@@ -1,4 +1,19 @@
 import express from "npm:express";
+import { DB } from "https://deno.land/x/sqlite/mod.ts";
+
+const IN_MEMORY = false;
+
+const db = new DB("tasks.db");
+if (!IN_MEMORY) {
+    db.execute(`
+    CREATE TABLE IF NOT EXISTS tasks (
+        id STRING PRIMARY KEY,
+        script TEXT,
+        status INT
+        )
+    `);
+}
+
 const app = express();
 app.use(express.json());
 
@@ -29,8 +44,86 @@ function taskify(script: string): Task {
     }
 }
 function addTask(task: Task) {
-    tasks.set(task.id, task);
+    if (IN_MEMORY) {
+        tasks.set(task.id, task);
+    } else {
+        const query = db.prepareQuery<never, never, { id: string, script: string, status: TaskStatus }>("INSERT INTO tasks (id, script, status) VALUES (:id, :script, :status)");
+        query.execute(task);
+    }
 }
+
+function getFirstTask(filter_by_status?: TaskStatus) {
+    if (IN_MEMORY) {
+        for (const [taskid, task] of tasks.entries()) {
+            if (filter_by_status !== undefined && task.status === filter_by_status) {
+                return task;
+            } else {
+                return task;
+            }
+        }
+    } else {
+        if (filter_by_status === undefined) {
+            const query = db.prepareQuery<[string, string, TaskStatus], { id: string, script: string, status: TaskStatus }>("SELECT id, script, status FROM tasks");
+            return query.firstEntry();
+        } else {
+            const query = db.prepareQuery<[string, string, TaskStatus], { id: string, script: string, status: TaskStatus }>("SELECT id, script, status FROM tasks WHERE status = :status");
+            return query.firstEntry({status: filter_by_status});
+        }
+    }
+}
+
+function getTasks(filter_by_status?: TaskStatus) {
+    if (IN_MEMORY) {
+        const tasks_c = [];
+        for (const [taskid, task] of tasks.entries()) {
+            if (filter_by_status !== undefined && task.status === filter_by_status) {
+                tasks_c.push(task);
+            } else {
+                tasks_c.push(task);
+            }
+        }
+        return tasks_c;
+    } else {
+        if (filter_by_status === undefined) {
+            const query = db.prepareQuery<[string, string, TaskStatus], { id: string, script: string, status: TaskStatus }>("SELECT id, script, status FROM tasks");
+            return query.allEntries();
+        } else {
+            const query = db.prepareQuery<[string, string, TaskStatus], { id: string, script: string, status: TaskStatus }>("SELECT id, script, status FROM tasks WHERE status = :status");
+            return query.allEntries({status: filter_by_status});
+        }
+    }
+}
+
+function getTask(taskId: string, filter_by_status?: TaskStatus) {
+    if (IN_MEMORY) {
+        let task = tasks.get(taskId);
+        if (filter_by_status !== undefined && task !== undefined && task.status !== filter_by_status) {
+            task = undefined;
+        }
+        return task;
+    } else {
+        if (filter_by_status === undefined) {
+            const query = db.prepareQuery<[string, string, TaskStatus], { id: string, script: string, status: TaskStatus }>("SELECT id, script, status FROM tasks WHERE id = :id");
+            return query.firstEntry({id: taskId});
+        } else {
+            const query = db.prepareQuery<[string, string, TaskStatus], { id: string, script: string, status: TaskStatus }>("SELECT id, script, status FROM tasks WHERE id = :id AND status = :status");
+            return query.firstEntry({id: taskId, status: filter_by_status});
+        }
+    }
+}
+
+function updateTaskStatus(taskId: string, status: TaskStatus) {
+    if (IN_MEMORY) {
+        let task = tasks.get(taskId);
+        if (task !== undefined) {
+            task.status = status;
+        }
+    } else {
+        const query = db.prepareQuery<never, never, { id: string, status: TaskStatus }>("UPDATE tasks SET status = :status WHERE id = :id");
+        query.execute({id: taskId, status: status});
+    }
+}
+
 const javascript = (strings, ...values) => String.raw({ raw: strings }, ...values);
 addTask(taskify(javascript`
 import shell from "npm:shelljs"
@@ -53,24 +146,23 @@ app.get("/", function (req, res) {
 });
 
 app.get("/tasks", (req, res) => {
-    res.json(Array.from(tasks.values()));
+    res.json(Array.from(getTasks()));
 });
 
 app.get("/tasks/get", (req, res) => {
-    for (const [taskid, task] of tasks.entries()) {
-        if (task.status === TaskStatus.AWAITING) {
-            const taskScriptURL = `${req.protocol}://${req.get('host')}/scripts/${task.id}`;
-            res.json({script: taskScriptURL, id: task.id, type: "deno"})
-            return;
-        }
+    const task = getFirstTask(TaskStatus.AWAITING);
+    if (task) {
+        const taskScriptURL = `${req.protocol}://${req.get('host')}/scripts/${task.id}`;
+        res.json({script: taskScriptURL, id: task.id, type: "deno"})
+        return;
     }
     res.json({});
 });
 
 app.post("/tasks/:id/accept", (req, res) => {
-    const task = tasks.get(req.params.id);
-    if (task && task.status === TaskStatus.AWAITING) {
-        task.status = TaskStatus.RUNNING;
+    const task = getTask(req.params.id, TaskStatus.AWAITING);
+    if (task) {
+        updateTaskStatus(task.id, TaskStatus.RUNNING);
         res.json({});
     } else {
         res.status(404);
@@ -79,9 +171,9 @@ app.post("/tasks/:id/accept", (req, res) => {
 });
 
 app.post("/tasks/:id/complete", (req, res) => {
-    const task = tasks.get(req.params.id);
-    if (task && task.status === TaskStatus.RUNNING) {
-        task.status = TaskStatus.COMPLETED;
+    const task = getTask(req.params.id, TaskStatus.RUNNING);
+    if (task) {
+        updateTaskStatus(task.id, TaskStatus.COMPLETED);
         res.json({});
         console.log(`Task ${req.params.id} completed with data ${JSON.stringify(req.body.data)}`);
     } else {
@@ -91,9 +183,9 @@ app.post("/tasks/:id/complete", (req, res) => {
 });
 
 app.post("/tasks/:id/failed", (req, res) => {
-    const task = tasks.get(req.params.id);
-    if (task && task.status === TaskStatus.RUNNING) {
-        task.status = TaskStatus.FAILED;
+    const task = tasks.get(req.params.id, TaskStatus.RUNNING);
+    if (task) {
+        updateTaskStatus(task.id, TaskStatus.FAILED);
         res.json({});
     } else {
         res.status(404);
@@ -134,7 +226,7 @@ app.get("/scripts/:id", (req, res) => {
             }
         }`);
     } else {
-        let task = tasks.get(req.params.id);
+        const task = getTask(req.params.id);
         if (task) {
             res.send(task.script);
         } else {
