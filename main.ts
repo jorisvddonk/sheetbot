@@ -9,7 +9,8 @@ if (!IN_MEMORY) {
     CREATE TABLE IF NOT EXISTS tasks (
         id STRING PRIMARY KEY,
         script TEXT,
-        status INT
+        status INT,
+        data JSON
         )
     `);
 }
@@ -24,8 +25,9 @@ app.use((req, res, next) => {
 
 interface Task {
     id: string,
-    script: string
-    status: TaskStatus
+    script: string,
+    status: TaskStatus,
+    data: Object,
 }
 
 enum TaskStatus {
@@ -40,16 +42,36 @@ function taskify(script: string): Task {
     return {
         id: crypto.randomUUID(),
         script,
-        status: TaskStatus.AWAITING
+        status: TaskStatus.AWAITING,
+        data: {}
     }
 }
 function addTask(task: Task) {
     if (IN_MEMORY) {
         tasks.set(task.id, task);
     } else {
-        const query = db.prepareQuery<never, never, { id: string, script: string, status: TaskStatus }>("INSERT INTO tasks (id, script, status) VALUES (:id, :script, :status)");
-        query.execute(task);
+        const query = db.prepareQuery<never, never, { id: string, script: string, status: TaskStatus, data: string }>("INSERT INTO tasks (id, script, status, data) VALUES (:id, :script, :status, :data)");
+        query.execute({
+            id: task.id,
+            script: task.script,
+            status: task.status,
+            data: JSON.stringify(task.data)
+        });
     }
+}
+
+function parseOneSQLTask(obj) {
+    if (obj !== undefined) {
+        return {...obj, data: JSON.parse(obj.data)};
+    }
+    return obj;
+}
+
+function parseAllSQLTasks(array) {
+    if (array !== undefined) {
+        return array.map(a => parseOneSQLTask(a), []);
+    }
+    return array;
 }
 
 function getFirstTask(filter_by_status?: TaskStatus) {
@@ -63,11 +85,11 @@ function getFirstTask(filter_by_status?: TaskStatus) {
         }
     } else {
         if (filter_by_status === undefined) {
-            const query = db.prepareQuery<[string, string, TaskStatus], { id: string, script: string, status: TaskStatus }>("SELECT id, script, status FROM tasks");
-            return query.firstEntry();
+            const query = db.prepareQuery<[string, string, TaskStatus], { id: string, script: string, status: TaskStatus, data: Object }>("SELECT id, script, status, data FROM tasks");
+            return parseOneSQLTask(query.firstEntry());
         } else {
-            const query = db.prepareQuery<[string, string, TaskStatus], { id: string, script: string, status: TaskStatus }>("SELECT id, script, status FROM tasks WHERE status = :status");
-            return query.firstEntry({status: filter_by_status});
+            const query = db.prepareQuery<[string, string, TaskStatus], { id: string, script: string, status: TaskStatus, data: Object }>("SELECT id, script, status, data FROM tasks WHERE status = :status");
+            return parseOneSQLTask(query.firstEntry({status: filter_by_status}));
         }
     }
 }
@@ -85,11 +107,11 @@ function getTasks(filter_by_status?: TaskStatus) {
         return tasks_c;
     } else {
         if (filter_by_status === undefined) {
-            const query = db.prepareQuery<[string, string, TaskStatus], { id: string, script: string, status: TaskStatus }>("SELECT id, script, status FROM tasks");
-            return query.allEntries();
+            const query = db.prepareQuery<[string, string, TaskStatus], { id: string, script: string, status: TaskStatus, data: Object }>("SELECT id, script, status, data FROM tasks");
+            return parseAllSQLTasks(query.allEntries());
         } else {
-            const query = db.prepareQuery<[string, string, TaskStatus], { id: string, script: string, status: TaskStatus }>("SELECT id, script, status FROM tasks WHERE status = :status");
-            return query.allEntries({status: filter_by_status});
+            const query = db.prepareQuery<[string, string, TaskStatus], { id: string, script: string, status: TaskStatus, data: Object }>("SELECT id, script, status, data FROM tasks WHERE status = :status");
+            return parseAllSQLTasks(query.allEntries({status: filter_by_status}));
         }
     }
 }
@@ -103,11 +125,11 @@ function getTask(taskId: string, filter_by_status?: TaskStatus) {
         return task;
     } else {
         if (filter_by_status === undefined) {
-            const query = db.prepareQuery<[string, string, TaskStatus], { id: string, script: string, status: TaskStatus }>("SELECT id, script, status FROM tasks WHERE id = :id");
-            return query.firstEntry({id: taskId});
+            const query = db.prepareQuery<[string, string, TaskStatus], { id: string, script: string, status: TaskStatus, data: Object }>("SELECT id, script, status, data FROM tasks WHERE id = :id");
+            return parseOneSQLTask(query.firstEntry({id: taskId}));
         } else {
-            const query = db.prepareQuery<[string, string, TaskStatus], { id: string, script: string, status: TaskStatus }>("SELECT id, script, status FROM tasks WHERE id = :id AND status = :status");
-            return query.firstEntry({id: taskId, status: filter_by_status});
+            const query = db.prepareQuery<[string, string, TaskStatus], { id: string, script: string, status: TaskStatus, data: Object }>("SELECT id, script, status, data FROM tasks WHERE id = :id AND status = :status");
+            return parseOneSQLTask(query.firstEntry({id: taskId, status: filter_by_status}));
         }
     }
 }
@@ -121,6 +143,20 @@ function updateTaskStatus(taskId: string, status: TaskStatus) {
     } else {
         const query = db.prepareQuery<never, never, { id: string, status: TaskStatus }>("UPDATE tasks SET status = :status WHERE id = :id");
         query.execute({id: taskId, status: status});
+    }
+}
+
+function updateTaskData(taskId: string, data: Object) {
+    if (IN_MEMORY) {
+        let task = tasks.get(taskId);
+        if (task !== undefined) {
+            task.data = Object.assign({}, task.data, data);
+        }
+    } else {
+        for (const [key, value] of Object.entries(data)) {
+            const query = db.prepareQuery<never, never, { id: string, key: string, value: string}>("UPDATE tasks SET data=(select json_set(data, :key, :value) from tasks where id == :id) where id == :id");
+            query.execute({id: taskId, key: `$.${key}`, value: value});
+        }
     }
 }
 
@@ -176,6 +212,19 @@ app.post("/tasks/:id/complete", (req, res) => {
         updateTaskStatus(task.id, TaskStatus.COMPLETED);
         res.json({});
         console.log(`Task ${req.params.id} completed with data ${JSON.stringify(req.body.data)}`);
+        updateTaskData(task.id, req.body.data);
+    } else {
+        res.status(404);
+        res.send();
+    }
+});
+
+app.post("/tasks/:id/data", (req, res) => {
+    const task = getTask(req.params.id);
+    if (task) {
+        res.json({});
+        console.log(`Adding data to task ${req.params.id}: ${JSON.stringify(req.body.data)}`);
+        updateTaskData(task.id, req.body.data);
     } else {
         res.status(404);
         res.send();
