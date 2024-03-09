@@ -1,0 +1,6 @@
+{
+    "tasks": {
+        "start": "deno run -A --watch main.ts",
+        "start-agent": "deno run --reload -A http://localhost:3000/scripts/agent",
+      }
+}
