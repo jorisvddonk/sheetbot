@@ -166,12 +166,29 @@ import shell from "npm:shelljs"
 import tmp from "npm:tmp"
 import $ from "https://deno.land/x/dax/mod.ts";
 
+async function subtask_statusupdate(subtaskname, completed) {
+    const data = {};
+    data["subtask/" + subtaskname] = completed ? true : false;
+    await fetch(Deno.env.get("SHEETBOX_TASK_BASEURL") + "/data", {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({data: data})
+    });
+}
+
+
 let tmpdir = tmp.dirSync().name;
 $.cd(tmpdir);
+await subtask_statusupdate("git checkout", false);
 await $\`git clone https://github.com/jorisvddonk/tzo-c .\`
+await subtask_statusupdate("git checkout", true);
+await subtask_statusupdate("build", false);
 await $\`mkdir build\`
 await $\`cmake -S . -B build/\`
 await $\`cmake --build build/\`
+await subtask_statusupdate("build", true);
 shell.ls().forEach(file => {
     shell.echo(file);
 });
@@ -248,6 +265,8 @@ app.get("/scripts/:id", (req, res) => {
         const response = await fetch("${req.protocol}://${req.get('host')}/tasks/get")
         const json = await response.json();
         if (json.hasOwnProperty("script")) {
+            Deno.env.set("SHEETBOX_TASK_ID", json.id);
+            Deno.env.set("SHEETBOX_TASK_BASEURL", "${req.protocol}://${req.get('host')}/tasks/" + json.id);
             await fetch("${req.protocol}://${req.get('host')}/tasks/" + json.id + "/accept", {
                 method: 'POST',
                 headers: {
@@ -265,6 +284,7 @@ app.get("/scripts/:id", (req, res) => {
                     body: JSON.stringify({data: data})
                 });
             } catch (e) {
+                console.error(e);
                 await fetch("${req.protocol}://${req.get('host')}/tasks/" + json.id + "/failed", {
                     method: 'POST',
                     headers: {
