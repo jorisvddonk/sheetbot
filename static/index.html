@@ -8,6 +8,11 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/typescript.min.js"></script>
+    <style>
+        .jexcel > tbody > tr > td.readonly {
+            color: black;
+        }
+    </style>
 </head>
 
 <body>
@@ -64,10 +69,10 @@
             jspreadsheet(document.getElementById('spreadsheet'), {
                 data: data,
                 columns: [
-                    { type: 'text', name: 'id', title: 'ID', width: 300 },
-                    { type: 'text', name: 'status', title: 'Status', width: 200, editor: statusColumn, stripHTML: false, },
-                    { type: 'text', name: 'data', title: 'Data', width: 200, editor: codeColumn, stripHTML: false, align: 'left' },
-                    { type: 'html', name: 'script', title: 'Script', width: 500, editor: codeColumn, stripHTML: false, align: 'left' },
+                    { type: 'text', name: 'id', title: 'ID', width: 300, readOnly: true },
+                    { type: 'text', name: 'status', title: 'Status', width: 200, editor: statusColumn, stripHTML: false, readOnly: true },
+                    { type: 'text', name: 'data', title: 'Data', width: 200, editor: codeColumn, stripHTML: false, align: 'left', readOnly: true },
+                    { type: 'html', name: 'script', title: 'Script', width: 500, editor: codeColumn, stripHTML: false, align: 'left', readOnly: true },
                 ]
             });
         });
