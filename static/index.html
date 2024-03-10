@@ -1,0 +1,78 @@
+<html>
+
+<head>
+    <script src="https://bossanova.uk/jspreadsheet/v4/jexcel.js"></script>
+    <script src="https://jsuites.net/v4/jsuites.js"></script>
+    <link rel="stylesheet" href="https://jsuites.net/v4/jsuites.css" type="text/css" />
+    <link rel="stylesheet" href="https://bossanova.uk/jspreadsheet/v4/jexcel.css" type="text/css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/typescript.min.js"></script>
+</head>
+
+<body>
+    <div id="spreadsheet"></div>
+    <script>
+        // Fix a problem with jspreadsheet where Objects will be shown as '[object Object]'...
+        // This is a very dirty fix!
+        Object.defineProperty(Object.prototype, 'toString', {
+            get() {
+                return () => JSON.stringify(this, null, 2);
+            },
+            configurable: true,
+        });
+
+        const codeColumn = {
+            closeEditor: function (cell, save) {
+                // does not support editing!
+            },
+            openEditor: function (cell) {
+                // does not support editing!
+            },
+            createCell: function (elem) {
+                elem.innerHTML = `<pre><code class="hljs">${hljs.highlightAuto(elem.innerHTML).value}</code></pre>`;
+                return elem;
+            }
+        }
+
+        const statusColumn = {
+            closeEditor: function (cell, save) {
+                // does not support editing!
+            },
+            openEditor: function (cell) {
+                // does not support editing!
+            },
+            createCell: function (elem) {
+                if (elem.innerHTML === '0') {
+                    elem.innerHTML = `<span>AWAITING</span>`;
+                } else if (elem.innerHTML === '1') {
+                    elem.innerHTML = `<span>RUNNING</span>`;
+                } else if (elem.innerHTML === '2') {
+                    elem.innerHTML = `<span>COMPLETED</span>`;
+                } else if (elem.innerHTML === '3') {
+                    elem.innerHTML = `<span>FAILED</span>`;
+                } else {
+                    elem.innerHTML = `<span>?</span>`;
+                }
+                return elem;
+            }
+        }
+
+        const data = fetch("/tasks").then(response => {
+            return response.json()
+        }).then(data => {
+            jspreadsheet(document.getElementById('spreadsheet'), {
+                data: data,
+                columns: [
+                    { type: 'text', name: 'id', title: 'ID', width: 300 },
+                    { type: 'text', name: 'status', title: 'Status', width: 200, editor: statusColumn, stripHTML: false, },
+                    { type: 'text', name: 'data', title: 'Data', width: 200, editor: codeColumn, stripHTML: false, align: 'left' },
+                    { type: 'html', name: 'script', title: 'Script', width: 500, editor: codeColumn, stripHTML: false, align: 'left' },
+                ]
+            });
+        });
+
+    </script>
+</body>
+
+</html>

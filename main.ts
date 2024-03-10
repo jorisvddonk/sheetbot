@@ -17,6 +17,7 @@ if (!IN_MEMORY) {
 
 const app = express();
 app.use(express.json());
+app.use(express.static('static'))
 
 app.use((req, res, next) => {
     console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
