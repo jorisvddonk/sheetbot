@@ -169,7 +169,7 @@ import $ from "https://deno.land/x/dax/mod.ts";
 async function subtask_statusupdate(subtaskname, completed) {
     const data = {};
     data["subtask/" + subtaskname] = completed ? true : false;
-    await fetch(Deno.env.get("SHEETBOX_TASK_BASEURL") + "/data", {
+    await fetch(Deno.env.get("SHEETBOX_TASK_DATAURL"), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -265,9 +265,15 @@ app.get("/scripts/:id", (req, res) => {
         const response = await fetch("${req.protocol}://${req.get('host')}/tasks/get")
         const json = await response.json();
         if (json.hasOwnProperty("script")) {
+
             Deno.env.set("SHEETBOX_TASK_ID", json.id);
             Deno.env.set("SHEETBOX_TASK_BASEURL", "${req.protocol}://${req.get('host')}/tasks/" + json.id);
-            await fetch("${req.protocol}://${req.get('host')}/tasks/" + json.id + "/accept", {
+            Deno.env.set("SHEETBOX_TASK_ACCEPTURL", "${req.protocol}://${req.get('host')}/tasks/" + json.id + "/accept");
+            Deno.env.set("SHEETBOX_TASK_COMPLETEURL", "${req.protocol}://${req.get('host')}/tasks/" + json.id + "/complete");
+            Deno.env.set("SHEETBOX_TASK_FAILEDURL", "${req.protocol}://${req.get('host')}/tasks/" + json.id + "/failed");
+            Deno.env.set("SHEETBOX_TASK_DATAURL", "${req.protocol}://${req.get('host')}/tasks/" + json.id + "/data");
+
+            await fetch(Deno.env.get("SHEETBOX_TASK_ACCEPTURL"), {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json'
@@ -276,7 +282,7 @@ app.get("/scripts/:id", (req, res) => {
             });
             try {
                 const data = await import(json.script);
-                await fetch("${req.protocol}://${req.get('host')}/tasks/" + json.id + "/complete", {
+                await fetch(Deno.env.get("SHEETBOX_TASK_COMPLETEURL"), {
                     method: 'POST',
                     headers: {
                       'Content-Type': 'application/json'
@@ -285,7 +291,7 @@ app.get("/scripts/:id", (req, res) => {
                 });
             } catch (e) {
                 console.error(e);
-                await fetch("${req.protocol}://${req.get('host')}/tasks/" + json.id + "/failed", {
+                await fetch(Deno.env.get("SHEETBOX_TASK_FAILEDURL"), {
                     method: 'POST',
                     headers: {
                       'Content-Type': 'application/json'
