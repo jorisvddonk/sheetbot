@@ -1,5 +1,7 @@
 import express from "npm:express";
 import { DB } from "https://deno.land/x/sqlite/mod.ts";
+import { validateSheetName } from "./lib/sheet_validator.ts";
+import { upsert, validateTableName } from "./lib/data_providers/sqlite/lib.ts";
 
 const IN_MEMORY = false;
 
@@ -310,6 +312,77 @@ app.get("/scripts/:id", (req, res) => {
             res.send();
         }
     }
+});
+
+app.post("/sheets/:id/data", (req, res) => {
+    if (!validateSheetName(req.params.id) || !validateTableName(req.params.id)) {
+        res.status(500);
+        res.send("Invalid sheet name");
+        return;
+    }
+
+    if (!Object.prototype.hasOwnProperty.call(req.body, "key")) {
+        res.status(500);
+        res.send("Data needs to be JSON with a 'key' property");
+        return;
+    }
+
+    const sheet_db = new DB(`./sheets/${req.params.id}.db`); // TODO: move to a map? what's the performance of this?
+    sheet_db.execute(`
+        CREATE TABLE IF NOT EXISTS "${req.params.id}" (
+            key STRING PRIMARY KEY
+        )`);
+    const data = Object.entries(Object.assign({key: req.body.key}, req.body)); // Need to put the primary key first... This is terrible and I guess slow as well, but it works.
+    upsert(sheet_db, req.params.id, data); 
+    sheet_db.close();
+    res.status(200);
+    res.send();
+});
+
+app.get("/sheets/:id", (req, res) => {
+    if (!validateSheetName(req.params.id) || !validateTableName(req.params.id)) {
+        res.status(500);
+        res.send("Invalid sheet name");
+        return;
+    }
+
+    const sheet_db = new DB(`./sheets/${req.params.id}.db`); // TODO: move to a map? what's the performance of this?
+    sheet_db.execute(`
+        CREATE TABLE IF NOT EXISTS "${req.params.id}" (
+            key STRING PRIMARY KEY
+        )`);
+    const schema = sheet_db.queryEntries(`pragma table_info("${req.params.id}");`);
+    const schemaMap = schema.reduce((memo, value: any, index) => { // TODO: value should have a typedef corresponding to an obj with keys cid, name, type, notnull, dflt_value and pk
+        memo[value.name] = value;
+        return memo;
+    }, {});
+    const columns = schema.map(s => s.name);
+    const rowEntries = sheet_db.queryEntries(`SELECT * FROM "${req.params.id}"`);
+    const rows = rowEntries.map(rowEntry => {
+        const returnrow = [];
+        Object.entries(rowEntry).forEach(re => {
+            if (schemaMap[re[0]].type === "JSON") {
+                re[1] = JSON.parse(re[1]);
+            }
+            returnrow.push(re[1]);
+        })
+        return returnrow;
+    });
+    sheet_db.close();
+    res.json({schema: schemaMap, columnNames: columns, rows});
+    res.send();
+});
+
+app.get("/sheets", (req, res) => {
+    const retval = [];
+    for (const dirEntry of Deno.readDirSync("./sheets/")) {
+        if (dirEntry.isFile && dirEntry.name.endsWith(".db")) {
+            retval.push(dirEntry.name.replace(/\.db$/,""));
+        }
+    }
+
+    res.json(retval);
+    res.send();
 });
 
 
