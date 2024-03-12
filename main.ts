@@ -362,7 +362,11 @@ app.get("/sheets/:id", (req, res) => {
         const returnrow = [];
         Object.entries(rowEntry).forEach(re => {
             if (schemaMap[re[0]].type === "JSON") {
-                re[1] = JSON.parse(re[1]);
+                try {
+                    re[1] = JSON.parse(re[1]);
+                } catch (e) {
+                    re[1] = re[1]; // data is actually a string, so return a string
+                }
             }
             returnrow.push(re[1]);
         })
