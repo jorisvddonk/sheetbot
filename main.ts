@@ -210,7 +210,7 @@ app.get("/tasks", (req, res) => {
 app.get("/tasks/get", (req, res) => {
     const task = getFirstTask(TaskStatus.AWAITING);
     if (task) {
-        const taskScriptURL = `${req.protocol}://${req.get('host')}/scripts/${task.id}`;
+        const taskScriptURL = `${req.protocol}://${req.get('host')}/scripts/${task.id}.ts`;
         res.json({script: taskScriptURL, id: task.id, type: "deno"})
         return;
     }
@@ -264,55 +264,28 @@ app.post("/tasks/:id/failed", (req, res) => {
     }
 });
 
-app.get("/scripts/:id", (req, res) => {
-    if (req.params.id == 'agent') {
-        res.send(javascript`
-        const response = await fetch("${req.protocol}://${req.get('host')}/tasks/get")
-        const json = await response.json();
-        if (json.hasOwnProperty("script")) {
+app.use('/scripts', express.static('scripts'));
+app.get("/scripts/agent(\.ts)?", (req, res) => {
+    res.send(new TextDecoder().decode(
+        Deno.readFileSync("./scripts/agent.template.ts")
+    )
+    .replaceAll("${req.protocol}", req.protocol)
+    .replaceAll("${req.get('host')}", req.get('host')
+    ));
+});
 
-            Deno.env.set("SHEETBOX_TASK_ID", json.id);
-            Deno.env.set("SHEETBOX_TASK_BASEURL", "${req.protocol}://${req.get('host')}/tasks/" + json.id);
-            Deno.env.set("SHEETBOX_TASK_ACCEPTURL", "${req.protocol}://${req.get('host')}/tasks/" + json.id + "/accept");
-            Deno.env.set("SHEETBOX_TASK_COMPLETEURL", "${req.protocol}://${req.get('host')}/tasks/" + json.id + "/complete");
-            Deno.env.set("SHEETBOX_TASK_FAILEDURL", "${req.protocol}://${req.get('host')}/tasks/" + json.id + "/failed");
-            Deno.env.set("SHEETBOX_TASK_DATAURL", "${req.protocol}://${req.get('host')}/tasks/" + json.id + "/data");
-
-            await fetch(Deno.env.get("SHEETBOX_TASK_ACCEPTURL"), {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({})
-            });
-            try {
-                const data = await import(json.script);
-                await fetch(Deno.env.get("SHEETBOX_TASK_COMPLETEURL"), {
-                    method: 'POST',
-                    headers: {
-                      'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({data: data})
-                });
-            } catch (e) {
-                console.error(e);
-                await fetch(Deno.env.get("SHEETBOX_TASK_FAILEDURL"), {
-                    method: 'POST',
-                    headers: {
-                      'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({})
-                });
-            }
-        }`);
-    } else {
+app.get("/scripts/:id\.?.*", (req, res) => {
         const task = getTask(req.params.id);
         if (task) {
+        if (req.path.endsWith(".ts")) {
+            res.contentType("application/typescript");
+        } else if (req.path.endsWith(".js")) {
+            res.contentType("application/javascript");
+        }
             res.send(task.script);
         } else {
             res.status(404);
             res.send();
-        }
     }
 });
 
