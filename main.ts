@@ -1,4 +1,5 @@
 import express from "npm:express";
+import multer from "npm:multer";
 import { DB } from "https://deno.land/x/sqlite/mod.ts";
 import { validateSheetName } from "./lib/sheet_validator.ts";
 import { upsert, validateTableName } from "./lib/data_providers/sqlite/lib.ts";
@@ -20,6 +21,7 @@ if (!IN_MEMORY) {
 const app = express();
 app.use(express.json());
 app.use(express.static('static'))
+const upload = multer({ dest: './artefacts/' });
 
 app.use((req, res, next) => {
     console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
@@ -388,6 +390,33 @@ app.get("/sheets", (req, res) => {
     res.json(retval);
     res.send();
 });
+
+app.post('/tasks/:id/artefacts', upload.single('file'), async function (req, res) {
+    const task = getTask(req.params.id, TaskStatus.RUNNING);
+    if (task) {
+        const dirpath = `./artefacts/tasks/${req.params.id}`;
+        await Deno.mkdir(dirpath, { recursive: true });
+        await Deno.rename(req.file.path, `${dirpath}/${req.file.originalname}`);
+        const artefactURL = `${req.protocol}://${req.get('host')}/tasks/${req.params.id}/artefacts/${req.file.originalname}`;
+        res.json({url: artefactURL});
+        res.send();
+    } else {
+        res.status(400);
+        res.send();
+        await Deno.remove(req.file.path); // TODO: would it be possible to not even *accept* the file, and bail out earlier in the upload?
+    }
+});
+app.get('/tasks/:id/artefacts/:filename', function (req, res) {
+    const task = getTask(req.params.id);
+    if (task) {
+        res.redirect(307, `/artefacts/tasks/${req.params.id}/${req.params.filename}`);
+    } else {
+        res.status(404);
+        res.send();
+    }
+});
+
+app.use('/artefacts', express.static('artefacts'));
 
 
 app.listen(3000);
