@@ -166,7 +166,7 @@ function updateTaskData(taskId: string, data: Object) {
 }
 
 const javascript = (strings, ...values) => String.raw({ raw: strings }, ...values);
-addTask(taskify(javascript`
+/*addTask(taskify(javascript`
 import shell from "npm:shelljs"
 import tmp from "npm:tmp"
 import $ from "https://deno.land/x/dax/mod.ts";
@@ -197,7 +197,9 @@ await subtask_statusupdate("build", true);
 shell.ls().forEach(file => {
     shell.echo(file);
 });
-`));
+`));*/
+
+addTask(taskify(new TextDecoder().decode(Deno.readFileSync("./scripts/noctis.ts"))));
 
 app.get("/", function (req, res) {
   res.send("Hello World");
