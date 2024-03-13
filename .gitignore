@@ -1,3 +1,4 @@
 tasks.db
 sheets/*.db
 experiment.*
+artefacts/
