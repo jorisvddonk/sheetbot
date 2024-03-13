@@ -277,17 +277,17 @@ app.get("/scripts/agent(\.ts)?", (req, res) => {
 });
 
 app.get("/scripts/:id\.?.*", (req, res) => {
-        const task = getTask(req.params.id);
-        if (task) {
+    const task = getTask(req.params.id);
+    if (task) {
         if (req.path.endsWith(".ts")) {
             res.contentType("application/typescript");
         } else if (req.path.endsWith(".js")) {
             res.contentType("application/javascript");
         }
-            res.send(task.script);
-        } else {
-            res.status(404);
-            res.send();
+        res.send(task.script);
+    } else {
+        res.status(404);
+        res.send();
     }
 });
 
