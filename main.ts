@@ -174,7 +174,7 @@ import $ from "https://deno.land/x/dax/mod.ts";
 async function subtask_statusupdate(subtaskname, completed) {
     const data = {};
     data["subtask/" + subtaskname] = completed ? true : false;
-    await fetch(Deno.env.get("SHEETBOX_TASK_DATAURL"), {
+    await fetch(Deno.env.get("SHEETBOT_TASK_DATAURL"), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
