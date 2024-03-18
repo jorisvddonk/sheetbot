@@ -259,6 +259,16 @@ app.get("/tasks/get", (req, res) => {
     res.json({});
 });
 
+app.get("/tasks/:id", (req, res) => {
+    const task = getTask(req.params.id);
+    if (task) {
+        res.json(task);
+        return;
+    }
+    res.status(404);
+    res.send();
+});
+
 app.post("/tasks/:id/accept", (req, res) => {
     const task = getTask(req.params.id, TaskStatus.AWAITING);
     if (task) {
