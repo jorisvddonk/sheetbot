@@ -14,7 +14,8 @@ if (!IN_MEMORY) {
         script TEXT,
         status INT,
         data JSON,
-        artefacts JSON
+        artefacts JSON,
+        dependsOn JSON
         )
     `);
 }
@@ -34,7 +35,12 @@ interface Task {
     script: string,
     status: TaskStatus,
     data: Object,
-    artefacts: string[]
+    artefacts: string[],
+    dependsOn: string[]
+}
+
+interface TaskQ extends Task {
+    [name: string]: string | string[]
 }
 
 enum TaskStatus {
@@ -51,27 +57,29 @@ function taskify(script: string): Task {
         script,
         status: TaskStatus.AWAITING,
         data: {},
-        artefacts: []
+        artefacts: [],
+        dependsOn: []
     }
 }
 function addTask(task: Task) {
     if (IN_MEMORY) {
         tasks.set(task.id, task);
     } else {
-        const query = db.prepareQuery<never, never, { id: string, script: string, status: TaskStatus, data: string, artefacts: string }>("INSERT INTO tasks (id, script, status, data, artefacts) VALUES (:id, :script, :status, :data, :artefacts)");
+        const query = db.prepareQuery<never, never, { id: string, script: string, status: TaskStatus, data: string, artefacts: string, dependsOn: string }>("INSERT INTO tasks (id, script, status, data, artefacts, dependsOn) VALUES (:id, :script, :status, :data, :artefacts, :dependsOn)");
         query.execute({
             id: task.id,
             script: task.script,
             status: task.status,
             data: JSON.stringify(task.data),
-            artefacts: JSON.stringify(task.artefacts)
+            artefacts: JSON.stringify(task.artefacts),
+            dependsOn: JSON.stringify(task.dependsOn)
         });
     }
 }
 
 function parseOneSQLTask(obj) {
     if (obj !== undefined) {
-        return {...obj, data: JSON.parse(obj.data), artefacts: JSON.parse(obj.artefacts)};
+        return {...obj, data: JSON.parse(obj.data), artefacts: JSON.parse(obj.artefacts), dependsOn: JSON.parse(obj.dependsOn)};
     }
     return obj;
 }
@@ -83,10 +91,11 @@ function parseAllSQLTasks(array) {
     return array;
 }
 
-function getFirstTask(filter_by_status?: TaskStatus) {
+function getTaskToComplete(filter_by_status?: TaskStatus) {
+    // Get the task to complete, ensuring it's available and does not have any dependencies remaining
     if (IN_MEMORY) {
         for (const [taskid, task] of tasks.entries()) {
-            if (filter_by_status !== undefined && task.status === filter_by_status) {
+            if (filter_by_status !== undefined && task.status === filter_by_status && task.dependsOn.length === 0) {
                 return task;
             } else {
                 return task;
@@ -94,10 +103,10 @@ function getFirstTask(filter_by_status?: TaskStatus) {
         }
     } else {
         if (filter_by_status === undefined) {
-            const query = db.prepareQuery<[string, string, TaskStatus], { id: string, script: string, status: TaskStatus, data: Object }>("SELECT id, script, status, data, artefacts FROM tasks");
+            const query = db.prepareQuery<[string, string, TaskStatus], TaskQ>("SELECT id, script, status, data, artefacts, dependsOn FROM tasks WHERE (dependsOn IS NULL OR json_array_length(dependsOn) = 0)");
             return parseOneSQLTask(query.firstEntry());
         } else {
-            const query = db.prepareQuery<[string, string, TaskStatus], { id: string, script: string, status: TaskStatus, data: Object }>("SELECT id, script, status, data, artefacts FROM tasks WHERE status = :status");
+            const query = db.prepareQuery<[string, string, TaskStatus], TaskQ>("SELECT id, script, status, data, artefacts, dependsOn FROM tasks WHERE (dependsOn IS NULL OR json_array_length(dependsOn) = 0) AND status = :status");
             return parseOneSQLTask(query.firstEntry({status: filter_by_status}));
         }
     }
@@ -116,10 +125,10 @@ function getTasks(filter_by_status?: TaskStatus) {
         return tasks_c;
     } else {
         if (filter_by_status === undefined) {
-            const query = db.prepareQuery<[string, string, TaskStatus], { id: string, script: string, status: TaskStatus, data: Object }>("SELECT id, script, status, data, artefacts FROM tasks");
+            const query = db.prepareQuery<[string, string, TaskStatus], TaskQ>("SELECT id, script, status, data, artefacts, dependsOn FROM tasks");
             return parseAllSQLTasks(query.allEntries());
         } else {
-            const query = db.prepareQuery<[string, string, TaskStatus], { id: string, script: string, status: TaskStatus, data: Object }>("SELECT id, script, status, data, artefacts FROM tasks WHERE status = :status");
+            const query = db.prepareQuery<[string, string, TaskStatus], TaskQ>("SELECT id, script, status, data, artefacts, dependsOn FROM tasks WHERE status = :status");
             return parseAllSQLTasks(query.allEntries({status: filter_by_status}));
         }
     }
@@ -134,10 +143,10 @@ function getTask(taskId: string, filter_by_status?: TaskStatus) {
         return task;
     } else {
         if (filter_by_status === undefined) {
-            const query = db.prepareQuery<[string, string, TaskStatus], { id: string, script: string, status: TaskStatus, data: Object }>("SELECT id, script, status, data, artefacts FROM tasks WHERE id = :id");
+            const query = db.prepareQuery<[string, string, TaskStatus], TaskQ>("SELECT id, script, status, data, artefacts, dependsOn FROM tasks WHERE id = :id");
             return parseOneSQLTask(query.firstEntry({id: taskId}));
         } else {
-            const query = db.prepareQuery<[string, string, TaskStatus], { id: string, script: string, status: TaskStatus, data: Object }>("SELECT id, script, status, data, artefacts FROM tasks WHERE id = :id AND status = :status");
+            const query = db.prepareQuery<[string, string, TaskStatus], TaskQ>("SELECT id, script, status, data, artefacts, dependsOn FROM tasks WHERE id = :id AND status = :status");
             return parseOneSQLTask(query.firstEntry({id: taskId, status: filter_by_status}));
         }
     }
@@ -182,6 +191,22 @@ function updateTaskAddArtefact(taskId, newArtefact: string) {
             query.execute({id: taskId, artefacts: JSON.stringify(artefacts)});
             // console.log(`Added artefact ${newArtefact} to task ${taskId}`);
         }
+    }
+}
+
+function removeTaskFromAllDependsOn(taskId: string) {
+    if (IN_MEMORY) {
+        tasks.forEach(task => {
+            task.dependsOn = task.dependsOn.filter(val => val !== taskId)
+        });
+    } else {
+        // This doesn't work in a single query for some reason in this version of sqlite... :(
+        const q = db.prepareQuery("SELECT *, (SELECT key FROM json_each(dependsOn) WHERE value = :taskid) as key from tasks WHERE key IS NOT NULL");
+        const rows = q.allEntries({taskid: taskId});
+        rows.forEach(row => {
+            const query = db.prepareQuery("UPDATE tasks SET dependsOn = JSON_REMOVE(dependsOn, '$[' || :k || ']')");
+            query.execute({k: row.key as string});
+        });
     }
 }
 
@@ -234,6 +259,12 @@ app.post("/tasks", upload.array('file'), async (req, res) => {
     } catch (e) {
         task.data = req.body.data;
     }
+    let dependsOn: string[] = [];
+    try {
+        dependsOn = JSON.parse(req.body.dependsOn);
+    } catch (e) {
+        dependsOn = [];
+    }
     const dirpath = `./artefacts/tasks/${task.id}`;
     await Deno.mkdir(dirpath, { recursive: true });
     const artefacts = [];
@@ -244,13 +275,19 @@ app.post("/tasks", upload.array('file'), async (req, res) => {
         }
     }
     task.artefacts = artefacts;
+    task.dependsOn = [];
+    for (const dep of (dependsOn || [])) {
+        if (getTask(dep)) { // only add tasks that actually exist
+            task.dependsOn.push(dep);
+        }
+    }
     addTask(task);
     res.json(task);
     res.send();
 });
 
 app.get("/tasks/get", (req, res) => {
-    const task = getFirstTask(TaskStatus.AWAITING);
+    const task = getTaskToComplete(TaskStatus.AWAITING);
     if (task) {
         const taskScriptURL = `${req.protocol}://${req.get('host')}/scripts/${task.id}.ts`;
         res.json({script: taskScriptURL, id: task.id, type: "deno"})
@@ -284,6 +321,7 @@ app.post("/tasks/:id/complete", (req, res) => {
     const task = getTask(req.params.id, TaskStatus.RUNNING);
     if (task) {
         updateTaskStatus(task.id, TaskStatus.COMPLETED);
+        removeTaskFromAllDependsOn(task.id);
         res.json({});
         console.log(`Task ${req.params.id} completed with data ${JSON.stringify(req.body.data)}`);
         updateTaskData(task.id, req.body.data);
@@ -309,6 +347,7 @@ app.post("/tasks/:id/failed", (req, res) => {
     const task = tasks.get(req.params.id, TaskStatus.RUNNING);
     if (task) {
         updateTaskStatus(task.id, TaskStatus.FAILED);
+        removeTaskFromAllDependsOn(task.id);
         res.json({});
     } else {
         res.status(404);
