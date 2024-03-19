@@ -261,7 +261,13 @@ app.post("/tasks", upload.array('file'), async (req, res) => {
     }
     let dependsOn: string[] = [];
     try {
-        dependsOn = JSON.parse(req.body.dependsOn);
+        if (typeof req.body.dependsOn == "object") {
+            dependsOn = req.body.dependsOn;
+        } else if (req.body.dependsOn !== undefined) {
+            dependsOn = JSON.parse(req.body.dependsOn);
+        } else {
+            dependsOn = [];
+        }
     } catch (e) {
         dependsOn = [];
     }
@@ -281,7 +287,11 @@ app.post("/tasks", upload.array('file'), async (req, res) => {
         if (dependentTask) { // only add tasks that actually exist and haven't failed or completed yet
             if (dependentTask.status !== TaskStatus.FAILED && dependentTask.status !== TaskStatus.COMPLETED) {
                 task.dependsOn.push(dep);
+            } else {
+                console.log("WARN: dependent task was not in a valid state");
             }
+        } else {
+            console.log("WARN: dependent task was not found");
         }
     }
     addTask(task);
