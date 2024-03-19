@@ -318,6 +318,11 @@ app.post("/tasks/:id/failed", (req, res) => {
 
 app.use('/scripts', express.static('scripts'));
 app.get("/scripts/agent(\.ts)?", (req, res) => {
+    if (req.path.endsWith(".ts")) {
+        res.contentType("application/typescript");
+    } else if (req.path.endsWith(".js")) {
+        res.contentType("application/javascript");
+    }
     res.send(new TextDecoder().decode(
         Deno.readFileSync("./scripts/agent.template.ts")
     )
