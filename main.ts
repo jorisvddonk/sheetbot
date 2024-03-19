@@ -277,8 +277,9 @@ app.post("/tasks", upload.array('file'), async (req, res) => {
     task.artefacts = artefacts;
     task.dependsOn = [];
     for (const dep of (dependsOn || [])) {
-        if (getTask(dep)) { // only add tasks that actually exist and haven't failed or completed yet
-            if (task.status !== TaskStatus.FAILED && task.status !== TaskStatus.COMPLETED) {
+        const dependentTask = getTask(dep)
+        if (dependentTask) { // only add tasks that actually exist and haven't failed or completed yet
+            if (dependentTask.status !== TaskStatus.FAILED && dependentTask.status !== TaskStatus.COMPLETED) {
                 task.dependsOn.push(dep);
             }
         }
