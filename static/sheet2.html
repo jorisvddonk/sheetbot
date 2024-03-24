@@ -1,0 +1,95 @@
+<html>
+
+<head>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
+    <script src="widget-image.js" type="module"></script>
+    <script src="widget-code.js" type="module"></script>
+    <script src="widget-text.js" type="module"></script>
+    <style>
+        table { 
+            background-color: rgba(100, 100, 255, .1);
+            border-collapse: collapse; 
+        }
+
+        tr { 
+            border: 0.1em solid rgb(150, 200, 255); 
+        }
+
+        th, td {
+            border-left: 0.1em solid rgb(150, 200, 255);
+        }
+
+        thead {
+            background-color: rgba(200, 200, 255, 0.5);
+        }
+    </style>
+</head>
+
+<body>
+    <ul id="sheetlist"></ul>
+    <table id="spreadsheet"></table>
+
+    <script>
+        function tableGenerator(element, tabledef) {
+            const thead = document.createElement("thead");
+            const tr = document.createElement("tr");
+            tabledef.columns.forEach(column => {
+                const th = document.createElement("th");
+                th.innerText = column.name;
+                tr.appendChild(th);
+            });
+            thead.appendChild(tr);
+            const tbody = document.createElement("tbody");
+
+            tabledef.data.forEach(row => {
+                const tr = document.createElement("tr");
+
+                row.forEach((cell, index) => {
+                    const td = document.createElement("td");
+                    let elem;
+                    const widgettype = tabledef.columns[index].widgettype;
+                    switch (widgettype) {
+                        default:
+                            elem = document.createElement(`widget-${widgettype}`);
+                            elem.setAttribute('data', cell);
+                        }
+                    td.appendChild(elem);
+                    tr.appendChild(td);
+                });
+
+                tbody.appendChild(tr);
+            });
+
+            element.appendChild(thead);
+            element.appendChild(tbody);
+        }
+
+        const params = new URL(document.URL).searchParams;
+        if (params.has("sheet")) {
+            const data = fetch(`/sheets/${params.get("sheet")}`).then(response => {
+                return response.json()
+            }).then(data => {
+                tableGenerator(document.getElementById('spreadsheet'), {
+                    data: data.rows,
+                    columns: data.columns
+                });
+            });
+        } else {
+            const data = fetch(`/sheets`).then(response => {
+                return response.json()
+            }).then(data => {
+                data.forEach(sheetName => {
+                    const elem = document.createElement("a");
+                    elem.innerText = sheetName;
+                    elem.setAttribute("href", `/sheet2.html?sheet=${sheetName}`);
+                    const li = document.createElement("li");
+                    li.appendChild(elem);
+                    document.getElementById('sheetlist').appendChild(li);
+                });
+            });
+        }
+
+    </script>
+</body>
+
+</html>
