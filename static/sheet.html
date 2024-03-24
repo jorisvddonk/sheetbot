@@ -41,7 +41,7 @@
             }
         }
 
-        const smartColumn = {
+        const imageColumn = {
             closeEditor: function (cell, save) {
                 // does not support editing!
             },
@@ -50,38 +50,7 @@
             },
             createCell: function (elem) {
                 const text = elem.innerHTML.trim();
-                if (text.startsWith("http://") || text.startsWith("https://")) {
-                    if (text.endsWith(".png") || text.endsWith(".jpg")) {
-                        elem.innerHTML = `<img src="${text}" style="width: fit-content; height: fit-content; max-width: fit-content;"></img>`;
-                    } else {
-                        elem.innerText = text;
-                    }
-                } else {
-                    elem.innerText = text;
-                }
-                return elem;
-            }
-        }
-
-        const statusColumn = {
-            closeEditor: function (cell, save) {
-                // does not support editing!
-            },
-            openEditor: function (cell) {
-                // does not support editing!
-            },
-            createCell: function (elem) {
-                if (elem.innerHTML === '0') {
-                    elem.innerHTML = `<span>AWAITING</span>`;
-                } else if (elem.innerHTML === '1') {
-                    elem.innerHTML = `<span>RUNNING</span>`;
-                } else if (elem.innerHTML === '2') {
-                    elem.innerHTML = `<span>COMPLETED</span>`;
-                } else if (elem.innerHTML === '3') {
-                    elem.innerHTML = `<span>FAILED</span>`;
-                } else {
-                    elem.innerHTML = `<span>?</span>`;
-                }
+                elem.innerHTML = `<img src="${text}" style="width: fit-content; height: fit-content; max-width: fit-content;"></img>`;
                 return elem;
             }
         }
@@ -93,13 +62,17 @@
             }).then(data => {
                 jspreadsheet(document.getElementById('spreadsheet'), {
                     data: data.rows,
-                    columns: data.columnNames.map(colname => {
-                        if (data.schema[colname].type === "NUMERIC") {
-                            return { type: 'number', name: colname, title: colname, width: 300, readOnly: true }   
-                        } else if (data.schema[colname].type === "JSON") {
-                            return { type: 'text', name: colname, title: colname, width: 300, editor: codeColumn, stripHTML: false, align: 'left', readOnly: true }
+                    columns: data.columns.map(columnDefinition => {
+                        if (columnDefinition.widgettype === "number") {
+                            return { type: 'number', name: columnDefinition.name, title: columnDefinition.name, width: columnDefinition.maxwidth, readOnly: true }   
+                        } else if (columnDefinition.widgettype === "code") {
+                            return { type: 'text', name: columnDefinition.name, title: columnDefinition.name, width: columnDefinition.maxwidth, editor: codeColumn, stripHTML: false, align: 'left', readOnly: true }
+                        }  else if (columnDefinition.widgettype === "image") {
+                            return { type: 'text', name: columnDefinition.name, title: columnDefinition.name, width: columnDefinition.maxwidth, editor: imageColumn, stripHTML: false, align: 'left', readOnly: true }
+                        }  else if (columnDefinition.widgettype === "text") {
+                            return { type: 'text', name: columnDefinition.name, title: columnDefinition.name, width: columnDefinition.maxwidth, readOnly: true, align: 'left' }
                         }
-                        return { type: 'text', name: colname, title: colname, width: 640, editor: smartColumn, stripHTML: false, readOnly: true }
+                        return { type: 'text', name: columnDefinition.name, title: columnDefinition.name, width: columnDefinition.maxwidth, readOnly: true }
                     })
                 });
             });

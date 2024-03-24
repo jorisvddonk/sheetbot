@@ -429,11 +429,9 @@ app.get("/sheets/:id", (req, res) => {
 
     const sheetdb = new SheetDB(`./sheets/${req.params.id}.db`); // TODO: move to a map? what's the performance of this?
     const schema = sheetdb.getSchema();
-    const schemaMap = sheetdb.getSchemaAsMap();
-    const columns = schema.map(s => s.name);
     const rows = sheetdb.getRows();
     sheetdb.close();
-    res.json({schema: schemaMap, columnNames: columns, rows});
+    res.json({columns: schema, rows});
     res.send();
 });
 

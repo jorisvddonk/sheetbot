@@ -2,14 +2,18 @@ import { DB } from "https://deno.land/x/sqlite@v3.8/mod.ts";
 import { upsert } from "./lib.ts";
 
 export const SHEETDB_DATA_TABLENAME = "data"; // used for writing
-export const SHEETDB_DATA_VIEWNAME = "view"; // used for reading, can be customized by user to hide/alter things if needed
+export const SHEETDB_DATA_VIEWNAME = "data_view"; // used for reading, can be customized by user to alter data if needed
+export const SHEETDB_COLUMNSTRUCTURE_TABLENAME = "columnstructure"; // used to store table column structure metadata, like widgets needed to render them, their order, and whether they're shown or not.
+export const SHEETDB_COLUMNSTRUCTURE_VIEWNAME = "columnstructure_view"; // used to read table column structure metadata. This is a view as it also includes data that's from the table_info pragma.
 
-export interface RowInfo {
-    cid: number,
-    type: "STRING" | "TEXT" | "NUMERIC" | "JSON" | any,
-    notnull: 0 | 1,
-    dflt_value: any,
-    pk: 0 | 1
+
+export interface ColumnInfo {
+    columnorder: number,
+    name: string,
+    datatype: "STRING" | "TEXT" | "NUMERIC" | "JSON" | any,
+    maxwidth: number,
+    maxheight: number,
+    [name: string]: string | string[]
 }
 
 export class SheetDB {
@@ -21,8 +25,21 @@ export class SheetDB {
             CREATE TABLE IF NOT EXISTS "${SHEETDB_DATA_TABLENAME}" (
                 key STRING PRIMARY KEY
             )`);
-            this.db.execute(`
+        this.db.execute(`
             CREATE VIEW IF NOT EXISTS "${SHEETDB_DATA_VIEWNAME}" AS SELECT * FROM "${SHEETDB_DATA_TABLENAME}"`);
+
+        this.db.execute(`
+            CREATE TABLE IF NOT EXISTS "${SHEETDB_COLUMNSTRUCTURE_TABLENAME}" (
+                name STRING PRIMARY KEY,
+                widgettype STRING,
+                maxwidth NUMERIC,
+                maxheight NUMERIC,
+                columnorder NUMERIC UNIQUE
+            )`);
+            this.db.execute(`
+            CREATE VIEW IF NOT EXISTS "${SHEETDB_COLUMNSTRUCTURE_VIEWNAME}" AS 
+                SELECT c.*, p.type as 'datatype' from "${SHEETDB_COLUMNSTRUCTURE_TABLENAME}" c JOIN pragma_table_info('${SHEETDB_DATA_VIEWNAME}') p on c.name = p.name
+                ORDER BY c.columnorder ASC`);
     }
 
     upsertData(data: [string, unknown][]) {
@@ -30,19 +47,21 @@ export class SheetDB {
     }
 
     getRows() {
-        const schemaMap = this.getSchemaAsMap();
-        const rowEntries = this.db.queryEntries(`SELECT * FROM "${SHEETDB_DATA_VIEWNAME}"`);
-        const rows = rowEntries.map(rowEntry => {
+        const columnsSchema = this.getSchema();
+        const rowsRaw = this.db.queryEntries(`SELECT * FROM "${SHEETDB_DATA_VIEWNAME}"`);
+        const rows = rowsRaw.map(row => {
             const returnrow = [];
-            Object.entries(rowEntry).forEach(re => {
-                if (schemaMap[re[0]].type === "JSON") {
+            columnsSchema.forEach(columnEntry => {
+                const columnData = row[columnEntry.name];
+                if (columnEntry.datatype === "JSON") {
                     try {
-                        re[1] = JSON.parse(re[1]);
+                        returnrow.push(JSON.parse(columnData));
                     } catch (e) {
-                        re[1] = re[1]; // data is actually a string, so return a string
+                        returnrow.push(columnData); // data is actually a string, so return a string
                     }
+                } else {
+                    returnrow.push(columnData);
                 }
-                returnrow.push(re[1]);
             })
             return returnrow;
         });
@@ -54,13 +73,6 @@ export class SheetDB {
     }
 
     getSchema() {
-        return this.db.queryEntries(`pragma table_info("${SHEETDB_DATA_VIEWNAME}");`);
-    }
-
-    getSchemaAsMap() {
-        return this.getSchema().reduce((memo: {[key: string]: RowInfo}, value: any) => { // TODO: value should have a typedef corresponding to an obj with keys cid, name, type, notnull, dflt_value and pk
-            memo[value.name] = value;
-            return memo;
-        }, {}) as {[key: string]: RowInfo};
+        return this.db.queryEntries<ColumnInfo>(`SELECT * FROM "${SHEETDB_COLUMNSTRUCTURE_VIEWNAME}"`);
     }
 } 
