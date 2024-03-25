@@ -42,7 +42,7 @@
     <script>
         function unselectAll() {
             document.querySelectorAll(`table td[selected]`).forEach(elem => {
-                elem.setAttribute("selected", 0);
+                elem.removeAttribute("selected");
             });
         }
         function downgradePreviousSelected() {
@@ -131,6 +131,8 @@
                     console.log("copy fail");
                 }
             );
+
+            console.log(textTableStruct, minRow, maxRow, minCol, maxCol);
         }
 
         function tableGenerator(element, tabledef) {
