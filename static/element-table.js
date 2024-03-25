@@ -164,10 +164,26 @@ export class TableElement extends LitElement {
     }
 
     selectCell(rowindex, columnindex, event, element) {
+        const prevElem = document.querySelector(`table td[selected="2"]`);
+        
         if (event.ctrlKey === false) {
             this.unselectAll();
         } else {
             this.downgradePreviousSelected();
+        }
+
+        if (event.shiftKey) {
+            const minRow = Math.min(parseInt(prevElem.getAttribute('row'), 10), parseInt(element.getAttribute('row'), 10));
+            const minCol = Math.min(parseInt(prevElem.getAttribute('col'), 10), parseInt(element.getAttribute('col'), 10));
+            const maxRow = Math.max(parseInt(prevElem.getAttribute('row'), 10), parseInt(element.getAttribute('row'), 10));
+            const maxCol = Math.max(parseInt(prevElem.getAttribute('col'), 10), parseInt(element.getAttribute('col'), 10));
+            document.querySelectorAll(`td`).forEach(elem => {
+                const r = parseInt(elem.getAttribute('row'), 10);
+                const c = parseInt(elem.getAttribute('col'), 10);
+                if (r >= minRow && r <= maxRow && c >= minCol && c <= maxCol) {
+                    elem.setAttribute("selected", 1);
+                }
+            });
         }
         element.setAttribute("selected", 2);
         event.preventDefault();
