@@ -103,7 +103,7 @@
 
             let copyPlainText = '';
             textTableStruct.forEach(rowarr => {
-                return rowarr.forEach((celltext, index) => {
+                rowarr.forEach((celltext, index) => {
                     copyPlainText += `${index > 0 ? '\t' : ''}${celltext}`;
                 });
                 copyPlainText += '\n';
@@ -112,7 +112,7 @@
             let copyHTMLText = '<table><tbody>';
             textTableStruct.forEach(rowarr => {
                 copyHTMLText += '<tr>';
-                return rowarr.forEach((celltext, index) => {
+                rowarr.forEach((celltext, index) => {
                     copyHTMLText += `<td>${celltext}</td>`;
                 });
                 copyHTMLText += '</tr>';
@@ -131,8 +131,6 @@
                     console.log("copy fail");
                 }
             );
-
-            console.log(textTableStruct, minRow, maxRow, minCol, maxCol);
         }
 
         function tableGenerator(element, tabledef) {
