@@ -15,5 +15,9 @@ export class TextWidget extends LitElement {
     render() {
       return html`<span>${this.data}</span>`;
     }
+
+    getCopyText() {
+        return this.data;
+    }
   }
   customElements.define('widget-text', TextWidget);

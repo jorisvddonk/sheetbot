@@ -19,6 +19,16 @@
             border-left: 0.1em solid rgb(150, 200, 255);
         }
 
+        td[selected="1"] {
+            border: 0.1em solid rgb(100, 100, 100); 
+            box-shadow: inset 0px 0px 0.5em 0px rgb(50,50,50, 0.5);
+        }
+
+        td[selected="2"] {
+            border: 0.1em solid rgb(0, 0, 0); 
+            box-shadow: inset 0px 0px 0.5em 0px rgb(0,0,0, 1);
+        }
+
         thead {
             background-color: rgba(200, 200, 255, 0.5);
         }
@@ -30,30 +40,156 @@
     <table id="spreadsheet"></table>
 
     <script>
+        function unselectAll() {
+            document.querySelectorAll(`table td[selected]`).forEach(elem => {
+                elem.setAttribute("selected", 0);
+            });
+        }
+        function downgradePreviousSelected() {
+            document.querySelectorAll(`table td[selected="2"]`).forEach(elem => {
+                elem.setAttribute("selected", 1);
+            });
+        }
+
+        function copySelectionToClipboard() {
+            const selection = Array.from(document.querySelectorAll(`table td[selected]`));
+            const minRow = selection.reduce((memo, elem) => {
+                const row = parseInt(elem.getAttribute("row"), 10);
+                return row < memo ? row : memo;
+            }, Number.MAX_SAFE_INTEGER);
+            const minCol = selection.reduce((memo, elem) => {
+                const col = parseInt(elem.getAttribute("col"), 10);
+                return col < memo ? col : memo;
+            }, Number.MAX_SAFE_INTEGER);
+            const maxRow = selection.reduce((memo, elem) => {
+                const row = parseInt(elem.getAttribute("row"), 10);
+                return row > memo ? row : memo;
+            }, Number.MIN_SAFE_INTEGER);
+            const maxCol = selection.reduce((memo, elem) => {
+                const col = parseInt(elem.getAttribute("col"), 10);
+                return col > memo ? col : memo;
+            }, Number.MIN_SAFE_INTEGER);
+
+            const emptyTableStruct = [...Array(maxRow - minRow + 1).keys()].map(r => {
+                return [...Array(maxCol - minCol + 1).keys()].map(c => {
+                    return {
+                        row: r + minRow,
+                        col: c + minCol
+                    }
+                });
+            }); // array of arrays of {row: number, col: number}; will contain items that are NOT selected if there are gaps in the selection!
+
+            const elementTableStruct = emptyTableStruct.map(rowarr => {
+                return rowarr.map(cell => {
+                    return selection.find(elem => parseInt(elem.getAttribute("selected"), 10) > 0 && parseInt(elem.getAttribute("row"), 10) == cell.row && parseInt(elem.getAttribute("col"), 10) == cell.col);
+                });
+            }); // array of arrays of td elements; will contain undefined if there are gaps in the selection!
+
+            const textTableStruct = elementTableStruct.map(rowarr => {
+                return rowarr.map(tdElem => {
+                    if (tdElem !== undefined) {
+                        const elem = tdElem.firstChild;
+                        if (elem !== undefined) {
+                            try {
+                                return elem.getCopyText();
+                            } catch (e) {
+                                return elem.innerText; // may not work!
+                            }
+                        }
+                    }
+                    return '';
+                })
+            });
+
+            let copyPlainText = '';
+            textTableStruct.forEach(rowarr => {
+                return rowarr.forEach((celltext, index) => {
+                    copyPlainText += `${index > 0 ? '\t' : ''}${celltext}`;
+                });
+                copyPlainText += '\n';
+            });
+
+            let copyHTMLText = '<table><tbody>';
+            textTableStruct.forEach(rowarr => {
+                copyHTMLText += '<tr>';
+                return rowarr.forEach((celltext, index) => {
+                    copyHTMLText += `<td>${celltext}</td>`;
+                });
+                copyHTMLText += '</tr>';
+            });
+            copyHTMLText += "</tbody></table>";
+
+            const data = [new ClipboardItem({
+                ["text/plain"]: new Blob([copyPlainText], { type: "text/plain" }),
+                ["text/html"]: new Blob([copyHTMLText], { type: "text/html" }),
+            })];
+            navigator.clipboard.write(data).then(
+                () => {
+                    console.log("copy success")
+                },
+                () => {
+                    console.log("copy fail");
+                }
+            );
+        }
+
         function tableGenerator(element, tabledef) {
+            document.addEventListener("selectionchange", unselectAll);
+            document.addEventListener("keydown", (event) => {
+                if (event.code === "KeyC" && event.ctrlKey === true) {
+                    event.preventDefault();
+                    copySelectionToClipboard();
+                }
+            });
+
             const thead = document.createElement("thead");
             const tr = document.createElement("tr");
-            tabledef.columns.forEach(column => {
+            tabledef.columns.forEach((column, columnindex) => {
                 const th = document.createElement("th");
                 th.innerText = column.name;
+                th.setAttribute("col", columnindex);
+                th.onclick = (event) => {
+                    if (event.detail == 2) {
+                        //const selection = document.getSelection();
+                        //selection.removeAllRanges();
+                        document.querySelectorAll(`td[col="${columnindex}"]`).forEach(elem => {
+                            //const range = document.createRange();
+                            //range.selectNode(elem);
+                            //selection.addRange(range);
+
+                            elem.setAttribute("selected", 1);
+                        });
+                    }
+                };
                 tr.appendChild(th);
             });
             thead.appendChild(tr);
             const tbody = document.createElement("tbody");
 
-            tabledef.data.forEach(row => {
+            tabledef.data.forEach((row, rowindex) => {
                 const tr = document.createElement("tr");
 
-                row.forEach((cell, index) => {
+                row.forEach((cell, columnindex) => {
                     const td = document.createElement("td");
+                    td.setAttribute("col", columnindex);
+                    td.setAttribute("row", rowindex);
                     let elem;
-                    const widgettype = tabledef.columns[index].widgettype;
+                    const widgettype = tabledef.columns[columnindex].widgettype;
                     switch (widgettype) {
                         default:
                             elem = document.createElement(`widget-${widgettype}`);
                             elem.setAttribute('data', cell);
                         }
                     td.appendChild(elem);
+                    td.addEventListener("mousedown", (event) => {
+                        if (event.ctrlKey === false) {
+                            unselectAll();
+                        } else {
+                            downgradePreviousSelected();
+                        }
+                        td.setAttribute("selected", 2);
+                        event.preventDefault();
+                    });
                     tr.appendChild(td);
                 });
 
@@ -122,7 +258,7 @@
             const data = fetch(`/sheets/${params.get("sheet")}`).then(response => {
                 return response.json()
             }).then(data => {
-                vTableGenerator(document.getElementById('spreadsheet'), {
+                tableGenerator(document.getElementById('spreadsheet'), {
                     data: data.rows,
                     columns: data.columns
                 });
