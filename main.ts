@@ -315,7 +315,6 @@ app.get("/", function (req, res) {
 });
 
 app.get("/tasks", requiresLogin, requiresPermission(PERMISSION_VIEW_TASKS), (req, res) => {
-    console.log(req.user);
     res.json(Array.from(getTasks()));
 });
 
