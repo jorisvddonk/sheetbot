@@ -200,59 +200,6 @@
             element.appendChild(tbody);
         }
 
-        function vTableGenerator(element, tabledef) {
-            const tbody = document.createElement("tbody");
-            const tabletr = document.createElement("tr");
-            const rowheight = tabledef.columns.reduce((memo, coldef) => {
-                return coldef.maxheight > memo ? coldef.maxheight : memo;
-            }, 0);
-
-            tabledef.columns.forEach((column, columnindex) => {
-                const widgettype = tabledef.columns[columnindex].widgettype;
-                const columntable = document.createElement("table");
-                const columnthead = document.createElement("thead");
-                const columntbody = document.createElement("tbody");
-
-                // add header
-                const theadr = document.createElement("tr");
-                const theadh = document.createElement("th");
-                theadh.innerText = column.name;
-                theadr.appendChild(theadh);
-                columnthead.appendChild(theadr);
-
-                // add rows as needed to body
-                tabledef.data.forEach((row, rowindex) => {
-                    const tr = document.createElement("tr");
-                    const td = document.createElement("td");
-                    const cell = tabledef.data[rowindex][columnindex];
-                    let elem;
-                    switch (widgettype) {
-                        default:
-                            elem = document.createElement(`widget-${widgettype}`);
-                            elem.setAttribute('data', cell);
-                            elem.style.width = tabledef.columns[columnindex].maxwidth;
-                            elem.style.height = rowheight;
-                            elem.style.display = "block";
-                            elem.style.overflow = "auto";
-                        }
-                    td.appendChild(elem);
-                    tr.appendChild(td);
-
-                    columntbody.appendChild(tr);
-                });
-
-                columntable.appendChild(columnthead);
-                columntable.appendChild(columntbody);
-
-                const columntabletd = document.createElement("td");
-                columntabletd.appendChild(columntable);
-                tabletr.appendChild(columntabletd);
-                tabletr.appendChild(columntable);
-            });
-            tbody.appendChild(tabletr);
-            element.appendChild(tbody);
-        }
-
         const params = new URL(document.URL).searchParams;
         if (params.has("sheet")) {
             const data = fetch(`/sheets/${params.get("sheet")}`).then(response => {
