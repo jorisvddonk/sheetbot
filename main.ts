@@ -259,11 +259,15 @@ shell.ls().forEach(file => {
 `));*/
 
 const requiresLogin = (req, res, next) => {
-    const hdr = req.header('Authorization').split(" ")
-    if (hdr[0].toLowerCase() !== "bearer") {
+    const hdr = req.header('Authorization');
+    if (hdr === undefined) {
+        return res.status(401).json({ error: 'Unauthorized' });
+    }
+    const hdrs = hdr.split(" ")
+    if (hdrs[0].toLowerCase() !== "bearer") {
         return res.status(401).json({ error: 'Unknown authorization scheme' });
     }
-    const token = hdr[1];
+    const token = hdrs[1];
     if (!token) {
         return res.status(401).json({ error: 'Authentication failed' });
     }
