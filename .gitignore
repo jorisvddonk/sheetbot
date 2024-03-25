@@ -1,4 +1,9 @@
 tasks.db
+users.db
 sheets/*.db
 experiment.*
 artefacts/
+key.pem
+cert.pem
+csr.pem
+secret.txt

@@ -1,11 +1,22 @@
+import jsonwebtoken from "npm:jsonwebtoken";
+
+import https from "node:https";
+import { existsSync } from "https://deno.land/std@0.220.1/fs/mod.ts";
 import express from "npm:express";
 import multer from "npm:multer";
 import { DB } from "https://deno.land/x/sqlite/mod.ts";
 import { validateSheetName } from "./lib/sheet_validator.ts";
 import { upsert, validateTableName } from "./lib/data_providers/sqlite/lib.ts";
 import { SheetDB } from "./lib/data_providers/sqlite/sheetdb.ts";
+import { UserDB } from "./lib/data_providers/sqlite/userdb.ts";
 
 const IN_MEMORY = false;
+const SECRET_KEY = new TextDecoder().decode(Deno.readFileSync("./secret.txt"));
+
+const PERMISSION_VIEW_TASKS = "viewTasks";
+const PERMISSION_CREATE_TASKS = "createTasks";
+const PERMISSION_PERFORM_TASKS = "performTasks";
+const PERMISSION_PUT_SHEET_DATA = "putSheetData";
 
 const db = new DB("tasks.db");
 if (!IN_MEMORY) {
@@ -25,6 +36,8 @@ const app = express();
 app.use(express.json());
 app.use(express.static('static'))
 const upload = multer({ dest: './artefacts/' });
+
+const userdb = new UserDB();
 
 app.use((req, res, next) => {
     console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
@@ -245,15 +258,65 @@ shell.ls().forEach(file => {
 });
 `));*/
 
+const requiresLogin = (req, res, next) => {
+    const hdr = req.header('Authorization').split(" ")
+    if (hdr[0].toLowerCase() !== "bearer") {
+        return res.status(401).json({ error: 'Unknown authorization scheme' });
+    }
+    const token = hdr[1];
+    if (!token) {
+        return res.status(401).json({ error: 'Authentication failed' });
+    }
+
+    jsonwebtoken.verify(token, SECRET_KEY, (err, user) => {
+        if (err) {
+            console.error(err);
+            return res.status(403).json({ error: 'Authentication failed' });
+        }
+        req.user = user;
+        next();
+    });
+}
+
+const requiresPermission = (permission) => {
+    return (req, res, next) => {
+        if (!req.user.hasOwnProperty("permissions")) {
+            return res.status(403).json({ error: 'Forbidden' });
+        }
+        if (req.user.permissions.indexOf("*") === -1 && req.user.permissions.indexOf(permission) === -1) {
+            return res.status(403).json({ error: 'Forbidden' });
+        }
+        next();
+    }
+}
+
+app.post("/login", async (req, res) => {
+    try {
+        const { username, password } = req.body;
+        const user = await userdb.findUser(username);
+        const loginvalid = await userdb.verifyLogin(username, password);
+        if (!loginvalid) {
+          return res.status(401).json({ error: 'Authentication failed' });
+        }
+        const token = jsonwebtoken.sign({ userId: username, permissions: user.permissions.split(",") }, SECRET_KEY, { expiresIn: '1h' });
+        res.json({ token });
+      } catch (e) {
+        console.log(e); 
+        return res.status(500).json({ error: 'Authentication failed' });
+      }
+});
+
 app.get("/", function (req, res) {
   res.send("Hello World");
 });
 
-app.get("/tasks", (req, res) => {
+app.get("/tasks", requiresLogin, requiresPermission(PERMISSION_VIEW_TASKS), (req, res) => {
+    console.log(req.user);
     res.json(Array.from(getTasks()));
 });
 
-app.post("/tasks", upload.array('file'), async (req, res) => {
+
+app.post("/tasks", requiresLogin, requiresPermission(PERMISSION_CREATE_TASKS), upload.array('file'), async (req, res) => {
     const task = taskify(req.body.script);
     try {
         task.data = JSON.parse(req.body.data);
@@ -300,7 +363,7 @@ app.post("/tasks", upload.array('file'), async (req, res) => {
     res.send();
 });
 
-app.get("/tasks/get", (req, res) => {
+app.get("/tasks/get", requiresLogin, requiresPermission(PERMISSION_PERFORM_TASKS), (req, res) => {
     const task = getTaskToComplete(TaskStatus.AWAITING);
     if (task) {
         const taskScriptURL = `${req.protocol}://${req.get('host')}/scripts/${task.id}.ts`;
@@ -310,7 +373,7 @@ app.get("/tasks/get", (req, res) => {
     res.json({});
 });
 
-app.get("/tasks/:id", (req, res) => {
+app.get("/tasks/:id", requiresLogin, requiresPermission(PERMISSION_VIEW_TASKS), (req, res) => {
     const task = getTask(req.params.id);
     if (task) {
         res.json(task);
@@ -320,7 +383,7 @@ app.get("/tasks/:id", (req, res) => {
     res.send();
 });
 
-app.post("/tasks/:id/accept", (req, res) => {
+app.post("/tasks/:id/accept", requiresLogin, requiresPermission(PERMISSION_PERFORM_TASKS), (req, res) => {
     const task = getTask(req.params.id, TaskStatus.AWAITING);
     if (task) {
         updateTaskStatus(task.id, TaskStatus.RUNNING);
@@ -331,7 +394,7 @@ app.post("/tasks/:id/accept", (req, res) => {
     }
 });
 
-app.post("/tasks/:id/complete", (req, res) => {
+app.post("/tasks/:id/complete", requiresLogin, requiresPermission(PERMISSION_PERFORM_TASKS), (req, res) => {
     const task = getTask(req.params.id, TaskStatus.RUNNING);
     if (task) {
         updateTaskStatus(task.id, TaskStatus.COMPLETED);
@@ -345,7 +408,7 @@ app.post("/tasks/:id/complete", (req, res) => {
     }
 });
 
-app.post("/tasks/:id/data", (req, res) => {
+app.post("/tasks/:id/data", requiresLogin, requiresPermission(PERMISSION_PERFORM_TASKS), (req, res) => {
     const task = getTask(req.params.id);
     if (task) {
         res.json({});
@@ -357,7 +420,7 @@ app.post("/tasks/:id/data", (req, res) => {
     }
 });
 
-app.post("/tasks/:id/failed", (req, res) => {
+app.post("/tasks/:id/failed", requiresLogin, requiresPermission(PERMISSION_PERFORM_TASKS), (req, res) => {
     const task = tasks.get(req.params.id, TaskStatus.RUNNING);
     if (task) {
         updateTaskStatus(task.id, TaskStatus.FAILED);
@@ -399,7 +462,7 @@ app.get("/scripts/:id\.?.*", (req, res) => {
     }
 });
 
-app.post("/sheets/:id/data", (req, res) => {
+app.post("/sheets/:id/data", requiresLogin, requiresPermission(PERMISSION_PUT_SHEET_DATA), (req, res) => {
     if (!validateSheetName(req.params.id) || !validateTableName(req.params.id)) {
         res.status(500);
         res.send("Invalid sheet name");
@@ -447,7 +510,7 @@ app.get("/sheets", (req, res) => {
     res.send();
 });
 
-app.post('/tasks/:id/artefacts', upload.single('file'), async function (req, res) {
+app.post('/tasks/:id/artefacts', requiresLogin, requiresPermission(PERMISSION_PERFORM_TASKS), upload.single('file'), async function (req, res) {
     const task = getTask(req.params.id, TaskStatus.RUNNING);
     if (task) {
         const dirpath = `./artefacts/tasks/${req.params.id}`;
@@ -478,3 +541,12 @@ app.use('/artefacts', express.static('artefacts'));
 
 app.listen(3000);
 console.log("listening on http://localhost:3000/");
+
+if (existsSync("./key.pem") && existsSync("./cert.pem")) {
+    const key = new TextDecoder().decode(Deno.readFileSync('./key.pem'));
+    const cert = new TextDecoder().decode(Deno.readFileSync('./cert.pem'));
+    https.createServer({key: key, cert: cert}, app).listen(443);
+    console.log("listening on http://localhost:443/");
+} else {
+    console.log("No key.pem and cert.pem exist, so not setting up HTTPS!");
+}
