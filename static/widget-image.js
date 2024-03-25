@@ -15,5 +15,13 @@ export class ImageWidget extends LitElement {
     render() {
       return html`<img src="${this.data}"></img>`;
     }
+
+    getCopyText() {
+      return this.data;
+    }
+
+    getCopyHTML() {
+      return `<img src="${this.data}"></img>`;
+    }
   }
   customElements.define('widget-image', ImageWidget);

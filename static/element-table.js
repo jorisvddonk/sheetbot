@@ -78,6 +78,26 @@ export class TableElement extends LitElement {
             })
         });
 
+        const htmlTableStruct = elementTableStruct.map(rowarr => {
+            return rowarr.map(tdElem => {
+                if (tdElem !== undefined) {
+                    const elem = tdElem.firstElementChild;
+                    if (elem !== undefined) {
+                        try {
+                            return elem.getCopyHTML();
+                        } catch (e) {
+                            try {
+                                return elem.getCopyText();
+                            } catch (e) {
+                                return elem.innerText; // may not work!
+                            }
+                        }
+                    }
+                }
+                return '';
+            })
+        });
+
         let copyPlainText = '';
         textTableStruct.forEach(rowarr => {
             rowarr.forEach((celltext, index) => {
@@ -87,7 +107,7 @@ export class TableElement extends LitElement {
         });
 
         let copyHTMLText = '<table><tbody>';
-        textTableStruct.forEach(rowarr => {
+        htmlTableStruct.forEach(rowarr => {
             copyHTMLText += '<tr>';
             rowarr.forEach((celltext, index) => {
                 copyHTMLText += `<td>${celltext}</td>`;
