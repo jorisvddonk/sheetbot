@@ -63,7 +63,13 @@
             }
         }
 
-        const data = fetch("/tasks").then(response => {
+        const headers = {};
+        if (localStorage.hasOwnProperty("jwt_token")) {
+            headers["Authorization"] = `Bearer ${localStorage["jwt_token"]}`;
+        }
+        const data = fetch("/tasks", {
+            headers: headers
+        }).then(response => {
             return response.json()
         }).then(data => {
             jspreadsheet(document.getElementById('spreadsheet'), {
