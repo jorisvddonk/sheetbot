@@ -2,7 +2,7 @@ import { DB } from "https://deno.land/x/sqlite/mod.ts";
 
 
 const ALLOWED_TABLE_NAME_REGEX = /^[a-zA-Z0-9-_ ]+$/;
-const ALLOWED_COLUMN_NAME_REGEX = /^[a-zA-Z0-9-_ ]+$/;
+const ALLOWED_COLUMN_NAME_REGEX = /^[a-zA-Z0-9-_ .]+$/;
 
 export function validateTableName(tablename: string) {
     return ALLOWED_TABLE_NAME_REGEX.test(tablename);
