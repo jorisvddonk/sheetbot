@@ -424,7 +424,7 @@ app.post("/tasks/:id/data", requiresLogin, requiresPermission(PERMISSION_PERFORM
 });
 
 app.post("/tasks/:id/failed", requiresLogin, requiresPermission(PERMISSION_PERFORM_TASKS), (req, res) => {
-    const task = tasks.get(req.params.id, TaskStatus.RUNNING);
+    const task = getTask(req.params.id, TaskStatus.RUNNING);
     if (task) {
         updateTaskStatus(task.id, TaskStatus.FAILED);
         removeTaskFromAllDependsOn(task.id);
