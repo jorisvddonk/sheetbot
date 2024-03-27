@@ -7,3 +7,4 @@ key.pem
 cert.pem
 csr.pem
 secret.txt
+.capabilities.json
