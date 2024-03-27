@@ -70,6 +70,7 @@ const response = await checkForErrors(fetch(SHEETBOT_BASEURL + "/tasks/get", {
 const json = await response.json();
 if (json.hasOwnProperty("script")) {
   Deno.env.set("SHEETBOT_TASK_ID", json.id);
+  Deno.env.set("SHEETBOT_AUTHORIZATION_HEADER", headers["Authorization"]);
   Deno.env.set(
     "SHEETBOT_TASK_BASEURL",
     SHEETBOT_BASEURL + "/tasks/" + json.id,
