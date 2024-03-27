@@ -49,7 +49,10 @@ const response = await checkForErrors(fetch(SHEETBOT_BASEURL + "/tasks/get", {
   },
   body: JSON.stringify({
     type: 'deno',
-    capabilities: {}
+    capabilities: {
+      os: Deno.build.os,
+      arch: Deno.build.arch
+    }
   })
 }));
 
