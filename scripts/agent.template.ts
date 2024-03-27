@@ -42,10 +42,15 @@ if (Deno.env.has("SHEETBOT_AUTH_USER") && Deno.env.has("SHEETBOT_AUTH_PASS")) {
 }
 
 const response = await checkForErrors(fetch(SHEETBOT_BASEURL + "/tasks/get", {
-  method: "GET",
+  method: "POST",
   headers: {
-    ...headers
-  }
+    ...headers,
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    type: 'deno',
+    capabilities: {}
+  })
 }));
 
 const json = await response.json();

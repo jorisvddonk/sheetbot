@@ -1,5 +1,5 @@
 import jsonwebtoken from "npm:jsonwebtoken";
-
+import Ajv from "npm:ajv";
 import https from "node:https";
 import { existsSync } from "https://deno.land/std@0.220.1/fs/mod.ts";
 import express from "npm:express";
@@ -10,7 +10,6 @@ import { upsert, validateTableName } from "./lib/data_providers/sqlite/lib.ts";
 import { SheetDB } from "./lib/data_providers/sqlite/sheetdb.ts";
 import { UserDB } from "./lib/data_providers/sqlite/userdb.ts";
 
-const IN_MEMORY = false;
 const SECRET_KEY = new TextDecoder().decode(Deno.readFileSync("./secret.txt"));
 
 const PERMISSION_VIEW_TASKS = "viewTasks";
@@ -19,18 +18,19 @@ const PERMISSION_PERFORM_TASKS = "performTasks";
 const PERMISSION_PUT_SHEET_DATA = "putSheetData";
 
 const db = new DB("tasks.db");
-if (!IN_MEMORY) {
-    db.execute(`
-    CREATE TABLE IF NOT EXISTS tasks (
-        id STRING PRIMARY KEY,
-        script TEXT,
-        status INT,
-        data JSON,
-        artefacts JSON,
-        dependsOn JSON
-        )
-    `);
-}
+db.execute(`
+CREATE TABLE IF NOT EXISTS tasks (
+    id STRING PRIMARY KEY,
+    script TEXT,
+    status INT,
+    data JSON,
+    artefacts JSON,
+    dependsOn JSON,
+    ephemeral NUMERIC REQUIRED,
+    type STRING REQUIRED,
+    capabilitiesSchema JSON
+    )
+`);
 
 const app = express();
 app.use(express.json());
@@ -38,6 +38,8 @@ app.use(express.static('static'))
 const upload = multer({ dest: './artefacts/' });
 
 const userdb = new UserDB();
+
+const ajv = new Ajv();
 
 app.use((req, res, next) => {
     console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
@@ -50,7 +52,10 @@ interface Task {
     status: TaskStatus,
     data: Object,
     artefacts: string[],
-    dependsOn: string[]
+    dependsOn: string[],
+    ephemeral: Ephemeralness,
+    type: string,
+    capabilitiesSchema: Object
 }
 
 interface TaskQ extends Task {
@@ -64,7 +69,12 @@ enum TaskStatus {
     FAILED = 3
 }
 
-const tasks: Map<string, Task> = new Map();
+enum Ephemeralness {
+    PERSISTENT = 0, // task will not get auto-deleted on completion
+    EPHEMERAL_ON_SUCCESS = 1, // task will get auto-deleted, but only if completed successful; this allows you to debug failures
+    EPHEMERAL_ALWAYS = 2 // task will get auto-deleted when completed, regardless of if it completed succesfully or not
+}
+
 function taskify(script: string): Task {
     return {
         id: crypto.randomUUID(),
@@ -72,28 +82,30 @@ function taskify(script: string): Task {
         status: TaskStatus.AWAITING,
         data: {},
         artefacts: [],
-        dependsOn: []
+        dependsOn: [],
+        ephemeral: Ephemeralness.PERSISTENT,
+        type: "deno",
+        capabilitiesSchema: {}
     }
 }
 function addTask(task: Task) {
-    if (IN_MEMORY) {
-        tasks.set(task.id, task);
-    } else {
-        const query = db.prepareQuery<never, never, { id: string, script: string, status: TaskStatus, data: string, artefacts: string, dependsOn: string }>("INSERT INTO tasks (id, script, status, data, artefacts, dependsOn) VALUES (:id, :script, :status, :data, :artefacts, :dependsOn)");
-        query.execute({
-            id: task.id,
-            script: task.script,
-            status: task.status,
-            data: JSON.stringify(task.data),
-            artefacts: JSON.stringify(task.artefacts),
-            dependsOn: JSON.stringify(task.dependsOn)
-        });
-    }
+    const query = db.prepareQuery<never, never, { id: string, script: string, status: TaskStatus, data: string, artefacts: string, dependsOn: string, type: string, ephemeral: number, capabilitiesSchema: string }>("INSERT INTO tasks (id, script, status, data, artefacts, dependsOn, ephemeral, type, capabilitiesSchema) VALUES (:id, :script, :status, :data, :artefacts, :dependsOn, :ephemeral, :type, :capabilitiesSchema)");
+    query.execute({
+        id: task.id,
+        script: task.script,
+        status: task.status,
+        data: JSON.stringify(task.data),
+        artefacts: JSON.stringify(task.artefacts),
+        dependsOn: JSON.stringify(task.dependsOn),
+        type: task.type,
+        ephemeral: task.ephemeral,
+        capabilitiesSchema: JSON.stringify(task.capabilitiesSchema)
+    });
 }
 
 function parseOneSQLTask(obj) {
     if (obj !== undefined) {
-        return {...obj, data: JSON.parse(obj.data), artefacts: JSON.parse(obj.artefacts), dependsOn: JSON.parse(obj.dependsOn)};
+        return {...obj, data: JSON.parse(obj.data), artefacts: JSON.parse(obj.artefacts), dependsOn: JSON.parse(obj.dependsOn), capabilitiesSchema: JSON.parse(obj.capabilitiesSchema)};
     }
     return obj;
 }
@@ -105,123 +117,84 @@ function parseAllSQLTasks(array) {
     return array;
 }
 
-function getTaskToComplete(filter_by_status?: TaskStatus) {
-    // Get the task to complete, ensuring it's available and does not have any dependencies remaining
-    if (IN_MEMORY) {
-        for (const [taskid, task] of tasks.entries()) {
-            if (filter_by_status !== undefined && task.status === filter_by_status && task.dependsOn.length === 0) {
-                return task;
-            } else {
-                return task;
+function getTaskToComplete(type: string, capabilities?: object, filter_by_status?: TaskStatus) {
+    // Get the task to complete, ensuring it's available, does not have any dependencies remaining, and its capabilities schema (if any) matches the provided capabilities.
+    const query = db.prepareQuery<[string, string, TaskStatus], TaskQ>(`SELECT * FROM tasks WHERE type = :type AND (dependsOn IS NULL OR json_array_length(dependsOn) = 0) ${filter_by_status === undefined ? '' : 'AND status = :status'}`);
+    const tasks = query.allEntries({type: type, status: filter_by_status});
+    for (const taskRaw of tasks) {
+        const task = parseOneSQLTask(taskRaw);
+        if (Object.hasOwn(task, "capabilitiesSchema")) {
+            const validateResult = ajv.validate(task.capabilitiesSchema || {}, capabilities);
+            if (typeof validateResult === 'boolean') {
+                if (validateResult) {
+                    // Task acceptable! Return it.
+                    return task;
+                }
+            } else { // assuming it's a promise then
+                console.warn("Task submitted with asynchronous capabilitiesSchema; ignoring!");
+                // async schemas not supported! Ignore...
             }
-        }
-    } else {
-        if (filter_by_status === undefined) {
-            const query = db.prepareQuery<[string, string, TaskStatus], TaskQ>("SELECT id, script, status, data, artefacts, dependsOn FROM tasks WHERE (dependsOn IS NULL OR json_array_length(dependsOn) = 0)");
-            return parseOneSQLTask(query.firstEntry());
         } else {
-            const query = db.prepareQuery<[string, string, TaskStatus], TaskQ>("SELECT id, script, status, data, artefacts, dependsOn FROM tasks WHERE (dependsOn IS NULL OR json_array_length(dependsOn) = 0) AND status = :status");
-            return parseOneSQLTask(query.firstEntry({status: filter_by_status}));
+            return task;
         }
     }
 }
 
 function getTasks(filter_by_status?: TaskStatus) {
-    if (IN_MEMORY) {
-        const tasks_c = [];
-        for (const [taskid, task] of tasks.entries()) {
-            if (filter_by_status !== undefined && task.status === filter_by_status) {
-                tasks_c.push(task);
-            } else {
-                tasks_c.push(task);
-            }
-        }
-        return tasks_c;
+    if (filter_by_status === undefined) {
+        const query = db.prepareQuery<[string, string, TaskStatus], TaskQ>("SELECT * FROM tasks");
+        return parseAllSQLTasks(query.allEntries());
     } else {
-        if (filter_by_status === undefined) {
-            const query = db.prepareQuery<[string, string, TaskStatus], TaskQ>("SELECT id, script, status, data, artefacts, dependsOn FROM tasks");
-            return parseAllSQLTasks(query.allEntries());
-        } else {
-            const query = db.prepareQuery<[string, string, TaskStatus], TaskQ>("SELECT id, script, status, data, artefacts, dependsOn FROM tasks WHERE status = :status");
-            return parseAllSQLTasks(query.allEntries({status: filter_by_status}));
-        }
+        const query = db.prepareQuery<[string, string, TaskStatus], TaskQ>("SELECT * FROM tasks WHERE status = :status");
+        return parseAllSQLTasks(query.allEntries({status: filter_by_status}));
     }
 }
 
 function getTask(taskId: string, filter_by_status?: TaskStatus) {
-    if (IN_MEMORY) {
-        let task = tasks.get(taskId);
-        if (filter_by_status !== undefined && task !== undefined && task.status !== filter_by_status) {
-            task = undefined;
-        }
-        return task;
+    if (filter_by_status === undefined) {
+        const query = db.prepareQuery<[string, string, TaskStatus], TaskQ>("SELECT * FROM tasks WHERE id = :id");
+        return parseOneSQLTask(query.firstEntry({id: taskId}));
     } else {
-        if (filter_by_status === undefined) {
-            const query = db.prepareQuery<[string, string, TaskStatus], TaskQ>("SELECT id, script, status, data, artefacts, dependsOn FROM tasks WHERE id = :id");
-            return parseOneSQLTask(query.firstEntry({id: taskId}));
-        } else {
-            const query = db.prepareQuery<[string, string, TaskStatus], TaskQ>("SELECT id, script, status, data, artefacts, dependsOn FROM tasks WHERE id = :id AND status = :status");
-            return parseOneSQLTask(query.firstEntry({id: taskId, status: filter_by_status}));
-        }
+        const query = db.prepareQuery<[string, string, TaskStatus], TaskQ>("SELECT * FROM tasks WHERE id = :id AND status = :status");
+        return parseOneSQLTask(query.firstEntry({id: taskId, status: filter_by_status}));
     }
 }
 
 function updateTaskStatus(taskId: string, status: TaskStatus) {
-    if (IN_MEMORY) {
-        let task = tasks.get(taskId);
-        if (task !== undefined) {
-            task.status = status;
-        }
-    } else {
-        const query = db.prepareQuery<never, never, { id: string, status: TaskStatus }>("UPDATE tasks SET status = :status WHERE id = :id");
-        query.execute({id: taskId, status: status});
-    }
+    const query = db.prepareQuery<never, never, { id: string, status: TaskStatus }>("UPDATE tasks SET status = :status WHERE id = :id");
+    query.execute({id: taskId, status: status});
+}
+
+function deleteTask(taskId: string) {
+    const query = db.prepareQuery<never, never, { id: string }>("DELETE FROM tasks WHERE id = :id");
+    query.execute({id: taskId});
 }
 
 function updateTaskData(taskId: string, data: Object) {
-    if (IN_MEMORY) {
-        let task = tasks.get(taskId);
-        if (task !== undefined) {
-            task.data = Object.assign({}, task.data, data);
-        }
-    } else {
-        for (const [key, value] of Object.entries(data)) {
-            const query = db.prepareQuery<never, never, { id: string, key: string, value: string}>("UPDATE tasks SET data=(select json_set(data, :key, :value) from tasks where id == :id) where id == :id");
-            query.execute({id: taskId, key: `$.${key}`, value: value});
-        }
+    for (const [key, value] of Object.entries(data)) {
+        const query = db.prepareQuery<never, never, { id: string, key: string, value: string}>("UPDATE tasks SET data=(select json_set(data, :key, :value) from tasks where id == :id) where id == :id");
+        query.execute({id: taskId, key: `$.${key}`, value: value});
     }
 }
 
 function updateTaskAddArtefact(taskId, newArtefact: string) {
     const task = getTask(taskId);
-    if (IN_MEMORY) {
-        if (task !== undefined) {
-            task.artefacts = Array.from(new Set(task.artefacts.concat(newArtefact)));
-        }
-    } else {
-        if (task !== undefined) {
-            const artefacts = Array.from(new Set(task.artefacts.concat(newArtefact)));
-            const query = db.prepareQuery<never, never, { id: string, artefacts: string}>("UPDATE tasks SET artefacts=:artefacts where id == :id");
-            query.execute({id: taskId, artefacts: JSON.stringify(artefacts)});
-            // console.log(`Added artefact ${newArtefact} to task ${taskId}`);
-        }
+    if (task !== undefined) {
+        const artefacts = Array.from(new Set(task.artefacts.concat(newArtefact)));
+        const query = db.prepareQuery<never, never, { id: string, artefacts: string}>("UPDATE tasks SET artefacts=:artefacts where id == :id");
+        query.execute({id: taskId, artefacts: JSON.stringify(artefacts)});
+        // console.log(`Added artefact ${newArtefact} to task ${taskId}`);
     }
 }
 
 function removeTaskFromAllDependsOn(taskId: string) {
-    if (IN_MEMORY) {
-        tasks.forEach(task => {
-            task.dependsOn = task.dependsOn.filter(val => val !== taskId)
-        });
-    } else {
-        // This doesn't work in a single query for some reason in this version of sqlite... :(
-        const q = db.prepareQuery("SELECT *, (SELECT key FROM json_each(dependsOn) WHERE value = :taskid) as key from tasks WHERE key IS NOT NULL");
-        const rows = q.allEntries({taskid: taskId});
-        rows.forEach(row => {
-            const query = db.prepareQuery("UPDATE tasks SET dependsOn = JSON_REMOVE(dependsOn, '$[' || :k || ']')");
-            query.execute({k: row.key as string});
-        });
-    }
+    // This doesn't work in a single query for some reason in this version of sqlite... :(
+    const q = db.prepareQuery("SELECT *, (SELECT key FROM json_each(dependsOn) WHERE value = :taskid) as key from tasks WHERE key IS NOT NULL");
+    const rows = q.allEntries({taskid: taskId});
+    rows.forEach(row => {
+        const query = db.prepareQuery("UPDATE tasks SET dependsOn = JSON_REMOVE(dependsOn, '$[' || :k || ']')");
+        query.execute({k: row.key as string});
+    });
 }
 
 const javascript = (strings, ...values) => String.raw({ raw: strings }, ...values);
@@ -326,6 +299,13 @@ app.post("/tasks", requiresLogin, requiresPermission(PERMISSION_CREATE_TASKS), u
     } catch (e) {
         task.data = req.body.data;
     }
+    try {
+        task.capabilitiesSchema = JSON.parse(req.body.capabilitiesSchema);
+    } catch (e) {
+        task.capabilitiesSchema = req.body.capabilitiesSchema;
+    }
+    task.type = req.body.type;
+    task.ephemeral = req.body.ephemeral || Ephemeralness.PERSISTENT;
     let dependsOn: string[] = [];
     try {
         if (typeof req.body.dependsOn == "object") {
@@ -366,8 +346,8 @@ app.post("/tasks", requiresLogin, requiresPermission(PERMISSION_CREATE_TASKS), u
     res.send();
 });
 
-app.get("/tasks/get", requiresLogin, requiresPermission(PERMISSION_PERFORM_TASKS), (req, res) => {
-    const task = getTaskToComplete(TaskStatus.AWAITING);
+app.post("/tasks/get", requiresLogin, requiresPermission(PERMISSION_PERFORM_TASKS), (req, res) => {
+    const task = getTaskToComplete(req.body.type, req.body.capabilities, TaskStatus.AWAITING);
     if (task) {
         const taskScriptURL = `${req.protocol}://${req.get('host')}/scripts/${task.id}.ts`;
         res.json({script: taskScriptURL, id: task.id, type: "deno"})
@@ -405,6 +385,9 @@ app.post("/tasks/:id/complete", requiresLogin, requiresPermission(PERMISSION_PER
         res.json({});
         console.log(`Task ${req.params.id} completed with data ${JSON.stringify(req.body.data)}`);
         updateTaskData(task.id, req.body.data);
+        if (task.ephemeral === Ephemeralness.EPHEMERAL_ALWAYS || task.ephemeral == Ephemeralness.EPHEMERAL_ON_SUCCESS) {
+            deleteTask(task.id);
+        }
     } else {
         res.status(404);
         res.send();
@@ -428,6 +411,9 @@ app.post("/tasks/:id/failed", requiresLogin, requiresPermission(PERMISSION_PERFO
     if (task) {
         updateTaskStatus(task.id, TaskStatus.FAILED);
         removeTaskFromAllDependsOn(task.id);
+        if (task.ephemeral === Ephemeralness.EPHEMERAL_ALWAYS) {
+            deleteTask(task.id);
+        }
         res.json({});
     } else {
         res.status(404);
