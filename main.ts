@@ -187,6 +187,15 @@ function updateTaskAddArtefact(taskId, newArtefact: string) {
     }
 }
 
+function getAllTasksThatDependOn(taskId: string) {
+    const q = db.prepareQuery("SELECT *, (SELECT key FROM json_each(dependsOn) WHERE value = :taskid) as _json_array_key from tasks WHERE _json_array_key IS NOT NULL");
+    const rows = q.allEntries({taskid: taskId}).map(r => {
+        delete r["_json_array_key"];
+        return r;
+    });
+    return parseAllSQLTasks(rows);
+}
+
 function removeTaskFromAllDependsOn(taskId: string) {
     // This doesn't work in a single query for some reason in this version of sqlite... :(
     const q = db.prepareQuery("SELECT *, (SELECT key FROM json_each(dependsOn) WHERE value = :taskid) as key from tasks WHERE key IS NOT NULL");
@@ -376,8 +385,12 @@ app.post("/tasks/:id/failed", requiresLogin, requiresPermission(PERMISSION_PERFO
     const task = getTask(req.params.id, TaskStatus.RUNNING);
     if (task) {
         updateTaskStatus(task.id, TaskStatus.FAILED);
-        removeTaskFromAllDependsOn(task.id);
         if (task.ephemeral === Ephemeralness.EPHEMERAL_ALWAYS) {
+            // delete all tasks that depend on this ephemeral task that just failed
+            getAllTasksThatDependOn(task.id).forEach(t => {
+                deleteTask(t.id);
+            });
+            // delete this task
             deleteTask(task.id);
         }
         res.json({});
