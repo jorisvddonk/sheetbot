@@ -197,40 +197,6 @@ function removeTaskFromAllDependsOn(taskId: string) {
     });
 }
 
-const javascript = (strings, ...values) => String.raw({ raw: strings }, ...values);
-/*addTask(taskify(javascript`
-import shell from "npm:shelljs"
-import tmp from "npm:tmp"
-import $ from "https://deno.land/x/dax/mod.ts";
-
-async function subtask_statusupdate(subtaskname, completed) {
-    const data = {};
-    data["subtask/" + subtaskname] = completed ? true : false;
-    await fetch(Deno.env.get("SHEETBOT_TASK_DATAURL"), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({data: data})
-    });
-}
-
-
-let tmpdir = tmp.dirSync().name;
-$.cd(tmpdir);
-await subtask_statusupdate("git checkout", false);
-await $\`git clone https://github.com/jorisvddonk/tzo-c .\`
-await subtask_statusupdate("git checkout", true);
-await subtask_statusupdate("build", false);
-await $\`mkdir build\`
-await $\`cmake -S . -B build/\`
-await $\`cmake --build build/\`
-await subtask_statusupdate("build", true);
-shell.ls().forEach(file => {
-    shell.echo(file);
-});
-`));*/
-
 const requiresLogin = (req, res, next) => {
     const hdr = req.header('Authorization');
     if (hdr === undefined) {
