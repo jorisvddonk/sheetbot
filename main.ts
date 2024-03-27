@@ -263,12 +263,12 @@ app.post("/tasks", requiresLogin, requiresPermission(PERMISSION_CREATE_TASKS), u
     try {
         task.data = JSON.parse(req.body.data);
     } catch (e) {
-        task.data = req.body.data;
+        task.data = req.body.data || {};
     }
     try {
         task.capabilitiesSchema = JSON.parse(req.body.capabilitiesSchema);
     } catch (e) {
-        task.capabilitiesSchema = req.body.capabilitiesSchema;
+        task.capabilitiesSchema = req.body.capabilitiesSchema || {};
     }
     task.type = req.body.type;
     task.ephemeral = req.body.ephemeral || Ephemeralness.PERSISTENT;
