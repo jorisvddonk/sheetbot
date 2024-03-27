@@ -6,16 +6,16 @@ export class TaskStatusWidget extends LitElement {
 
       }
       div.awaiting {
-        background: #666;
+        background: #fee440;
       }
       div.running {
-        background: #f8f;
+        background: #f9dcc4;
       }
       div.completed {
-        background: #99f;
+        background: #00bbf9;
       }
       div.failed {
-        background: #f44;
+        background: #f15bb5;
       }
     `;
   

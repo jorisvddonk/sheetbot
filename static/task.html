@@ -8,6 +8,7 @@
     <script src="widget-code.js" type="module"></script>
     <script src="widget-text.js" type="module"></script>
     <script src="widget-taskstatus.js" type="module"></script>
+    <script src="widget-taskephemeral.js" type="module"></script>
     <style>
         table { 
             background-color: rgba(100, 100, 255, .1);
@@ -61,11 +62,27 @@
                     "datatype": "STRING"
                 },
                 {
+                    "name": "type",
+                    "widgettype": "text",
+                    "maxwidth": 100,
+                    "maxheight": 32,
+                    "columnorder": 1,
+                    "datatype": "STRING"
+                },
+                {
                     "name": "status",
                     "widgettype": "taskstatus",
                     "maxwidth": 100,
                     "maxheight": 32,
-                    "columnorder": 1,
+                    "columnorder": 2,
+                    "datatype": "NUMERIC"
+                },
+                {
+                    "name": "ephemeral",
+                    "widgettype": "taskephemeral",
+                    "maxwidth": 100,
+                    "maxheight": 32,
+                    "columnorder": 3,
                     "datatype": "NUMERIC"
                 },
                 {
@@ -73,7 +90,7 @@
                     "widgettype": "code",
                     "maxwidth": 500,
                     "maxheight": 500,
-                    "columnorder": 2,
+                    "columnorder": 4,
                     "datatype": "TEXT"
                 },
                 {
@@ -81,7 +98,23 @@
                     "widgettype": "code",
                     "maxwidth": 500,
                     "maxheight": 500,
-                    "columnorder": 3,
+                    "columnorder": 5,
+                    "datatype": "TEXT"
+                },
+                {
+                    "name": "capabilitiesSchema",
+                    "widgettype": "code",
+                    "maxwidth": 500,
+                    "maxheight": 500,
+                    "columnorder": 6,
+                    "datatype": "TEXT"
+                },
+                {
+                    "name": "dependsOn",
+                    "widgettype": "code",
+                    "maxwidth": 200,
+                    "maxheight": 200,
+                    "columnorder": 7,
                     "datatype": "TEXT"
                 }
             ];
