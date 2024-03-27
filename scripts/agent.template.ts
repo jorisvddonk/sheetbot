@@ -41,6 +41,20 @@ if (Deno.env.has("SHEETBOT_AUTH_USER") && Deno.env.has("SHEETBOT_AUTH_PASS")) {
   }
 }
 
+let localCapabilities = {};
+try {
+  const capabilitiesText = Deno.readTextFileSync("./.capabilities.json");
+  localCapabilities = JSON.parse(capabilitiesText);
+} catch (e) {
+  // ignore errors; file probably didn't exist
+}
+
+const capabilities = {
+  os: Deno.build.os,
+  arch: Deno.build.arch,
+  ...localCapabilities
+};
+
 const response = await checkForErrors(fetch(SHEETBOT_BASEURL + "/tasks/get", {
   method: "POST",
   headers: {
@@ -49,10 +63,7 @@ const response = await checkForErrors(fetch(SHEETBOT_BASEURL + "/tasks/get", {
   },
   body: JSON.stringify({
     type: 'deno',
-    capabilities: {
-      os: Deno.build.os,
-      arch: Deno.build.arch
-    }
+    capabilities: capabilities
   })
 }));
 
