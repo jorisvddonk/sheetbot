@@ -486,7 +486,8 @@ app.post('/tasks/:id/artefacts', requiresLogin, requiresPermission(PERMISSION_PE
         await Deno.rename(req.file.path, `${dirpath}/${req.file.originalname}`);
         const artefactURL = `${req.protocol}://${req.get('host')}/tasks/${req.params.id}/artefacts/${req.file.originalname}`;
         updateTaskAddArtefact(task.id, req.file.originalname);
-        res.json({url: artefactURL});
+        const directURL = `${req.protocol}://${req.get('host')}/artefacts/tasks/${req.params.id}/${req.file.originalname}`
+        res.json({url: artefactURL, directURL: directURL });
         res.send();
     } else {
         res.status(400);
