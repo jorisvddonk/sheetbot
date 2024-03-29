@@ -18,7 +18,7 @@ export class DownloadWidget extends LitElement {
     }
 
     render() {
-      if (this.data !== null && this.data !== undefined) {
+      if (this.data !== null && this.data !== undefined && this.data !== "null") {
         return html`<a href="${this.data}" target="_blank" title="${this.data}">Download</a>`;
       } else {
         return html`<span></span>`;
