@@ -449,6 +449,26 @@ app.post("/tasks/:id/failed", requiresLogin, requiresPermission(PERMISSION_PERFO
     }
 });
 
+app.post("/tasks/:id/clone", requiresLogin, requiresPermission(PERMISSION_CREATE_TASKS), async (req, res) => {
+    const task = getTask(req.params.id);
+    if (task) {
+        const oldTaskid = task.id;
+        task.id = crypto.randomUUID();
+        // clone all of the artefacts from the old task
+        const dirpath = `./artefacts/tasks/${task.id}`;
+        await Deno.mkdir(dirpath, { recursive: true });
+        for (const artefact of task.artefacts) {
+            await Deno.copyFile(`./artefacts/tasks/${oldTaskid}/${artefact}`, `${dirpath}/${artefact}`);
+        }
+        addTask(task);
+        res.json(task);
+        res.send();
+    } else {
+        res.status(404);
+        res.send();
+    }
+});
+
 app.use('/scripts', express.static('scripts'));
 app.get("/scripts/agent(\.ts)?", (req, res) => {
     if (req.path.endsWith(".ts")) {
