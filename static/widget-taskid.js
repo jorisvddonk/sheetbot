@@ -36,5 +36,11 @@ export class TaskIdWidget extends LitElement {
           }
         })
     }
+
+    getContextMenuDefinition() {
+      return [{text: `delete task ${this.data}`, action: () => {
+        this.delete();
+      }}]
+    }
   }
   customElements.define('widget-taskid', TaskIdWidget);

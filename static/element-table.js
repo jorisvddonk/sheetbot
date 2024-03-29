@@ -9,6 +9,8 @@ export class TableElement extends LitElement {
         super();
     }
 
+    contextMenuRef = createRef();
+
 
     createRenderRoot() {
         return this; // allow css to leak in
@@ -195,6 +197,21 @@ export class TableElement extends LitElement {
         event.preventDefault();
     }
 
+    contextCell(rowindex, columnindex, event, tdElement) {
+        const elem = tdElement.firstElementChild;
+        if (typeof elem.getContextMenuDefinition === 'function' && typeof this.contextMenuRef.value.setItems === 'function') {
+            event.preventDefault();
+            this.contextMenuRef.value.setItems(elem.getContextMenuDefinition());
+            this.contextMenuRef.value.style.top = event.clientY;
+            this.contextMenuRef.value.style.left = event.clientX;
+            this.contextMenuRef.value.style.position = "fixed";
+            if (typeof this.contextMenuRef.value.show  === 'function') {
+                this.contextMenuRef.value.show();
+            }
+            return false;
+        }
+    }
+
     tableGenerator(tabledef) {
         return html`
             <table><thead>
@@ -221,7 +238,11 @@ export class TableElement extends LitElement {
                                     }
                                 }
                             return html`
-                                <td ${ref(tdref)} col="${columnindex}" row="${rowindex}" @mousedown="${event => this.selectCell(rowindex, columnindex, event, tdref.value)}">${elem}</td>
+                                <td ${ref(tdref)} col="${columnindex}" row="${rowindex}" @mousedown="${event => {
+                                    if (event.button === 0) {
+                                        this.selectCell(rowindex, columnindex, event, tdref.value)
+                                    }
+                                }}" @contextmenu="${event => this.contextCell(rowindex, columnindex, event, tdref.value)}">${elem}</td>
                             `
                         })}
                     </tr>`;
@@ -232,7 +253,7 @@ export class TableElement extends LitElement {
     
     render() {
         if (this.data !== null && this.data !== undefined) {
-            return this.tableGenerator(JSON.parse(this.data));
+            return html`<span>${this.tableGenerator(JSON.parse(this.data))}<span><element-contextmenu ${ref(this.contextMenuRef)}/></span></span>`;
         }
         return html`<div></div>`;
     }

@@ -36,5 +36,11 @@ export class SheetKeyWidget extends LitElement {
         }
       })
     }
+
+    getContextMenuDefinition() {
+      return [{text: `delete row ${this.data}`, action: () => {
+        this.delete();
+      }}]
+    }
   }
   customElements.define('widget-sheetkey', SheetKeyWidget);

@@ -40,5 +40,11 @@ export class ImageWidget extends LitElement {
         }
       })
     }
+
+    getContextMenuDefinition() {
+      return [{text: 'delete', action: () => {
+        this.delete();
+      }}]
+    }
   }
   customElements.define('widget-image', ImageWidget);
