@@ -18,7 +18,11 @@ export class DownloadWidget extends LitElement {
     }
 
     render() {
-      return html`<a href="${this.data}" target="_blank" title="${this.data}">Download</a>`;
+      if (this.data !== null && this.data !== undefined) {
+        return html`<a href="${this.data}" target="_blank" title="${this.data}">Download</a>`;
+      } else {
+        return html`<span></span>`;
+      }
     }
 
     getCopyText() {
