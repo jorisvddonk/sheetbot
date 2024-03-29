@@ -15,6 +15,7 @@ const SECRET_KEY = new TextDecoder().decode(Deno.readFileSync("./secret.txt"));
 const PERMISSION_VIEW_TASKS = "viewTasks";
 const PERMISSION_CREATE_TASKS = "createTasks";
 const PERMISSION_PERFORM_TASKS = "performTasks";
+const PERMISSION_DELETE_TASKS = "deleteTasks";
 const PERMISSION_PUT_SHEET_DATA = "putSheetData";
 
 const db = new DB("tasks.db");
@@ -181,6 +182,15 @@ function updateTaskAddArtefact(taskId, newArtefact: string) {
     const task = getTask(taskId);
     if (task !== undefined) {
         const artefacts = Array.from(new Set(task.artefacts.concat(newArtefact)));
+        const query = db.prepareQuery<never, never, { id: string, artefacts: string}>("UPDATE tasks SET artefacts=:artefacts where id == :id");
+        query.execute({id: taskId, artefacts: JSON.stringify(artefacts)});
+        // console.log(`Added artefact ${newArtefact} to task ${taskId}`);
+    }
+}
+function updateTaskRemoveArtefact(taskId, artefact: string) {
+    const task = getTask(taskId);
+    if (task !== undefined) {
+        const artefacts = Array.from(task.artefacts.filter(x => x !== artefact));
         const query = db.prepareQuery<never, never, { id: string, artefacts: string}>("UPDATE tasks SET artefacts=:artefacts where id == :id");
         query.execute({id: taskId, artefacts: JSON.stringify(artefacts)});
         // console.log(`Added artefact ${newArtefact} to task ${taskId}`);
@@ -504,8 +514,38 @@ app.get('/tasks/:id/artefacts/:filename', function (req, res) {
         res.send();
     }
 });
+app.delete('/tasks/:id/artefacts/:filename', requiresLogin, requiresPermission(PERMISSION_DELETE_TASKS), async function (req, res) {
+    const task = getTask(req.params.id);
+    if (task) {
+        const dirpath = `./artefacts/tasks/${req.params.id}`;
+        await Deno.remove(`${dirpath}/${req.params.filename}`);
+        updateTaskRemoveArtefact(task.id, req.params.filename);
+        res.json({});
+        res.send();
+    } else {
+        res.status(404);
+        res.send();
+    }
+});
+
 
 app.use('/artefacts', express.static('artefacts'));
+app.delete('/artefacts/*', requiresLogin, requiresPermission(PERMISSION_DELETE_TASKS), async function (req, res) {
+    if (req.params[0].indexOf("..") === -1) {
+        const filepath = `./artefacts/${req.params[0]}`;
+        try {
+            await Deno.remove(`${filepath}`);
+            res.json({});
+            res.send();
+        } catch (e) {
+            res.status(404);
+            res.send();
+        }
+    } else {
+        res.status(404);
+        res.send();
+    }
+});
 
 app.set('trust proxy', (ip) => {
     if (ip === '127.0.0.1') {
