@@ -471,6 +471,19 @@ app.post("/sheets/:id/data", requiresLogin, requiresPermission(PERMISSION_PUT_SH
     res.status(200);
     res.send();
 });
+app.delete("/sheets/:id/data/:key", requiresLogin, requiresPermission(PERMISSION_PUT_SHEET_DATA), (req, res) => {
+    if (!validateSheetName(req.params.id) || !validateTableName(req.params.id)) {
+        res.status(500);
+        res.send("Invalid sheet name");
+        return;
+    }
+
+    const sheetdb = new SheetDB(`./sheets/${req.params.id}.db`); // TODO: move to a map? what's the performance of this?
+    sheetdb.deleteRow(req.params.key);
+    sheetdb.close();
+    res.status(204);
+    res.send();
+});
 
 app.get("/sheets/:id", (req, res) => {
     if (!validateSheetName(req.params.id) || !validateTableName(req.params.id)) {

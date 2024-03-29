@@ -68,6 +68,15 @@ export class SheetDB {
         return rows;
     }
 
+    deleteRow(key: string) {
+        const rows = this.db.query(`DELETE FROM "${SHEETDB_DATA_TABLENAME}" WHERE key = :key`, {key: key});
+        if (rows.length === 0) {
+            return true;
+        } else {
+            return false; // ???
+        }
+    }
+
     close() {
         this.db.close();
     }
