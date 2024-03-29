@@ -231,7 +231,12 @@ export class TableElement extends LitElement {
                             switch (widgettype) {
                                 default:
                                     elem = document.createElement(`widget-${widgettype}`);
-                                    if (typeof cell === "object") {
+                                    elem.setAttribute("rowkey", row[0]);
+                                    if (cell === null) {
+                                        elem.setAttribute('data', null);
+                                    } else if (cell === undefined) {
+                                        elem.setAttribute('data', undefined);
+                                    } else if (typeof cell === "object") {
                                         elem.setAttribute('data', JSON.stringify(cell, null, 2));
                                     } else {
                                         elem.setAttribute('data', cell);
