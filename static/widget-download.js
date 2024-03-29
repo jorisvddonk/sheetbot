@@ -28,5 +28,22 @@ export class DownloadWidget extends LitElement {
     getCopyHTML() {
       return this.data;
     }
+
+    delete() {
+      fetch(this.data, {
+          method: "DELETE",
+          headers: {
+              Authorization: `Bearer ${localStorage["jwt_token"]}`
+          }
+      }).then(response => {
+        if (response.status === 204) {
+          alert("Download artefact deleted successfully");
+        } else if (response.status === 401 || response.status === 403) {
+          alert("Download artefact deletion failed - you do not have the appropriate rights!");
+        } else {
+          alert("Download artefact deletion failed");
+        }
+      })
+    }
   }
   customElements.define('widget-download', DownloadWidget);

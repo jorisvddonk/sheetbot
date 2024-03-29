@@ -23,5 +23,22 @@ export class ImageWidget extends LitElement {
     getCopyHTML() {
       return `<img src="${this.data}"></img>`;
     }
+
+    delete() {
+      fetch(this.data, {
+          method: "DELETE",
+          headers: {
+              Authorization: `Bearer ${localStorage["jwt_token"]}`
+          }
+      }).then(response => {
+        if (response.status === 204) {
+          alert("Image deleted successfully");
+        } else if (response.status === 401 || response.status === 403) {
+          alert("Image deletion failed - you do not have the appropriate rights!");
+        } else {
+          alert("Image deletion failed");
+        }
+      })
+    }
   }
   customElements.define('widget-image', ImageWidget);
