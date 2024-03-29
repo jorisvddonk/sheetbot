@@ -350,6 +350,17 @@ app.get("/tasks/:id", requiresLogin, requiresPermission(PERMISSION_VIEW_TASKS), 
     res.status(404);
     res.send();
 });
+app.delete("/tasks/:id", requiresLogin, requiresPermission(PERMISSION_DELETE_TASKS), (req, res) => {
+    const task = getTask(req.params.id);
+    if (task) {
+        deleteTask(task.id);
+        res.status(204);
+        res.send();
+    } else {
+        res.status(404);
+        res.send();
+    }
+});
 
 app.post("/tasks/:id/accept", requiresLogin, requiresPermission(PERMISSION_PERFORM_TASKS), (req, res) => {
     const task = getTask(req.params.id, TaskStatus.AWAITING);
@@ -520,7 +531,7 @@ app.delete('/tasks/:id/artefacts/:filename', requiresLogin, requiresPermission(P
         const dirpath = `./artefacts/tasks/${req.params.id}`;
         await Deno.remove(`${dirpath}/${req.params.filename}`);
         updateTaskRemoveArtefact(task.id, req.params.filename);
-        res.json({});
+        res.status(204);
         res.send();
     } else {
         res.status(404);
@@ -535,7 +546,7 @@ app.delete('/artefacts/*', requiresLogin, requiresPermission(PERMISSION_DELETE_T
         const filepath = `./artefacts/${req.params[0]}`;
         try {
             await Deno.remove(`${filepath}`);
-            res.json({});
+            res.status(204);
             res.send();
         } catch (e) {
             res.status(404);

@@ -135,6 +135,12 @@ export class TableElement extends LitElement {
             event.preventDefault();
             this.copySelectionToClipboard();
         }
+        if (event.key === "Delete") {
+            const elem = document.querySelector(`table td[selected="2"] > *`);
+            if (typeof elem.delete === 'function') {
+                elem.delete();
+            }
+        }
     }
 
     connectedCallback() {

@@ -9,6 +9,7 @@
     <script src="widget-text.js" type="module"></script>
     <script src="widget-taskstatus.js" type="module"></script>
     <script src="widget-taskephemeral.js" type="module"></script>
+    <script src="widget-taskid.js" type="module"></script>
     <style>
         table { 
             background-color: rgba(100, 100, 255, .1);
@@ -55,7 +56,7 @@
             const columns = [
                 {
                     "name": "id",
-                    "widgettype": "text",
+                    "widgettype": "taskid",
                     "maxwidth": 300,
                     "maxheight": 300,
                     "columnorder": 0,
@@ -94,15 +95,15 @@
                     "datatype": "TEXT"
                 },
                 {
-                    "name": "script",
+                    "name": "artefacts",
                     "widgettype": "code",
-                    "maxwidth": 500,
+                    "maxwidth": 300,
                     "maxheight": 500,
                     "columnorder": 5,
                     "datatype": "TEXT"
                 },
                 {
-                    "name": "capabilitiesSchema",
+                    "name": "script",
                     "widgettype": "code",
                     "maxwidth": 500,
                     "maxheight": 500,
@@ -110,11 +111,19 @@
                     "datatype": "TEXT"
                 },
                 {
+                    "name": "capabilitiesSchema",
+                    "widgettype": "code",
+                    "maxwidth": 500,
+                    "maxheight": 500,
+                    "columnorder": 7,
+                    "datatype": "TEXT"
+                },
+                {
                     "name": "dependsOn",
                     "widgettype": "code",
                     "maxwidth": 200,
                     "maxheight": 200,
-                    "columnorder": 7,
+                    "columnorder": 8,
                     "datatype": "TEXT"
                 }
             ];
