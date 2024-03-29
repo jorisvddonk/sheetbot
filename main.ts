@@ -507,6 +507,13 @@ app.get('/tasks/:id/artefacts/:filename', function (req, res) {
 
 app.use('/artefacts', express.static('artefacts'));
 
+app.set('trust proxy', (ip) => {
+    if (ip === '127.0.0.1') {
+        return true; // trusted IPs
+    } else {
+        return false;
+    }
+});
 
 app.listen(3000);
 console.log("listening on http://localhost:3000/");
