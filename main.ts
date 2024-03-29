@@ -16,6 +16,7 @@ const PERMISSION_VIEW_TASKS = "viewTasks";
 const PERMISSION_CREATE_TASKS = "createTasks";
 const PERMISSION_PERFORM_TASKS = "performTasks";
 const PERMISSION_DELETE_TASKS = "deleteTasks";
+const PERMISSION_UPDATE_TASKS = "updateTasks";
 const PERMISSION_PUT_SHEET_DATA = "putSheetData";
 
 const db = new DB("tasks.db");
@@ -169,6 +170,13 @@ function updateTaskStatus(taskId: string, status: TaskStatus) {
 function deleteTask(taskId: string) {
     const query = db.prepareQuery<never, never, { id: string }>("DELETE FROM tasks WHERE id = :id");
     query.execute({id: taskId});
+}
+
+function setTaskStatus(taskId: string, status: number) {
+    if (typeof status === "number" && (status === 0 || status === 1 || status === 2 || status === 3)) {
+        const query = db.prepareQuery<never, never, { id: string, status: number}>("UPDATE tasks SET status = :status where id == :id");
+        query.execute({id: taskId, status: status});
+    }
 }
 
 function updateTaskData(taskId: string, data: Object) {
@@ -356,6 +364,26 @@ app.delete("/tasks/:id", requiresLogin, requiresPermission(PERMISSION_DELETE_TAS
         deleteTask(task.id);
         res.status(204);
         res.send();
+    } else {
+        res.status(404);
+        res.send();
+    }
+});
+app.patch("/tasks/:id", requiresLogin, requiresPermission(PERMISSION_UPDATE_TASKS), (req, res) => {
+    const task = getTask(req.params.id);
+    if (task) {
+        try {
+            if (req.body.hasOwnProperty("status")) {
+                // updating status
+                setTaskStatus(task.id, req.body.status);
+            }
+        } catch (e) {
+            res.status(500);
+            res.send();
+        } finally {
+            res.status(204);
+            res.send();
+        }
     } else {
         res.status(404);
         res.send();
