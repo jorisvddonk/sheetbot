@@ -38,7 +38,7 @@ export class SheetDB {
             )`);
             this.db.execute(`
             CREATE VIEW IF NOT EXISTS "${SHEETDB_COLUMNSTRUCTURE_VIEWNAME}" AS 
-                SELECT c.*, p.type as 'datatype' from "${SHEETDB_COLUMNSTRUCTURE_TABLENAME}" c JOIN pragma_table_info('${SHEETDB_DATA_VIEWNAME}') p on c.name = p.name
+                SELECT p.name, c.widgettype, c.maxheight, c.maxwidth, (ROW_NUMBER() OVER(ORDER BY c.columnorder)) - 1 AS columnorder, p.type as 'datatype' from "columnstructure" c JOIN pragma_table_info('data_view') p on p.name LIKE c.name
                 ORDER BY c.columnorder ASC`);
     }
 
