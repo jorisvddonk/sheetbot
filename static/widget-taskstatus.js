@@ -17,6 +17,9 @@ export class TaskStatusWidget extends LitElement {
       div.failed {
         background: #f15bb5;
       }
+      div.paused {
+        background: #777;
+      }
     `;
   
     static properties = {
@@ -43,6 +46,9 @@ export class TaskStatusWidget extends LitElement {
       if (num == 3) {
         return "failed";
       }
+      if (num == 4) {
+        return "paused";
+      }
     }
 
     render() {
@@ -61,6 +67,8 @@ export class TaskStatusWidget extends LitElement {
         status = 2;
       } else if (newStatus === 'failed') {
         status = 3;
+      } else if (newStatus === 'paused') {
+        status = 4;
       }
       fetch(`/tasks/${this.rowkey}`, {
         method: "PATCH",
@@ -97,6 +105,11 @@ export class TaskStatusWidget extends LitElement {
         {
           text: `set to 'failed'`, action: () => {
             this.setStatus('failed');
+          }
+        },
+        {
+          text: `set to 'paused'`, action: () => {
+            this.setStatus('paused');
           }
         }
       ]

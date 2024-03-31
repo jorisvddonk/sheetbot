@@ -68,7 +68,8 @@ enum TaskStatus {
     AWAITING = 0,
     RUNNING = 1,
     COMPLETED = 2,
-    FAILED = 3
+    FAILED = 3,
+    PAUSED = 4,
 }
 
 enum Ephemeralness {
@@ -311,6 +312,7 @@ app.post("/tasks", requiresLogin, requiresPermission(PERMISSION_CREATE_TASKS), u
     } catch (e) {
         dependsOn = [];
     }
+    task.status = req.body.status !== undefined ? parseInt(req.body.status) : TaskStatus.AWAITING;
     const dirpath = `./artefacts/tasks/${task.id}`;
     await Deno.mkdir(dirpath, { recursive: true });
     const artefacts = [];
@@ -561,7 +563,7 @@ app.get("/sheets", (req, res) => {
 });
 
 app.post('/tasks/:id/artefacts', requiresLogin, requiresPermission(PERMISSION_PERFORM_TASKS), upload.single('file'), async function (req, res) {
-    const task = getTask(req.params.id, TaskStatus.RUNNING);
+    const task = getTask(req.params.id);
     if (task) {
         const dirpath = `./artefacts/tasks/${req.params.id}`;
         await Deno.mkdir(dirpath, { recursive: true });
