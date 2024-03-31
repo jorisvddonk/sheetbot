@@ -143,6 +143,30 @@ export class TableElement extends LitElement {
                 elem.delete();
             }
         }
+        if (event.key === "ArrowDown" || event.key === "ArrowUp" || event.key === "ArrowLeft" || event.key === "ArrowRight") {
+            let rowAdd = 0;
+            let colAdd = 0;
+            if (event.key === "ArrowDown") {
+                rowAdd += 1;
+            }
+            if (event.key === "ArrowUp") {
+                rowAdd -= 1;
+            }
+            if (event.key === "ArrowLeft") {
+                colAdd -= 1;
+            }
+            if (event.key === "ArrowRight") {
+                colAdd += 1;
+            }
+            const curElem = document.querySelector(`table td[selected="2"]`);
+            const elem = document.querySelector(`table td[row="${parseInt(curElem.getAttribute("row")) + rowAdd}"][col="${parseInt(curElem.getAttribute("col")) + colAdd}"]`);
+            if (elem) {
+                curElem.removeAttribute("selected");
+                elem.setAttribute("selected", 2);
+                elem.scrollIntoViewIfNeeded();
+                event.preventDefault();
+            }
+        }
     }
 
     connectedCallback() {
