@@ -13,7 +13,11 @@ export class ImageWidget extends LitElement {
     }
 
     render() {
-      return html`<img src="${this.data}"></img>`;
+      if (this.data !== null && this.data !== undefined && this.data !== "null") {
+        return html`<img src="${this.data}"></img>`;
+      } else {
+        return html`<span></span>`;
+      }
     }
 
     getCopyText() {
@@ -21,7 +25,7 @@ export class ImageWidget extends LitElement {
     }
 
     getCopyHTML() {
-      return `<img src="${this.data}"></img>`;
+      return this.render();
     }
 
     delete() {
