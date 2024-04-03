@@ -52,10 +52,10 @@ export async function uploadArtefact(filename, file: Uint8Array, taskid?: string
         }
     }).then(checkError).then(res => res.json());
 }
-export async function uploadArtefactFromFilepath(filepath, taskid?: string) {
+export async function uploadArtefactFromFilepath(filepath, filename?: string, taskid?: string) {
     const file = await Deno.readFile(filepath);
-    const filename = basename(filepath);
-    return uploadArtefact(filename, file, taskid);
+    const filen = filename !== undefined ? filename : basename(filepath);
+    return uploadArtefact(filen, file, taskid);
 }
 
 export async function getScript(path) {
@@ -81,4 +81,14 @@ export async function patchTask(taskspecpartial, taskid?: string) {
         },
         body: JSON.stringify(taskspecpartial)
     }).then(checkError).then(() => getTask(taskid));
+}
+
+export async function deleteTask(taskid?: string) {
+    return await fetch(taskid === undefined ? Deno.env.get("SHEETBOT_TASK_BASEURL") : `${Deno.env.get("SHEETBOT_BASEURL")!}/tasks/${taskid}`, {
+        method: "DELETE",
+        headers: {
+            "Content-Type": "application/json",
+            'Authorization': Deno.env.get("SHEETBOT_AUTHORIZATION_HEADER")
+        }
+    }).then(checkError).then(() => undefined);
 }

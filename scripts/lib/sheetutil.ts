@@ -10,3 +10,12 @@ export async function addSheetData(sheet, data) {
     body: JSON.stringify(data)
   }).then(checkError).then(() => undefined);
 };
+
+export async function getSheetData(sheet) {
+  return fetch(`${Deno.env.get("SHEETBOT_BASEURL")}/sheets/${sheet}`, {
+    method: "GET",
+    headers: {
+      'Authorization': Deno.env.get("SHEETBOT_AUTHORIZATION_HEADER")
+    }
+  }).then(checkError).then(res => res.json());
+};
