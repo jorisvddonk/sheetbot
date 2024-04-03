@@ -138,10 +138,11 @@ export class TableElement extends LitElement {
             this.copySelectionToClipboard();
         }
         if (event.key === "Delete") {
-            const elem = document.querySelector(`table td[selected="2"] > *`);
-            if (typeof elem.delete === 'function') {
-                elem.delete();
-            }
+            document.querySelectorAll(`table td[selected] > *`).forEach(elem => {
+                if (typeof elem.delete === 'function') {
+                    elem.delete();
+                }
+            });
         }
         if (event.key === "ArrowDown" || event.key === "ArrowUp" || event.key === "ArrowLeft" || event.key === "ArrowRight") {
             let rowAdd = 0;
