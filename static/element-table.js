@@ -223,6 +223,9 @@ export class TableElement extends LitElement {
     }
 
     contextCell(rowindex, columnindex, event, tdElement) {
+        if (event.shiftKey) {
+            return;
+        }
         const elem = tdElement.firstElementChild;
         if (typeof elem.getContextMenuDefinition === 'function' && typeof this.contextMenuRef.value.setItems === 'function') {
             event.preventDefault();
