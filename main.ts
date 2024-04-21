@@ -174,7 +174,7 @@ function deleteTask(taskId: string) {
 }
 
 function setTaskStatus(taskId: string, status: number) {
-    if (typeof status === "number" && (status === 0 || status === 1 || status === 2 || status === 3)) {
+    if (typeof status === "number" && (status === 0 || status === 1 || status === 2 || status === 3 || status === 4)) {
         const query = db.prepareQuery<never, never, { id: string, status: number}>("UPDATE tasks SET status = :status where id == :id");
         query.execute({id: taskId, status: status});
     }
