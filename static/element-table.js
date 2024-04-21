@@ -253,23 +253,40 @@ export class TableElement extends LitElement {
                 ${tabledef.data.map((row, rowindex) => {
                     return html`<tr>
                     ${row.map((cell, columnindex) => {
-                            const tdref = createRef();
+                            function generateElement(widgettype) {
+                                let elem;
+                                switch (widgettype) {
+                                    default:
+                                        elem = document.createElement(`widget-${widgettype}`);
+                                        elem.setAttribute("rowkey", row[0]);
+                                        elem.setAttribute("style", `overflow: auto; display: inline-block; max-width:${tabledef.columns[columnindex].maxwidth}px; max-height:${tabledef.columns[columnindex].maxheight}px;`);
+                                        if (cell === null) {
+                                            elem.setAttribute('data', null);
+                                        } else if (cell === undefined) {
+                                            elem.setAttribute('data', undefined);
+                                        } else if (typeof cell === "object") {
+                                            elem.setAttribute('data', JSON.stringify(cell, null, 2));
+                                        } else {
+                                            elem.setAttribute('data', cell);
+                                        }
+                                    }
+                                return elem;
+                            }
                             let elem;
                             const widgettype = tabledef.columns[columnindex].widgettype;
-                            switch (widgettype) {
-                                default:
-                                    elem = document.createElement(`widget-${widgettype}`);
-                                    elem.setAttribute("rowkey", row[0]);
-                                    if (cell === null) {
-                                        elem.setAttribute('data', null);
-                                    } else if (cell === undefined) {
-                                        elem.setAttribute('data', undefined);
-                                    } else if (typeof cell === "object") {
-                                        elem.setAttribute('data', JSON.stringify(cell, null, 2));
-                                    } else {
-                                        elem.setAttribute('data', cell);
-                                    }
+                            if (Array.isArray(widgettype)) {
+                                // we have multiple widgets, slot them all into the first!
+                                elem = generateElement(widgettype[0]);
+                                elem.setAttribute("numslots", widgettype.length - 1);
+                                let innerHTML = "";
+                                for (let i = 1; i < widgettype.length; i++) {
+                                    innerHTML = innerHTML + `<div slot="${i}">${generateElement(widgettype[i]).outerHTML}</div>`;
                                 }
+                                elem.innerHTML = innerHTML;
+                            } else {
+                                elem = generateElement(widgettype);
+                            }
+                            const tdref = createRef();
                             return html`
                                 <td ${ref(tdref)} col="${columnindex}" row="${rowindex}" @mousedown="${event => {
                                     if (event.button === 0) {

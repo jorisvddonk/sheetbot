@@ -11,6 +11,8 @@
     <script src="widget-taskstatus.js" type="module"></script>
     <script src="widget-taskephemeral.js" type="module"></script>
     <script src="widget-taskid.js" type="module"></script>
+    <script src="widget-hashimg.js" type="module"></script>
+    <script src="widget-multi.js" type="module"></script>
     <style>
         table { 
             background-color: rgba(100, 100, 255, .1);
@@ -105,7 +107,7 @@
                 },
                 {
                     "name": "script",
-                    "widgettype": "code",
+                    "widgettype": ["multi", "hashimg", "code"],
                     "maxwidth": 500,
                     "maxheight": 500,
                     "columnorder": 6,
