@@ -254,22 +254,31 @@ export class TableElement extends LitElement {
                     return html`<tr>
                     ${row.map((cell, columnindex) => {
                             function generateElement(widgettype) {
-                                let elem;
-                                switch (widgettype) {
-                                    default:
-                                        elem = document.createElement(`widget-${widgettype}`);
-                                        elem.setAttribute("rowkey", row[0]);
-                                        elem.setAttribute("style", `overflow: auto; display: inline-block; max-width:${tabledef.columns[columnindex].maxwidth}px; max-height:${tabledef.columns[columnindex].maxheight}px;`);
-                                        if (cell === null) {
-                                            elem.setAttribute('data', null);
-                                        } else if (cell === undefined) {
-                                            elem.setAttribute('data', undefined);
-                                        } else if (typeof cell === "object") {
-                                            elem.setAttribute('data', JSON.stringify(cell, null, 2));
-                                        } else {
-                                            elem.setAttribute('data', cell);
-                                        }
-                                    }
+                                let elem = document.createElement(`widget-${widgettype}`);
+                                elem.setAttribute("rowkey", row[0]);
+                                elem.setAttribute("style", `overflow: auto; display: inline-block; position: relative;`);
+                                const coldef = tabledef.columns[columnindex];
+                                if (coldef.maxwidth !== undefined) {
+                                    elem.style.maxWidth = coldef.maxwidth + "px";
+                                }
+                                if (coldef.minwidth !== undefined) {
+                                    elem.style.minWidth = coldef.minwidth + "px";
+                                }
+                                if (coldef.maxheight !== undefined) {
+                                    elem.style.maxHeight = coldef.maxheight + "px";
+                                }
+                                if (coldef.minheight !== undefined) {
+                                    elem.style.minHeight = coldef.minheight + "px";
+                                }
+                                if (cell === null) {
+                                    elem.setAttribute('data', null);
+                                } else if (cell === undefined) {
+                                    elem.setAttribute('data', undefined);
+                                } else if (typeof cell === "object") {
+                                    elem.setAttribute('data', JSON.stringify(cell, null, 2));
+                                } else {
+                                    elem.setAttribute('data', cell);
+                                }
                                 return elem;
                             }
                             let elem;
