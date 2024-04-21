@@ -3,21 +3,31 @@ import {html, css, LitElement} from 'https://cdn.jsdelivr.net/gh/lit/dist@3/all/
 export class TaskStatusWidget extends LitElement {
     static styles = css`
       div {
-
+        width: 100%;
+        height: 100%;
+        display: grid;
+        grid-template-columns: auto;
+        grid-template-rows: auto;
       }
-      div.awaiting {
+
+      span {
+        justify-self: center;
+        align-self: center;
+      }
+      
+      .awaiting {
         background: #fee440;
       }
-      div.running {
+      .running {
         background: #f9dcc4;
       }
-      div.completed {
+      .completed {
         background: #00bbf9;
       }
-      div.failed {
+      .failed {
         background: #f15bb5;
       }
-      div.paused {
+      .paused {
         background: #777;
       }
     `;
@@ -52,7 +62,7 @@ export class TaskStatusWidget extends LitElement {
     }
 
     render() {
-      return html`<div class="${this.numberToStatus(this.data)}">${this.numberToStatus(this.data)}</div>`;
+      return html`<div class="${this.numberToStatus(this.data)}"><span>${this.numberToStatus(this.data)}</span></div>`;
     }
 
     getCopyText() {

@@ -1,7 +1,20 @@
 import {html, css, LitElement} from 'https://cdn.jsdelivr.net/gh/lit/dist@3/all/lit-all.min.js';
 
 export class TaskIdWidget extends LitElement {
-    static styles = css``;
+    static styles = css`
+      div {
+        width: 100%;
+        height: 100%;
+        display: grid;
+        grid-template-columns: auto;
+        grid-template-rows: auto;
+      }
+
+      span {
+        justify-self: center;
+        align-self: center;
+      }
+    `;
   
     static properties = {
       data: {type: String},
@@ -13,7 +26,7 @@ export class TaskIdWidget extends LitElement {
     }
 
     render() {
-      return html`<span>${this.data}</span>`;
+      return html`<div><span>${this.data}</span></div>`;
     }
 
     getCopyText() {

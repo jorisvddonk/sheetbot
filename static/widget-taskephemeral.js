@@ -2,13 +2,26 @@ import {html, css, LitElement} from 'https://cdn.jsdelivr.net/gh/lit/dist@3/all/
 
 export class TaskEphemeralWidget extends LitElement {
     static styles = css`
-      div.persistent {
+      div {
+        width: 100%;
+        height: 100%;
+        display: grid;
+        grid-template-columns: auto;
+        grid-template-rows: auto;
+      }
+
+      span {
+        justify-self: center;
+        align-self: center;
+      }
+
+      .persistent {
           background: #00f5d4;
       }
-      div.ephemeral_on_success {
+      .ephemeral_on_success {
           background: #00bbf9;
       }
-      div.ephemeral_always {
+      .ephemeral_always {
           background: #fee440;
       }
     `;
@@ -35,7 +48,7 @@ export class TaskEphemeralWidget extends LitElement {
     }
 
     render() {
-      return html`<div class="${this.numberToEphemeralness(this.data)}">${this.numberToEphemeralness(this.data)}</div>`;
+      return html`<div class="${this.numberToEphemeralness(this.data)}"><span>${this.numberToEphemeralness(this.data)}</span></div>`;
     }
 
     getCopyText() {
