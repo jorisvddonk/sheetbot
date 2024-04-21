@@ -1,7 +1,23 @@
 import {html, css, LitElement} from 'https://cdn.jsdelivr.net/gh/lit/dist@3/all/lit-all.min.js';
 
 export class ImageWidget extends LitElement {
-    static styles = css``;
+    static styles = css`
+      div {
+        width: 100%;
+        height: 100%;
+        display: grid;
+        grid-template-columns: auto;
+        grid-template-rows: auto;
+      }
+
+      img {
+        justify-self: center;
+        align-self: center;
+        object-fit: contain;
+        width: 100%;
+        height: 100%;
+      }
+    `;
   
     static properties = {
       data: {type: String},
@@ -14,7 +30,7 @@ export class ImageWidget extends LitElement {
 
     render() {
       if (this.data !== null && this.data !== undefined && this.data !== "null") {
-        return html`<img src="${this.data}"></img>`;
+        return html`<div><img src="${this.data}"></img></div>`;
       } else {
         return html`<span></span>`;
       }
