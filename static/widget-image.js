@@ -64,6 +64,8 @@ export class ImageWidget extends LitElement {
     getContextMenuDefinition() {
       return [{text: 'delete', action: () => {
         this.delete();
+      }}, {text: 'open in new tab', action: () => {
+        window.open(this.data);
       }}]
     }
   }
