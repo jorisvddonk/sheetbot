@@ -542,7 +542,18 @@ app.get("/sheets/:id", (req, res) => {
         return;
     }
 
-    const sheetdb = new SheetDB(`./sheets/${req.params.id}.db`); // TODO: move to a map? what's the performance of this?
+    let sheetdb;
+    try {
+        sheetdb = new SheetDB(`./sheets/${req.params.id}.db`); // TODO: move to a map? what's the performance of this?
+    } catch (e) {
+        if (e.name === 'NotFoundError') {
+            res.status(404);
+        } else {
+            res.status(500);
+        }
+        res.send();
+        return;
+    }
     const schema = sheetdb.getSchema();
     const rows = sheetdb.getRows();
     sheetdb.close();

@@ -1,5 +1,6 @@
 import { DB } from "https://deno.land/x/sqlite@v3.8/mod.ts";
 import { upsert } from "./lib.ts";
+import { existsSync } from "https://deno.land/std@0.220.1/fs/mod.ts";
 
 export const SHEETDB_DATA_TABLENAME = "data"; // used for writing
 export const SHEETDB_DATA_VIEWNAME = "data_view"; // used for reading, can be customized by user to alter data if needed
@@ -16,10 +17,20 @@ export interface ColumnInfo {
     [name: string]: string | string[]
 }
 
+export class NotFoundError extends Error {
+    constructor(message: string) {
+        super(message);
+        this.name = "NotFoundError";
+    }
+}
+
 export class SheetDB {
     db: DB;
     
     constructor(filepath: string) {
+        if (!existsSync(filepath)) {
+            throw new NotFoundError("Sheet does not exist");
+        }
         this.db = new DB(filepath);
         this.db.execute(`
             CREATE TABLE IF NOT EXISTS "${SHEETDB_DATA_TABLENAME}" (
