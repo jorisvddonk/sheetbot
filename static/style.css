@@ -110,3 +110,7 @@ td[selected="2"] {
 thead {
     background-color: rgba(200, 200, 255, 0.5);
 }
+
+element-contextmenu {
+    z-index: 1000;
+}
