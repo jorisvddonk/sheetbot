@@ -32,13 +32,15 @@ export class SheetDB {
             CREATE TABLE IF NOT EXISTS "${SHEETDB_COLUMNSTRUCTURE_TABLENAME}" (
                 name STRING PRIMARY KEY,
                 widgettype STRING,
+                minwidth NUMERIC,
                 maxwidth NUMERIC,
+                minheight NUMERIC,
                 maxheight NUMERIC,
                 columnorder NUMERIC UNIQUE
             )`);
             this.db.execute(`
             CREATE VIEW IF NOT EXISTS "${SHEETDB_COLUMNSTRUCTURE_VIEWNAME}" AS 
-                SELECT p.name, c.widgettype, c.maxheight, c.maxwidth, (ROW_NUMBER() OVER(ORDER BY c.columnorder)) - 1 AS columnorder, p.type as 'datatype' from "columnstructure" c JOIN pragma_table_info('data_view') p on p.name LIKE c.name
+                SELECT p.name, c.widgettype, c.minwidth, c.maxwidth, c.minheight, c.maxheight, (ROW_NUMBER() OVER(ORDER BY c.columnorder)) - 1 AS columnorder, p.type as 'datatype' from "columnstructure" c JOIN pragma_table_info('data_view') p on p.name LIKE c.name
                 ORDER BY c.columnorder ASC`);
     }
 
