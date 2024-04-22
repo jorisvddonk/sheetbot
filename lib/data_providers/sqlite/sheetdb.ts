@@ -28,17 +28,23 @@ export class SheetDB {
         this.db.execute(`
             CREATE VIEW IF NOT EXISTS "${SHEETDB_DATA_VIEWNAME}" AS SELECT * FROM "${SHEETDB_DATA_TABLENAME}"`);
 
-        this.db.execute(`
-            CREATE TABLE IF NOT EXISTS "${SHEETDB_COLUMNSTRUCTURE_TABLENAME}" (
-                name STRING PRIMARY KEY,
-                widgettype STRING,
-                minwidth NUMERIC,
-                maxwidth NUMERIC,
-                minheight NUMERIC,
-                maxheight NUMERIC,
-                columnorder NUMERIC UNIQUE
-            )`);
+        const table_exists = this.db.query(`SELECT name FROM sqlite_master WHERE type='table' AND name=:name`, { name: SHEETDB_COLUMNSTRUCTURE_TABLENAME }).length > 0;
+        if (!table_exists) {
             this.db.execute(`
+                CREATE TABLE IF NOT EXISTS "${SHEETDB_COLUMNSTRUCTURE_TABLENAME}" (
+                    name STRING PRIMARY KEY,
+                    widgettype STRING,
+                    minwidth NUMERIC,
+                    maxwidth NUMERIC,
+                    minheight NUMERIC,
+                    maxheight NUMERIC,
+                    columnorder NUMERIC UNIQUE
+                )`);
+            this.db.execute(`
+                INSERT INTO "${SHEETDB_COLUMNSTRUCTURE_TABLENAME}" (name, widgettype, columnorder) VALUES ('%', 'text', 0)
+            `);
+        }
+        this.db.execute(`
             CREATE VIEW IF NOT EXISTS "${SHEETDB_COLUMNSTRUCTURE_VIEWNAME}" AS 
                 SELECT p.name, c.widgettype, c.minwidth, c.maxwidth, c.minheight, c.maxheight, (ROW_NUMBER() OVER(ORDER BY c.columnorder)) - 1 AS columnorder, p.type as 'datatype' from "columnstructure" c JOIN pragma_table_info('data_view') p on p.name LIKE c.name
                 ORDER BY c.columnorder ASC`);
