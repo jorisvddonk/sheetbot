@@ -272,12 +272,26 @@ export class TableElement extends LitElement {
                                 }
                                 if (cell === null) {
                                     elem.setAttribute('data', null);
+                                    elem.setAttribute('datatype', 'null');
                                 } else if (cell === undefined) {
                                     elem.setAttribute('data', undefined);
+                                    elem.setAttribute('datatype', 'undefined');
                                 } else if (typeof cell === "object") {
                                     elem.setAttribute('data', JSON.stringify(cell, null, 2));
+                                    if (Array.isArray(cell)) {
+                                        elem.setAttribute('datatype', 'array');
+                                    } else {
+                                        elem.setAttribute('datatype', 'object');
+                                    }
                                 } else {
                                     elem.setAttribute('data', cell);
+                                    if (Number.isFinite(cell)) {
+                                        elem.setAttribute('datatype', 'number');
+                                    } else if (typeof cell === 'string') {
+                                        elem.setAttribute('datatype', 'string');
+                                    } else if (typeof cell === 'boolean') {
+                                        elem.setAttribute('datatype', 'boolean');
+                                    }
                                 }
                                 return elem;
                             }
