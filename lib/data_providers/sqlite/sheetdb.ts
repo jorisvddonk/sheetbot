@@ -27,8 +27,8 @@ export class NotFoundError extends Error {
 export class SheetDB {
     db: DB;
     
-    constructor(filepath: string) {
-        if (!existsSync(filepath)) {
+    constructor(filepath: string, do_check_filepath?: boolean) {
+        if ((do_check_filepath == undefined || do_check_filepath === true) && !existsSync(filepath)) {
             throw new NotFoundError("Sheet does not exist");
         }
         this.db = new DB(filepath);

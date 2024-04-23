@@ -514,7 +514,7 @@ app.post("/sheets/:id/data", requiresLogin, requiresPermission(PERMISSION_PUT_SH
         return;
     }
     
-    const sheetdb = new SheetDB(`./sheets/${req.params.id}.db`); // TODO: move to a map? what's the performance of this?
+    const sheetdb = new SheetDB(`./sheets/${req.params.id}.db`, false); // TODO: move to a map? what's the performance of this?
     const data = Object.entries(Object.assign({key: req.body.key}, req.body)); // Need to put the primary key first... This is terrible and I guess slow as well, but it works.
     sheetdb.upsertData(data); 
     sheetdb.close();
