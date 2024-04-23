@@ -60,28 +60,30 @@ export function upsert(db: DB, tablename: string, data: [string, unknown][], all
         }
     });
     const sql = `INSERT INTO "${tablename}" ${columnize(columns)} VALUES ${questionmark_valuesize(columns)} ON CONFLICT DO UPDATE SET ${settize(columns.slice(1))}`;
-    try {
-        const vals = values.concat(values.slice(1));
-        const rows = db.query(sql, vals);
-        return rows;
-    } catch (e) {
-        if (allow_create_column) {
-            const needle = "has no column named ";
-            const index = e.toString().indexOf(needle);
-            if (index > -1) { // TODO: use a proper regex here, or some other way to detect this error? Could be malicious or buggy use here if someone specifies a column named "has no column named"...
-                // need to add the column!
-                // TODO: add support for when *multiple* columns are missing?
-                const column_name = e.toString().substr(index + needle.length);
-                const data_element = data.filter(d => d[0] === column_name).shift();
-                if (data_element === undefined) {
-                    throw new Error("Could not add/fix column!");
+    let tries = 30; // can add 30 columns within the same POST.. This is a super lame implementation, but :shrug:
+    while(tries > 0) {
+        tries -= 1;
+        try {
+            const vals = values.concat(values.slice(1));
+            const rows = db.query(sql, vals);
+            return rows;
+        } catch (e) {
+            if (allow_create_column && tries > 0) {
+                const needle = "has no column named ";
+                const index = e.toString().indexOf(needle);
+                if (index > -1) { // TODO: use a proper regex here, or some other way to detect this error? Could be malicious or buggy use here if someone specifies a column named "has no column named"...
+                    // need to add the column!
+                    const column_name = e.toString().substr(index + needle.length);
+                    const data_element = data.filter(d => d[0] === column_name).shift();
+                    if (data_element === undefined) {
+                        throw new Error("Could not add/fix column!");
+                    }
+                    const alter_sql = `ALTER TABLE "${tablename}" ADD "${column_name}" ${inferType(data_element[1])}`;
+                    db.query(alter_sql);
                 }
-                const alter_sql = `ALTER TABLE "${tablename}" ADD "${column_name}" ${inferType(data_element[1])}`;
-                db.query(alter_sql);
-                upsert(db, tablename, data, false);
+            } else {
+                throw e;
             }
-        } else {
-            throw e;
         }
     }
 }
