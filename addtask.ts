@@ -31,11 +31,47 @@ Deno.env.set("SHEETBOT_AUTHORIZATION_HEADER", `Bearer ${token}`);
 Deno.env.set("SHEETBOT_BASEURL", baseurl);
 
 const scriptStuff = await getScript(`/scripts/${script}`);
-console.log(scriptStuff);
+
+const ephemeral: number = await Select.prompt({
+    message: "Ephemeralness?",
+    search: false,
+    options: [
+        {
+            name: "persistent            (task will not get automatically deleted on completion)",
+            value: 0
+        },
+        {
+            name: "ephemeral_on_success  (task will get removed on successful completion ONLY)",
+            value: 1
+        },
+        {
+            name: "ephemeral_always      (task will ALWAYS get automatically removed upon completion)",
+            value: 2
+        }
+    ],
+});
+
+const status: number = await Select.prompt({
+    message: "Initial status?",
+    search: false,
+    options: [
+        {
+            name: "awaiting  (task ready to get picked up immediately)",
+            value: 0
+        },
+        {
+            name: "paused    (task needs to get switched over to awaiting status before it can get picked up)",
+            value: 4
+        }
+    ],
+});
+
 
 await addTask({
     type: "deno",
     ...scriptStuff,
+    ephemeral,
+    status,
     data
 }).catch(checkError).then(task => {
     console.log(`Done! Task ID is ${task.id}`);
