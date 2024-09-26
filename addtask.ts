@@ -30,7 +30,31 @@ const token = await fetch(`${baseurl}/login`, {
 Deno.env.set("SHEETBOT_AUTHORIZATION_HEADER", `Bearer ${token}`);
 Deno.env.set("SHEETBOT_BASEURL", baseurl);
 
-const scriptStuff = await getScript(`/scripts/${script}`);
+const localOrRemote: number = await Select.prompt({
+    message: "Use local script, or fetch script from remote server?",
+    search: false,
+    options: [
+        {
+            name: "local",
+            value: 0
+        },
+        {
+            name: "remote",
+            value: 1
+        }
+    ],
+});
+let scriptStuff;
+if (localOrRemote === 1) {
+    scriptStuff = await getScript(`/scripts/${script}`);
+} else {
+    const scriptText = new TextDecoder().decode(Deno.readFileSync(`./scripts/${script}`));
+    const capabilitiesSchema = JSON.parse(scriptText.substr(scriptText.indexOf("<capabilitiesSchema>") + 20, scriptText.indexOf("</capabilitiesSchema>") - scriptText.indexOf("<capabilitiesSchema>") - 21));
+    scriptStuff = {
+        script: scriptText,
+        capabilitiesSchema
+    };
+}
 
 const ephemeral: number = await Select.prompt({
     message: "Ephemeralness?",
