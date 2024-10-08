@@ -40,7 +40,24 @@ async function getVirtualbox() {
 }
 
 async function getClang() {
-    return getGenericCmdVersion('clang', 'clang --version');
+    try {
+        const cmd = await $`clang --version`.text();
+        const match = Array.from(cmd.matchAll(/clang version (?<version>\S*)/gi))[0];
+        const version = match?.groups?.version;
+        if (version) {
+            return {
+                clang: {
+                    version: version,
+                    major_version: parseInt(version?.split(".")[0] + ""),
+                    minor_version: parseInt(version?.split(".")[1] + ""),
+                    patch_version: parseInt(version?.split(".")[2].split('-')[0].split('r')[0] + ""),
+                }
+            }
+        }
+    } catch (e) {
+        // ignore
+    }
+    return {};
 }
 
 async function getCMake() {
