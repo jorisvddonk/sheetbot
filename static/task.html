@@ -14,6 +14,7 @@
     <script src="widget-taskephemeral.js" type="module"></script>
     <script src="widget-tasktype.js" type="module"></script>
     <script src="widget-taskid.js" type="module"></script>
+    <script src="widget-taskname.js" type="module"></script>
     <script src="widget-hashimg.js" type="module"></script>
     <script src="widget-multi.js" type="module"></script>
 </head>
@@ -35,6 +36,13 @@
                 {
                     "name": "id",
                     "widgettype": "taskid",
+                    "minwidth": 300,
+                    "columnorder": 0,
+                    "datatype": "STRING"
+                },
+                {
+                    "name": "name",
+                    "widgettype": "taskname",
                     "minwidth": 300,
                     "columnorder": 0,
                     "datatype": "STRING"

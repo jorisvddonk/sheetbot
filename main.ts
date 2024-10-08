@@ -23,6 +23,7 @@ const db = new DB("tasks.db");
 db.execute(`
 CREATE TABLE IF NOT EXISTS tasks (
     id STRING PRIMARY KEY,
+    name TEXT,
     script TEXT,
     status INT,
     data JSON,
@@ -50,6 +51,7 @@ app.use((req, res, next) => {
 
 interface Task {
     id: string,
+    name?: string,
     script: string,
     status: TaskStatus,
     data: Object,
@@ -92,9 +94,10 @@ function taskify(script: string): Task {
     }
 }
 function addTask(task: Task) {
-    const query = db.prepareQuery<never, never, { id: string, script: string, status: TaskStatus, data: string, artefacts: string, dependsOn: string, type: string, ephemeral: number, capabilitiesSchema: string }>("INSERT INTO tasks (id, script, status, data, artefacts, dependsOn, ephemeral, type, capabilitiesSchema) VALUES (:id, :script, :status, :data, :artefacts, :dependsOn, :ephemeral, :type, :capabilitiesSchema)");
+    const query = db.prepareQuery<never, never, { id: string, name?: string, script: string, status: TaskStatus, data: string, artefacts: string, dependsOn: string, type: string, ephemeral: number, capabilitiesSchema: string }>("INSERT INTO tasks (id, name, script, status, data, artefacts, dependsOn, ephemeral, type, capabilitiesSchema) VALUES (:id, :name, :script, :status, :data, :artefacts, :dependsOn, :ephemeral, :type, :capabilitiesSchema)");
     query.execute({
         id: task.id,
+        name: task.name,
         script: task.script,
         status: task.status,
         data: JSON.stringify(task.data),
@@ -298,6 +301,7 @@ app.post("/tasks", requiresLogin, requiresPermission(PERMISSION_CREATE_TASKS), u
     } catch (e) {
         task.capabilitiesSchema = req.body.capabilitiesSchema || {};
     }
+    task.name = req.body.name;
     task.type = req.body.type;
     task.ephemeral = req.body.ephemeral || Ephemeralness.PERSISTENT;
     let dependsOn: string[] = [];
