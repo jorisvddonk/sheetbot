@@ -1,3 +1,6 @@
+import fs from "https://deno.land/std@0.140.0/node/fs.ts";
+import * as path from "jsr:@std/path";
+
 let SHEETBOT_BASEURL;
 if (!Deno.env.has("SHEETBOT_BASEURL")) {
   SHEETBOT_BASEURL
@@ -43,9 +46,21 @@ if (Deno.env.has("SHEETBOT_AUTH_USER") && Deno.env.has("SHEETBOT_AUTH_PASS")) {
 
 let localCapabilities = {};
 try {
-  const capabilitiesText = Deno.readTextFileSync("./.capabilities.json");
-  localCapabilities = JSON.parse(capabilitiesText);
+  const capabilitiesJSONPath = path.resolve("./.capabilities.dynamic.ts");
+  if (fs.existsSync(capabilitiesJSONPath)) {
+    const capabilitiesText = Deno.readTextFileSync("./.capabilities.json");
+    localCapabilities = Object.assign({}, localCapabilities, JSON.parse(capabilitiesText));
+  }
+
+  const capabilitiesPath = path.resolve("./.capabilities.dynamic.ts");
+  if (fs.existsSync(capabilitiesPath)) {
+    const { getCapabilities } = await import(path.toFileUrl(capabilitiesPath).toString());
+    const dynamicCapabilities = await getCapabilities(localCapabilities);
+    localCapabilities = Object.assign({}, localCapabilities, dynamicCapabilities);
+  }
+  console.log("capabilities:", localCapabilities);
 } catch (e) {
+  console.log(e);
   // ignore errors; file probably didn't exist
 }
 
