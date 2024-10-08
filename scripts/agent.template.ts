@@ -46,9 +46,9 @@ if (Deno.env.has("SHEETBOT_AUTH_USER") && Deno.env.has("SHEETBOT_AUTH_PASS")) {
 
 let localCapabilities = {};
 try {
-  const capabilitiesJSONPath = path.resolve("./.capabilities.dynamic.ts");
+  const capabilitiesJSONPath = path.resolve("./.capabilities.json");
   if (fs.existsSync(capabilitiesJSONPath)) {
-    const capabilitiesText = Deno.readTextFileSync("./.capabilities.json");
+    const capabilitiesText = Deno.readTextFileSync(capabilitiesJSONPath);
     localCapabilities = Object.assign({}, localCapabilities, JSON.parse(capabilitiesText));
   }
 
@@ -60,8 +60,8 @@ try {
   }
   console.log("capabilities:", localCapabilities);
 } catch (e) {
+  console.log("Ignoring capabilities error:");
   console.log(e);
-  // ignore errors; file probably didn't exist
 }
 
 const capabilities = {
