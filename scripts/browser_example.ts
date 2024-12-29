@@ -8,8 +8,36 @@ Suggested capabilitiesSchema for this task: <capabilitiesSchema>
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "type": "object",
-  "properties": {},
-  "required": []
+  "properties": {
+    "memory": {
+      "type": "object",
+      "properties": {
+        "available": {
+          "type": "number",
+          "minimum": 500
+        }
+      },
+      "required": [
+        "available"
+      ]
+    },
+    "loadavg": {
+      "type": "object",
+      "properties": {
+        "5min": {
+          "type": "number",
+          "exclusiveMaximum": 0.7
+        }
+      },
+      "required": [
+        "5min"
+      ]
+    }
+  },
+  "required": [
+    "memory",
+    "loadavg"
+  ]
 }
 
 </capabilitiesSchema>*/
