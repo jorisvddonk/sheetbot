@@ -90,6 +90,16 @@ async function getOS() {
     return {};
 }
 
+async function getMemory() {
+    const memoryInfo = Deno.systemMemoryInfo();
+    return {
+        total: memoryInfo.total / 1024 / 1024,
+        free: memoryInfo.free / 1024 / 1024,
+        available: memoryInfo.available / 1024 / 1024,
+        unit: 'MB'
+    }
+}
+
 
 async function getCapabilities(staticCapabilities) {
     let software = {};
@@ -102,13 +112,17 @@ async function getCapabilities(staticCapabilities) {
     let os = {}
     os = Object.assign(os, await getOS());
 
+    let memory = {}
+    memory = await getMemory();
+
     const packages = Array.from(new Set(Object.keys(software).concat(staticCapabilities?.packages || [])));
     return Object.assign({}, staticCapabilities, {
         'hostname': Deno.hostname(),
         'software': software,
         'packages': packages,
         'build': Deno.build,
-        'os': os
+        'os': os,
+        'memory': memory
     });
 }
 
