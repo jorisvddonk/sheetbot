@@ -68,6 +68,20 @@ async function getClang() {
     return {};
 }
 
+async function getScons() {
+    try {
+        const cmd = await $`scons --version`.text();
+        const match = Array.from(cmd.matchAll(/SCons: v(?<version>[\.a-zA-Z0-9]*)/gi))[0];
+        const version = match?.groups?.version;
+        if (version) {
+            return transformToVersion('scons', version);
+        }
+    } catch (e) {
+        // ignore
+    }
+    return {};
+}
+
 async function getCMake() {
     return getGenericCmdVersion('cmake', 'cmake --version');
 }
@@ -117,6 +131,7 @@ async function getCapabilities(staticCapabilities) {
     software = Object.assign(software, await getClang());
     software = Object.assign(software, await getCMake());
     software = Object.assign(software, await getDeno());
+    software = Object.assign(software, await getScons());
 
     let os = {}
     os = Object.assign(os, await getOS());
