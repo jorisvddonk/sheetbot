@@ -100,6 +100,15 @@ async function getMemory() {
     }
 }
 
+async function getLoadAvg() {
+    const loadAvg = Deno.loadavg();
+    return {
+        '1min': loadAvg[0],
+        '5min': loadAvg[1],
+        '15min': loadAvg[2]
+    }
+}
+
 
 async function getCapabilities(staticCapabilities) {
     let software = {};
@@ -115,6 +124,8 @@ async function getCapabilities(staticCapabilities) {
     let memory = {}
     memory = await getMemory();
 
+    let loadavg = await getLoadAvg();
+
     const packages = Array.from(new Set(Object.keys(software).concat(staticCapabilities?.packages || [])));
     return Object.assign({}, staticCapabilities, {
         'hostname': Deno.hostname(),
@@ -122,7 +133,8 @@ async function getCapabilities(staticCapabilities) {
         'packages': packages,
         'build': Deno.build,
         'os': os,
-        'memory': memory
+        'memory': memory,
+        'loadavg': loadavg
     });
 }
 
