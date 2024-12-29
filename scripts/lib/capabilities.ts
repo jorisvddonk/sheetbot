@@ -13,18 +13,22 @@ export { getCapabilities };
 
 import $ from "https://deno.land/x/dax/mod.ts";
 
+function transformToVersion(toolName, version) {
+    return {
+        [toolName]: {
+            version: version,
+            major_version: parseInt(version?.split(".")[0] + ""),
+            minor_version: parseInt(version?.split(".")[1] + ""),
+            patch_version: parseInt(version?.split(".")[2].split('-')[0].split('r')[0] + ""),
+        }
+    }
+}
+
 async function getGenericCmdVersion(cmdName, commandStr) {
     try {
         const cmd = await $(commandStr).text();
         const version = cmd.split('\n').shift()?.split(" ").pop();
-        return {
-            [cmdName]: {
-                version: version,
-                major_version: parseInt(version?.split(".")[0] + ""),
-                minor_version: parseInt(version?.split(".")[1] + ""),
-                patch_version: parseInt(version?.split(".")[2].split('-')[0].split('r')[0] + ""),
-            }
-        }
+        return transformToVersion(cmdName, version);
     } catch (e) {
         // ignore
     }
@@ -37,6 +41,10 @@ async function getGit() {
 
 async function getVirtualbox() {
     return getGenericCmdVersion('virtualbox', 'vboxmanage --version');
+}
+
+async function getDeno() {
+    return transformToVersion('deno', Deno.version.deno);
 }
 
 async function getClang() {
@@ -89,6 +97,7 @@ async function getCapabilities(staticCapabilities) {
     software = Object.assign(software, await getVirtualbox());
     software = Object.assign(software, await getClang());
     software = Object.assign(software, await getCMake());
+    software = Object.assign(software, await getDeno());
 
     let os = {}
     os = Object.assign(os, await getOS());
