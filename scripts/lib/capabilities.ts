@@ -14,6 +14,9 @@ export { getCapabilities };
 import $ from "https://deno.land/x/dax/mod.ts";
 
 function transformToVersion(toolName, version) {
+    if (version === undefined) {
+        return {}
+    }
     return {
         [toolName]: {
             version: version,
@@ -119,7 +122,7 @@ async function getLoadAvg() {
 async function getLinuxInfo() {
     const osReleaseText = await Deno.readTextFile("/etc/os-release");
     const prettyName = Array.from(osReleaseText.matchAll(/PRETTY_NAME\=\"(?<prettyName>.+)\"/gi))[0]?.groups?.prettyName;
-    const name = Array.from(osReleaseText.matchAll(/NAME\=\"(?<name>.+)\"/gi))[0]?.groups?.name;
+    const name = Array.from(osReleaseText.matchAll(/^NAME\=\"(?<name>.+)\"/gim))[0]?.groups?.name;
     const versionCodename = Array.from(osReleaseText.matchAll(/VERSION_CODENAME\=(?<codename>.+)/gi))[0]?.groups?.codename;
     const version = Array.from(osReleaseText.matchAll(/VERSION\=\"(?<version>.+)\"/gi))[0]?.groups?.version;
     const versionId = Array.from(osReleaseText.matchAll(/VERSION_ID\=\"(?<versionId>.+)\"/gi))[0]?.groups?.versionId;
