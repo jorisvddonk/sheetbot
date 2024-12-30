@@ -1,7 +1,7 @@
 import { promptSecret } from "https://deno.land/std@0.220.1/cli/prompt_secret.ts";
 import { checkError } from "./scripts/lib/commonutil.ts";
 import { getScript, addTask } from "./scripts/lib/taskutil.ts";
-import { Select, Input } from "https://deno.land/x/cliffy@v1.0.0-rc.3/prompt/mod.ts";
+import { Select, Input } from "https://deno.land/x/cliffy@v1.0.0-rc.4/prompt/mod.ts";
 
 const script: string = await Select.prompt({
     message: "Pick a script",
@@ -90,7 +90,8 @@ const status: number = await Select.prompt({
     ],
 });
 
-let name: string | undefined = await Input.prompt("Task name?")
+const suggestedName = scriptStuff.script.substr(scriptStuff.script.indexOf("<name>") + 6, scriptStuff.script.indexOf("</name>") - scriptStuff.script.indexOf("<name>") - 6);
+let name: string | undefined = await Input.prompt({message: "Task name?", suggestions: [suggestedName]})
 if (name == "") {
     name = undefined;
 }
