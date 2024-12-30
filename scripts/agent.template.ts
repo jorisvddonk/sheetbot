@@ -36,6 +36,8 @@ if (Deno.env.has("SHEETBOT_AUTH_USER") && Deno.env.has("SHEETBOT_AUTH_PASS")) {
       "Content-Type": "application/json",
     },
   });
+  Deno.env.delete("SHEETBOT_AUTH_USER");
+  Deno.env.delete("SHEETBOT_AUTH_PASS");
   if (authr.status === 200) {
     const authj = await authr.json();
     headers["Authorization"] = `Bearer ${authj.token}`;
