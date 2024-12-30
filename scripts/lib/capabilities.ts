@@ -116,6 +116,23 @@ async function getLoadAvg() {
     }
 }
 
+async function getLinuxInfo() {
+    const osReleaseText = await Deno.readTextFile("/etc/os-release");
+    const prettyName = Array.from(osReleaseText.matchAll(/PRETTY_NAME\=\"(?<prettyName>.+)\"/gi))[0]?.groups?.prettyName;
+    const name = Array.from(osReleaseText.matchAll(/NAME\=\"(?<name>.+)\"/gi))[0]?.groups?.name;
+    const versionCodename = Array.from(osReleaseText.matchAll(/VERSION_CODENAME\=(?<codename>.+)/gi))[0]?.groups?.codename;
+    const version = Array.from(osReleaseText.matchAll(/VERSION\=\"(?<version>.+)\"/gi))[0]?.groups?.version;
+    const versionId = Array.from(osReleaseText.matchAll(/VERSION_ID\=\"(?<versionId>.+)\"/gi))[0]?.groups?.versionId;
+    const versionNum = Array.from(version?.matchAll(/(?<versionNum>[0-9]+\.[0-9]+\.[0-9])/gi))[0]?.groups?.versionNum;
+    const rel = transformToVersion("release", versionNum);
+    return Object.assign({}, rel, {
+        "pretty_name": prettyName,
+        "name": name,
+        "versionCodename": versionCodename,
+        "versionId": versionId
+    });
+}
+
 
 async function getCapabilities(staticCapabilities) {
     let software = {};
@@ -128,6 +145,12 @@ async function getCapabilities(staticCapabilities) {
 
     let os = {}
     os = Object.assign(os, await getOS());
+
+    let linux = undefined;
+    let windows = undefined;
+    if (os.os === "linux") {
+        linux = await getLinuxInfo();
+    }
 
     let memory = {}
     memory = await getMemory();
@@ -142,7 +165,9 @@ async function getCapabilities(staticCapabilities) {
         'build': Deno.build,
         'os': os,
         'memory': memory,
-        'loadavg': loadavg
+        'loadavg': loadavg,
+        'linux': linux,
+        'windows': windows
     });
 }
 
