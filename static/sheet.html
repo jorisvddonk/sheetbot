@@ -22,14 +22,18 @@
 
     <script>
         const params = new URL(document.URL).searchParams;
+        const headers = {};
+        if (localStorage.hasOwnProperty("jwt_token")) {
+            headers["Authorization"] = `Bearer ${localStorage["jwt_token"]}`;
+        }
         if (params.has("sheet")) {
-            const data = fetch(`/sheets/${params.get("sheet")}`).then(response => {
+            const data = fetch(`/sheets/${params.get("sheet")}`, { headers: headers }).then(response => {
                 return response.json()
             }).then(data => {
                 document.getElementById('spreadsheet').setAttribute('data', JSON.stringify({data: data.rows, columns: data.columns}));
             });
         } else {
-            const data = fetch(`/sheets`).then(response => {
+            const data = fetch(`/sheets`, { headers: headers }).then(response => {
                 return response.json()
             }).then(data => {
                 data.forEach(sheetName => {

@@ -539,7 +539,7 @@ app.delete("/sheets/:id/data/:key", requiresLogin, requiresPermission(PERMISSION
     res.send();
 });
 
-app.get("/sheets/:id", (req, res) => {
+app.get("/sheets/:id", requiresLogin, (req, res) => {
     if (!validateSheetName(req.params.id) || !validateTableName(req.params.id)) {
         res.status(500);
         res.send("Invalid sheet name");
@@ -565,7 +565,7 @@ app.get("/sheets/:id", (req, res) => {
     res.send();
 });
 
-app.get("/sheets", (req, res) => {
+app.get("/sheets", requiresLogin, (req, res) => {
     const retval = [];
     for (const dirEntry of Deno.readDirSync("./sheets/")) {
         if (dirEntry.isFile && dirEntry.name.endsWith(".db")) {
