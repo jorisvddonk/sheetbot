@@ -112,6 +112,8 @@ await subtask_statusupdate("scons - build", false);
 await subtask_statusupdate("upload artefacts", false);
 await submitData({"commit hash": "n/a"});
 
+const ARTEFACT_REGEX = /godot\.\S+?\.(editor|template_release)(\.double)?.\S+(exe|llvm|x86_64)$/gi;
+
 if (Deno.env.has("GODOT_DIR")) {
   // we expect there to be a checkout already, so just change directory to it!
   $.cd(Deno.env.get("GODOT_DIR"));
@@ -140,6 +142,12 @@ if (taskdata.sheet_key !== undefined) {
 }
 console.log("Sheet_key is " + sheet_key + ", sheet is " + sheet);
 
+for await (const e of walk('./bin', { match: [ARTEFACT_REGEX] })) {
+  if (e.isFile) {
+    await Deno.remove(e.path);
+  }
+}
+
 if (Deno.build.os === "windows") {
   await $`scons platform=windows precision=double ${additional_build_flags}`;
 } else {
@@ -149,8 +157,7 @@ await subtask_statusupdate("scons - build", true);
 
 // done! Upload the artefact(s)!
 
-let foundArtefacts: Array<string> = [];
-for await (const e of walk('./bin', { match: [/godot\.\S+?\.(editor|template_release)(\.double)?.\S+(exe|llvm|x86_64)$/gi] })) {
+for await (const e of walk('./bin', { match: [ARTEFACT_REGEX] })) {
     if (e.isFile) {
         const foundArtefact = e.path;
         const tmpobj = tmp.fileSync({ mode: 0o644, prefix: basename(foundArtefact), postfix: '.tar.gz', discardDescriptor: true }).name.replaceAll("\\", "/");
