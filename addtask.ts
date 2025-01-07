@@ -54,6 +54,14 @@ if (localOrRemote === 1) {
     };
 }
 
+try {
+    const taskComments = scriptStuff.script.substr(scriptStuff.script.indexOf("<addTaskComments>") + 17, scriptStuff.script.indexOf("</addTaskComments>") - scriptStuff.script.indexOf("<addTaskComments>") - 17);
+    console.log("ADDTASK COMMENTS: ");
+    console.log(taskComments)
+} catch (e) {
+    // ignore
+}
+
 let suggestedData = {};
 try {
     suggestedData = JSON.parse(scriptStuff.script.substr(scriptStuff.script.indexOf("<data>") + 6, scriptStuff.script.indexOf("</data>") - scriptStuff.script.indexOf("<data>") - 6));
