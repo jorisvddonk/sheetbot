@@ -8,8 +8,6 @@ const script: string = await Select.prompt({
     search: true,
     options: Array.from(Deno.readDirSync("./scripts/").map(x => x.name).filter(x => x.endsWith(".ts") || x.endsWith(".js")))
 });
-let data = prompt("data (as JSON): ", "{}");
-data = JSON.parse(data);
 
 console.log("Adding task, please login first");
 const username = prompt("username");
@@ -55,6 +53,15 @@ if (localOrRemote === 1) {
         capabilitiesSchema
     };
 }
+
+let suggestedData = {};
+try {
+    suggestedData = JSON.parse(scriptStuff.script.substr(scriptStuff.script.indexOf("<data>") + 6, scriptStuff.script.indexOf("</data>") - scriptStuff.script.indexOf("<data>") - 6));
+} catch (e) {
+    console.warn("Could not parse suggested data - using default {}")
+}
+let data = prompt("data (as JSON): ", JSON.stringify(suggestedData, null, 2));
+data = JSON.parse(data);
 
 const ephemeral: number = await Select.prompt({
     message: "Ephemeralness?",
