@@ -60,6 +60,13 @@ try {
     const dynamicCapabilities = await getCapabilities(localCapabilities);
     localCapabilities = Object.assign({}, localCapabilities, dynamicCapabilities);
   }
+
+  const capabilitiesOverrideJSONPath = path.resolve("./.capabilities.override.json");
+  if (fs.existsSync(capabilitiesOverrideJSONPath)) {
+    const capabilitiesOverrideText = Deno.readTextFileSync(capabilitiesOverrideJSONPath);
+    localCapabilities = Object.assign({}, localCapabilities, JSON.parse(capabilitiesOverrideText));
+  }
+
   console.log("capabilities:", localCapabilities);
 } catch (e) {
   console.log("Ignoring capabilities error:");
