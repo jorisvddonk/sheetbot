@@ -13,6 +13,7 @@ export class RemoteTask<T> {
   private _resolve?: (value: T) => void;
   private _reject?: (error: any) => void;
   private _promise: Promise<T>;
+  private _executed = false;
 
   constructor(
     fn: Function,
@@ -52,6 +53,10 @@ export default result;
     onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | null,
     onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | null
   ): Promise<TResult1 | TResult2> {
+    if (!this._executed) {
+      this._executed = true;
+      Runtime.execute(this);
+    }
     return this._promise.then(onfulfilled, onrejected);
   }
 
