@@ -9,7 +9,6 @@ import { validateSheetName } from "./lib/sheet_validator.ts";
 import { upsert, validateTableName } from "./lib/data_providers/sqlite/lib.ts";
 import { SheetDB } from "./lib/data_providers/sqlite/sheetdb.ts";
 import { UserDB } from "./lib/data_providers/sqlite/userdb.ts";
-import { Runtime, RemoteTask } from "./lib/distributed_runtime.ts";
 
 const SECRET_KEY = new TextDecoder().decode(Deno.readFileSync("./secret.txt"));
 
@@ -44,32 +43,6 @@ const upload = multer({ dest: './artefacts/' });
 const userdb = new UserDB();
 
 const ajv = new Ajv();
-
-// Map for remote tasks
-const remoteTasks = new Map<string, RemoteTask<any>>();
-
-// Set dispatch function for distributed runtime
-Runtime.dispatchFunction = async (task: RemoteTask<any>) => {
-  let script = task.script;
-  // Replace dependency placeholders with actual results
-  for (const dep of task.deps) {
-    const placeholder = `__DEP_RESULT_${dep.id}__`;
-    const result = Runtime.results.get(dep.id);
-    script = script.replace(new RegExp(placeholder, 'g'), JSON.stringify(result));
-  }
-
-  const dbTask = taskify(script);
-  dbTask.name = `RemoteTask-${task.id}`;
-  dbTask.type = "deno";
-  dbTask.capabilitiesSchema = task.schema || {};
-  dbTask.dependsOn = task.deps.map(dep => dep.id);
-  dbTask.ephemeral = Ephemeralness.EPHEMERAL_ON_SUCCESS; // Clean up after success
-
-  // Store the RemoteTask for resolution later
-  remoteTasks.set(dbTask.id, task);
-
-  addTask(dbTask);
-};
 
 app.use((req, res, next) => {
     console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
@@ -441,15 +414,6 @@ app.post("/tasks/:id/complete", requiresLogin, requiresPermission(PERMISSION_PER
         updateTaskData(task.id, req.body.data);
         updateTaskStatus(task.id, TaskStatus.COMPLETED);
 
-        // Resolve RemoteTask if it exists
-        if (remoteTasks.has(task.id)) {
-            const remoteTask = remoteTasks.get(task.id)!;
-            Runtime.results.set(remoteTask.id, req.body.data);
-            // Resolve the promise
-            (remoteTask as any)._resolve(req.body.data);
-            remoteTasks.delete(task.id);
-        }
-
         if (task.ephemeral === Ephemeralness.EPHEMERAL_ALWAYS || task.ephemeral == Ephemeralness.EPHEMERAL_ON_SUCCESS) {
             removeTaskFromAllDependsOn(task.id);
             deleteTask(task.id);
@@ -478,13 +442,6 @@ app.post("/tasks/:id/failed", requiresLogin, requiresPermission(PERMISSION_PERFO
     const task = getTask(req.params.id, TaskStatus.RUNNING);
     if (task) {
         updateTaskStatus(task.id, TaskStatus.FAILED);
-
-        // Reject RemoteTask if it exists
-        if (remoteTasks.has(task.id)) {
-            const remoteTask = remoteTasks.get(task.id)!;
-            (remoteTask as any)._reject(new Error("Task failed"));
-            remoteTasks.delete(task.id);
-        }
 
         if (task.ephemeral === Ephemeralness.EPHEMERAL_ALWAYS) {
             // delete all tasks that depend on this ephemeral task that just failed
