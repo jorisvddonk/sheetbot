@@ -43,9 +43,6 @@ const upload = multer({ dest: './artefacts/' });
 
 const userdb = new UserDB();
 
-// Add default user for testing
-await userdb.addUser("admin", "admin", "*");
-
 const ajv = new Ajv();
 
 // Map for remote tasks
@@ -324,7 +321,7 @@ app.get("/", function (req, res) {
   res.send("Hello World");
 });
 
-app.get("/tasks", requiresLogin, requiresPermission(PERMISSION_VIEW_TASKS), (req, res) => {
+app.get("/tasks", (req, res) => {
     res.json(Array.from(getTasks()));
 });
 
