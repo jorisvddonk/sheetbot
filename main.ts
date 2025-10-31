@@ -155,10 +155,20 @@ function parseAllSQLTasks(array) {
 
 function getTaskToComplete(type: string, capabilities?: object, filter_by_status?: TaskStatus) {
     // Get the task to complete, ensuring it's available, does not have any dependencies remaining, and its capabilities schema (if any) matches the provided capabilities.
-    const query = db.prepareQuery<[string, string, TaskStatus], TaskQ>(`SELECT * FROM tasks WHERE type = :type AND (dependsOn IS NULL OR json_array_length(dependsOn) = 0) ${filter_by_status === undefined ? '' : 'AND status = :status'}`);
+    const query = db.prepareQuery<[string, string, TaskStatus], TaskQ>(`SELECT * FROM tasks WHERE type = :type ${filter_by_status === undefined ? '' : 'AND status = :status'}`);
     const tasks = query.allEntries({type: type, status: filter_by_status});
     for (const taskRaw of tasks) {
         const task = parseOneSQLTask(taskRaw);
+        // Check if all dependencies are completed
+        let depsCompleted = true;
+        for (const depId of task.dependsOn) {
+            const depTask = getTask(depId);
+            if (!depTask || depTask.status !== TaskStatus.COMPLETED) {
+                depsCompleted = false;
+                break;
+            }
+        }
+        if (!depsCompleted) continue;
         if (Object.hasOwn(task, "capabilitiesSchema")) {
             const validateResult = ajv.validate(task.capabilitiesSchema || {}, capabilities);
             if (typeof validateResult === 'boolean') {
@@ -321,6 +331,9 @@ app.get("/tasks", requiresLogin, requiresPermission(PERMISSION_VIEW_TASKS), (req
 
 app.post("/tasks", requiresLogin, requiresPermission(PERMISSION_CREATE_TASKS), upload.array('file'), async (req, res) => {
     const task = taskify(req.body.script);
+    if (req.body.id) {
+        task.id = req.body.id;
+    }
     try {
         task.data = JSON.parse(req.body.data);
     } catch (e) {
@@ -357,19 +370,7 @@ app.post("/tasks", requiresLogin, requiresPermission(PERMISSION_CREATE_TASKS), u
         }
     }
     task.artefacts = artefacts;
-    task.dependsOn = [];
-    for (const dep of (dependsOn || [])) {
-        const dependentTask = getTask(dep)
-        if (dependentTask) { // only add tasks that actually exist and haven't failed or completed yet
-            if (dependentTask.status !== TaskStatus.FAILED && dependentTask.status !== TaskStatus.COMPLETED) {
-                task.dependsOn.push(dep);
-            } else {
-                console.log("WARN: dependent task was not in a valid state");
-            }
-        } else {
-            console.log("WARN: dependent task was not found");
-        }
-    }
+    task.dependsOn = dependsOn || [];
     addTask(task);
     res.json(task);
     res.send();
@@ -442,7 +443,6 @@ app.post("/tasks/:id/complete", requiresLogin, requiresPermission(PERMISSION_PER
     if (task) {
         updateTaskData(task.id, req.body.data);
         updateTaskStatus(task.id, TaskStatus.COMPLETED);
-        removeTaskFromAllDependsOn(task.id);
 
         // Resolve RemoteTask if it exists
         if (remoteTasks.has(task.id)) {
@@ -454,6 +454,7 @@ app.post("/tasks/:id/complete", requiresLogin, requiresPermission(PERMISSION_PER
         }
 
         if (task.ephemeral === Ephemeralness.EPHEMERAL_ALWAYS || task.ephemeral == Ephemeralness.EPHEMERAL_ON_SUCCESS) {
+            removeTaskFromAllDependsOn(task.id);
             deleteTask(task.id);
         }
         res.json({});
@@ -546,7 +547,17 @@ app.get("/scripts/:id\.?.*", (req, res) => {
         } else if (req.path.endsWith(".js")) {
             res.contentType("application/javascript");
         }
-        res.send(task.script);
+        let script = task.script;
+        // Replace dependency placeholders with actual results
+        for (const depId of task.dependsOn) {
+            const placeholder = `__DEP_RESULT_${depId}__`;
+            const depTask = getTask(depId);
+            if (depTask && depTask.data && depTask.data.default !== undefined) {
+                const result = depTask.data.default;
+                script = script.replace(new RegExp(placeholder, 'g'), JSON.stringify(result));
+            }
+        }
+        res.send(script);
     } else {
         res.status(404);
         res.send();
