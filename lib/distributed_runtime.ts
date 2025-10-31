@@ -8,13 +8,15 @@ export class RemoteTask<T> {
   id: string;
   deps: RemoteTask<any>[];
   schema?: JSONSchema;
+  script: string;
   run: () => Promise<T>;
   private _resolve?: (value: T) => void;
   private _reject?: (error: any) => void;
   private _promise: Promise<T>;
 
   constructor(
-    run: () => Promise<T>,
+    fn: Function,
+    args: any[],
     deps: RemoteTask<any>[] = [],
     schema?: JSONSchema
   ) {
@@ -25,7 +27,22 @@ export class RemoteTask<T> {
     this.id = crypto.randomUUID();
     this.deps = deps;
     this.schema = schema;
-    this.run = run;
+
+    // Generate run function
+    this.run = () => fn(...args);
+
+    // Generate script for remote execution
+    const fnScript = fn.toString();
+    const argValues = args.map(arg => arg instanceof RemoteTask ? `__DEP_RESULT_${arg.id}__` : JSON.stringify(arg));
+
+    this.script = `
+// Execute function
+const __FN__ = ${fnScript};
+const result = await __FN__(${argValues.join(', ')});
+
+// Return result
+export default result;
+`;
 
     // Register with runtime
     Runtime.register(this);
@@ -54,7 +71,8 @@ export function distributed<T extends any[], R>(
     const deps = args.filter(arg => arg instanceof RemoteTask) as RemoteTask<any>[];
 
     return new RemoteTask<R>(
-      () => fn(...args),
+      fn,
+      args,
       deps,
       schema
     );
