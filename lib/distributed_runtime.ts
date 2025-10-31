@@ -14,6 +14,7 @@ export class RemoteTask<T> {
   private _reject?: (error: any) => void;
   private _promise: Promise<T>;
   private _executed = false;
+  private _dispatched = false;
 
   constructor(
     fn: Function,
@@ -93,6 +94,7 @@ export class Runtime {
   static results = new Map<string, any>();
   static functions = new Map<string, Function>();
   static dispatchFunction?: (task: RemoteTask<any>) => Promise<void>;
+  static offloadMode = false;
 
   static register(task: RemoteTask<any>) {
     this.tasks.set(task.id, task);
@@ -100,6 +102,16 @@ export class Runtime {
 
   static async execute(rootTask: RemoteTask<any>) {
     const dag = this.buildDAG(rootTask);
+
+    if (this.offloadMode) {
+      // Dispatch all tasks without waiting for levels
+      for (const task of dag.keys()) {
+        if (!this.results.has(task.id)) {
+          this.dispatchTask(task); // Don't await
+        }
+      }
+      return rootTask;
+    }
 
     // Topological sort and execute
     for (const level of this.topologicalSort(dag)) {
@@ -180,6 +192,11 @@ export class Runtime {
       }
       return;
     }
+
+    if (task._dispatched) {
+      return;
+    }
+    task._dispatched = true;
 
     if (this.dispatchFunction) {
       await this.dispatchFunction(task);
