@@ -1,27 +1,28 @@
-import { DB } from "https://deno.land/x/sqlite@v3.8/mod.ts";
+import { DatabaseSync } from "node:sqlite";
 import * as bcrypt from "https://deno.land/x/bcrypt/mod.ts";
 
 export const USERDB_DATA_TABLENAME = "users";
 export const USERDB_FILEPATH = "./users.db";
 
 export class UserDB {
-    db: DB;
+    db: DatabaseSync;
     
     constructor() {
-        this.db = new DB(USERDB_FILEPATH);
-        this.db.execute(`
+        this.db = new DatabaseSync(USERDB_FILEPATH);
+        this.db.exec(`
             CREATE TABLE IF NOT EXISTS "${USERDB_DATA_TABLENAME}" (
-                id STRING PRIMARY KEY,
-                hashed_salted_password STRING REQUIRED,
-                permissions STRING
+                id TEXT PRIMARY KEY,
+                hashed_salted_password TEXT NOT NULL,
+                permissions TEXT
             )`);
     }
 
 
     async findUser(subject: string) {
-        const rows = this.db.queryEntries(`SELECT * FROM "${USERDB_DATA_TABLENAME}" WHERE id = :id`, {id: subject});
-        if (rows.length > 0) {
-            return rows[0];
+        const stmt = this.db.prepare(`SELECT * FROM "${USERDB_DATA_TABLENAME}" WHERE id = ?`);
+        const row = stmt.get(subject);
+        if (row) {
+            return row;
         } else {
             throw new Error("Not found");
         }
@@ -30,11 +31,8 @@ export class UserDB {
     async addUser(username: string, password: string, permissions: string) {
         const salt = await bcrypt.genSalt(10);
         const hash = await bcrypt.hash(password, salt);
-        return this.db.query(`INSERT INTO "${USERDB_DATA_TABLENAME}" (id, hashed_salted_password, permissions) VALUES (:id, :hashed_salted_password, :permissions)`, {
-            id: username,
-            hashed_salted_password: hash,
-            permissions
-        });
+        const stmt = this.db.prepare(`INSERT INTO "${USERDB_DATA_TABLENAME}" (id, hashed_salted_password, permissions) VALUES (?, ?, ?)`);
+        return stmt.run(username, hash, permissions);
     }
 
     async verifyLogin(username: string, hashed_salted_password: string) {

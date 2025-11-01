@@ -1,4 +1,4 @@
-import { DB } from "https://deno.land/x/sqlite@v3.8/mod.ts";
+import { DatabaseSync } from "node:sqlite";
 import { upsert } from "./lib.ts";
 import { existsSync } from "https://deno.land/std@0.220.1/fs/mod.ts";
 
@@ -14,7 +14,7 @@ export interface ColumnInfo {
     datatype: "STRING" | "TEXT" | "NUMERIC" | "JSON" | any,
     maxwidth: number,
     maxheight: number,
-    [name: string]: string | string[]
+    [name: string]: any
 }
 
 export class NotFoundError extends Error {
@@ -25,37 +25,37 @@ export class NotFoundError extends Error {
 }
 
 export class SheetDB {
-    db: DB;
+    db: DatabaseSync;
     
     constructor(filepath: string, do_check_filepath?: boolean) {
         if ((do_check_filepath == undefined || do_check_filepath === true) && !existsSync(filepath)) {
             throw new NotFoundError("Sheet does not exist");
         }
-        this.db = new DB(filepath);
-        this.db.execute(`
+        this.db = new DatabaseSync(filepath);
+        this.db.exec(`
             CREATE TABLE IF NOT EXISTS "${SHEETDB_DATA_TABLENAME}" (
-                key STRING PRIMARY KEY
+                key TEXT PRIMARY KEY
             )`);
-        this.db.execute(`
+        this.db.exec(`
             CREATE VIEW IF NOT EXISTS "${SHEETDB_DATA_VIEWNAME}" AS SELECT * FROM "${SHEETDB_DATA_TABLENAME}"`);
 
-        const table_exists = this.db.query(`SELECT name FROM sqlite_master WHERE type='table' AND name=:name`, { name: SHEETDB_COLUMNSTRUCTURE_TABLENAME }).length > 0;
+        const table_exists = this.db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name=?`).get(SHEETDB_COLUMNSTRUCTURE_TABLENAME);
         if (!table_exists) {
-            this.db.execute(`
+            this.db.exec(`
                 CREATE TABLE IF NOT EXISTS "${SHEETDB_COLUMNSTRUCTURE_TABLENAME}" (
-                    name STRING PRIMARY KEY,
-                    widgettype STRING,
-                    minwidth NUMERIC,
-                    maxwidth NUMERIC,
-                    minheight NUMERIC,
-                    maxheight NUMERIC,
-                    columnorder NUMERIC UNIQUE
+                    name TEXT PRIMARY KEY,
+                    widgettype TEXT,
+                    minwidth INTEGER,
+                    maxwidth INTEGER,
+                    minheight INTEGER,
+                    maxheight INTEGER,
+                    columnorder INTEGER UNIQUE
                 )`);
-            this.db.execute(`
+            this.db.exec(`
                 INSERT INTO "${SHEETDB_COLUMNSTRUCTURE_TABLENAME}" (name, widgettype, columnorder) VALUES ('%', 'text', 0)
             `);
         }
-        this.db.execute(`
+        this.db.exec(`
             CREATE VIEW IF NOT EXISTS "${SHEETDB_COLUMNSTRUCTURE_VIEWNAME}" AS 
                 SELECT p.name, c.widgettype, c.minwidth, c.maxwidth, c.minheight, c.maxheight, (ROW_NUMBER() OVER(ORDER BY c.columnorder)) - 1 AS columnorder, p.type as 'datatype' from "columnstructure" c JOIN pragma_table_info('data_view') p on p.name LIKE c.name
                 ORDER BY c.columnorder ASC`);
@@ -67,7 +67,8 @@ export class SheetDB {
 
     getRows() {
         const columnsSchema = this.getSchema();
-        const rowsRaw = this.db.queryEntries(`SELECT * FROM "${SHEETDB_DATA_VIEWNAME}"`);
+        const stmt = this.db.prepare(`SELECT * FROM "${SHEETDB_DATA_VIEWNAME}"`);
+        const rowsRaw = stmt.all();
         const rows = rowsRaw.map(row => {
             const returnrow = [];
             columnsSchema.forEach(columnEntry => {
@@ -88,12 +89,9 @@ export class SheetDB {
     }
 
     deleteRow(key: string) {
-        const rows = this.db.query(`DELETE FROM "${SHEETDB_DATA_TABLENAME}" WHERE key = :key`, {key: key});
-        if (rows.length === 0) {
-            return true;
-        } else {
-            return false; // ???
-        }
+        const stmt = this.db.prepare(`DELETE FROM "${SHEETDB_DATA_TABLENAME}" WHERE key = ?`);
+        const result = stmt.run(key);
+        return result.changes > 0;
     }
 
     close() {
@@ -101,6 +99,7 @@ export class SheetDB {
     }
 
     getSchema() {
-        return this.db.queryEntries<ColumnInfo>(`SELECT * FROM "${SHEETDB_COLUMNSTRUCTURE_VIEWNAME}"`);
+        const stmt = this.db.prepare(`SELECT * FROM "${SHEETDB_COLUMNSTRUCTURE_VIEWNAME}"`);
+        return stmt.all() as ColumnInfo[];
     }
 } 

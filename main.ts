@@ -1,10 +1,10 @@
 import jsonwebtoken from "npm:jsonwebtoken";
-import Ajv from "npm:ajv";
+import Ajv, { JSONSchemaType } from "npm:ajv";
 import https from "node:https";
 import { existsSync } from "https://deno.land/std@0.220.1/fs/mod.ts";
 import express from "npm:express";
 import multer from "npm:multer";
-import { DB } from "https://deno.land/x/sqlite/mod.ts";
+import { DatabaseSync } from "node:sqlite";
 import { validateSheetName } from "./lib/sheet_validator.ts";
 import { upsert, validateTableName } from "./lib/data_providers/sqlite/lib.ts";
 import { SheetDB } from "./lib/data_providers/sqlite/sheetdb.ts";
@@ -19,20 +19,20 @@ const PERMISSION_DELETE_TASKS = "deleteTasks";
 const PERMISSION_UPDATE_TASKS = "updateTasks";
 const PERMISSION_PUT_SHEET_DATA = "putSheetData";
 
-const db = new DB("tasks.db");
-db.execute(`
+const db = new DatabaseSync("tasks.db");
+db.exec(`
 CREATE TABLE IF NOT EXISTS tasks (
-    id STRING PRIMARY KEY,
+    id TEXT PRIMARY KEY,
     name TEXT,
     script TEXT,
-    status INT,
-    data JSON,
-    artefacts JSON,
-    dependsOn JSON,
-    ephemeral NUMERIC REQUIRED,
-    type STRING REQUIRED,
-    capabilitiesSchema JSON
-    )
+    status INTEGER,
+    data TEXT,
+    artefacts TEXT,
+    dependsOn TEXT,
+    ephemeral INTEGER NOT NULL,
+    type TEXT NOT NULL,
+    capabilitiesSchema TEXT
+)
 `);
 
 const app = express();
@@ -42,7 +42,7 @@ const upload = multer({ dest: './artefacts/' });
 
 const userdb = new UserDB();
 
-const ajv = new Ajv();
+const ajv = new (Ajv as any)();
 
 app.use((req, res, next) => {
     console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
@@ -63,7 +63,7 @@ interface Task {
 }
 
 interface TaskQ extends Task {
-    [name: string]: string | string[]
+    [name: string]: any
 }
 
 enum TaskStatus {
@@ -94,39 +94,57 @@ function taskify(script: string): Task {
     }
 }
 function addTask(task: Task) {
-    const query = db.prepareQuery<never, never, { id: string, name?: string, script: string, status: TaskStatus, data: string, artefacts: string, dependsOn: string, type: string, ephemeral: number, capabilitiesSchema: string }>("INSERT INTO tasks (id, name, script, status, data, artefacts, dependsOn, ephemeral, type, capabilitiesSchema) VALUES (:id, :name, :script, :status, :data, :artefacts, :dependsOn, :ephemeral, :type, :capabilitiesSchema)");
-    query.execute({
-        id: task.id,
-        name: task.name,
-        script: task.script,
-        status: task.status,
-        data: JSON.stringify(task.data),
-        artefacts: JSON.stringify(task.artefacts),
-        dependsOn: JSON.stringify(task.dependsOn),
-        type: task.type,
-        ephemeral: task.ephemeral,
-        capabilitiesSchema: JSON.stringify(task.capabilitiesSchema)
-    });
+    const stmt = db.prepare(`
+        INSERT INTO tasks (id, name, script, status, data, artefacts, dependsOn, ephemeral, type, capabilitiesSchema) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    stmt.run(
+        task.id,
+        task.name || null,
+        task.script,
+        task.status,
+        JSON.stringify(task.data),
+        JSON.stringify(task.artefacts),
+        JSON.stringify(task.dependsOn),
+        task.ephemeral,
+        task.type,
+        JSON.stringify(task.capabilitiesSchema)
+    );
 }
 
-function parseOneSQLTask(obj) {
+function parseOneSQLTask(obj: any) {
     if (obj !== undefined) {
-        return {...obj, data: JSON.parse(obj.data), artefacts: JSON.parse(obj.artefacts), dependsOn: JSON.parse(obj.dependsOn), capabilitiesSchema: JSON.parse(obj.capabilitiesSchema)};
+        return {
+            ...obj, 
+            data: JSON.parse(obj.data || '{}'), 
+            artefacts: JSON.parse(obj.artefacts || '[]'), 
+            dependsOn: JSON.parse(obj.dependsOn || '[]'), 
+            capabilitiesSchema: JSON.parse(obj.capabilitiesSchema || '{}')
+        };
     }
     return obj;
 }
 
-function parseAllSQLTasks(array) {
+function parseAllSQLTasks(array: any[]) {
     if (array !== undefined) {
-        return array.map(a => parseOneSQLTask(a), []);
+        return array.map(a => parseOneSQLTask(a));
     }
-    return array;
+    return [];
 }
 
 function getTaskToComplete(type: string, capabilities?: object, filter_by_status?: TaskStatus) {
     // Get the task to complete, ensuring it's available, does not have any dependencies remaining, and its capabilities schema (if any) matches the provided capabilities.
-    const query = db.prepareQuery<[string, string, TaskStatus], TaskQ>(`SELECT * FROM tasks WHERE type = :type ${filter_by_status === undefined ? '' : 'AND status = :status'}`);
-    const tasks = query.allEntries({type: type, status: filter_by_status});
+    let sql = `SELECT * FROM tasks WHERE type = ?`;
+    const params: any[] = [type];
+    
+    if (filter_by_status !== undefined) {
+        sql += ` AND status = ?`;
+        params.push(filter_by_status);
+    }
+    
+    const stmt = db.prepare(sql);
+    const tasks = stmt.all(...params);
+    
     for (const taskRaw of tasks) {
         const task = parseOneSQLTask(taskRaw);
         // Check if all dependencies are completed
@@ -158,45 +176,49 @@ function getTaskToComplete(type: string, capabilities?: object, filter_by_status
 
 function getTasks(filter_by_status?: TaskStatus) {
     if (filter_by_status === undefined) {
-        const query = db.prepareQuery<[string, string, TaskStatus], TaskQ>("SELECT * FROM tasks");
-        return parseAllSQLTasks(query.allEntries());
+        const stmt = db.prepare("SELECT * FROM tasks");
+        return parseAllSQLTasks(stmt.all());
     } else {
-        const query = db.prepareQuery<[string, string, TaskStatus], TaskQ>("SELECT * FROM tasks WHERE status = :status");
-        return parseAllSQLTasks(query.allEntries({status: filter_by_status}));
+        const stmt = db.prepare("SELECT * FROM tasks WHERE status = ?");
+        return parseAllSQLTasks(stmt.all(filter_by_status));
     }
 }
 
 function getTask(taskId: string, filter_by_status?: TaskStatus) {
     if (filter_by_status === undefined) {
-        const query = db.prepareQuery<[string, string, TaskStatus], TaskQ>("SELECT * FROM tasks WHERE id = :id");
-        return parseOneSQLTask(query.firstEntry({id: taskId}));
+        const stmt = db.prepare("SELECT * FROM tasks WHERE id = ?");
+        const result = stmt.get(taskId);
+        return parseOneSQLTask(result);
     } else {
-        const query = db.prepareQuery<[string, string, TaskStatus], TaskQ>("SELECT * FROM tasks WHERE id = :id AND status = :status");
-        return parseOneSQLTask(query.firstEntry({id: taskId, status: filter_by_status}));
+        const stmt = db.prepare("SELECT * FROM tasks WHERE id = ? AND status = ?");
+        const result = stmt.get(taskId, filter_by_status);
+        return parseOneSQLTask(result);
     }
 }
 
 function updateTaskStatus(taskId: string, status: TaskStatus) {
-    const query = db.prepareQuery<never, never, { id: string, status: TaskStatus }>("UPDATE tasks SET status = :status WHERE id = :id");
-    query.execute({id: taskId, status: status});
+    const stmt = db.prepare("UPDATE tasks SET status = ? WHERE id = ?");
+    stmt.run(status, taskId);
 }
 
 function deleteTask(taskId: string) {
-    const query = db.prepareQuery<never, never, { id: string }>("DELETE FROM tasks WHERE id = :id");
-    query.execute({id: taskId});
+    const stmt = db.prepare("DELETE FROM tasks WHERE id = ?");
+    stmt.run(taskId);
 }
 
 function setTaskStatus(taskId: string, status: number) {
     if (typeof status === "number" && (status === 0 || status === 1 || status === 2 || status === 3 || status === 4)) {
-        const query = db.prepareQuery<never, never, { id: string, status: number}>("UPDATE tasks SET status = :status where id == :id");
-        query.execute({id: taskId, status: status});
+        const stmt = db.prepare("UPDATE tasks SET status = ? WHERE id = ?");
+        stmt.run(status, taskId);
     }
 }
 
 function updateTaskData(taskId: string, data: Object) {
-    for (const [key, value] of Object.entries(data)) {
-        const query = db.prepareQuery<never, never, { id: string, key: string, value: string}>("UPDATE tasks SET data=(select json_set(data, :key, :value) from tasks where id == :id) where id == :id");
-        query.execute({id: taskId, key: `$.${key}`, value: value});
+    const currentTask = getTask(taskId);
+    if (currentTask) {
+        const updatedData = { ...currentTask.data, ...data };
+        const stmt = db.prepare("UPDATE tasks SET data = ? WHERE id = ?");
+        stmt.run(JSON.stringify(updatedData), taskId);
     }
 }
 
@@ -204,8 +226,8 @@ function updateTaskAddArtefact(taskId, newArtefact: string) {
     const task = getTask(taskId);
     if (task !== undefined) {
         const artefacts = Array.from(new Set(task.artefacts.concat(newArtefact)));
-        const query = db.prepareQuery<never, never, { id: string, artefacts: string}>("UPDATE tasks SET artefacts=:artefacts where id == :id");
-        query.execute({id: taskId, artefacts: JSON.stringify(artefacts)});
+        const stmt = db.prepare("UPDATE tasks SET artefacts = ? WHERE id = ?");
+        stmt.run(JSON.stringify(artefacts), taskId);
         // console.log(`Added artefact ${newArtefact} to task ${taskId}`);
     }
 }
@@ -213,28 +235,42 @@ function updateTaskRemoveArtefact(taskId, artefact: string) {
     const task = getTask(taskId);
     if (task !== undefined) {
         const artefacts = Array.from(task.artefacts.filter(x => x !== artefact));
-        const query = db.prepareQuery<never, never, { id: string, artefacts: string}>("UPDATE tasks SET artefacts=:artefacts where id == :id");
-        query.execute({id: taskId, artefacts: JSON.stringify(artefacts)});
+        const stmt = db.prepare("UPDATE tasks SET artefacts = ? WHERE id = ?");
+        stmt.run(JSON.stringify(artefacts), taskId);
         // console.log(`Added artefact ${newArtefact} to task ${taskId}`);
     }
 }
 
 function getAllTasksThatDependOn(taskId: string) {
-    const q = db.prepareQuery("SELECT *, (SELECT key FROM json_each(dependsOn) WHERE value = :taskid) as _json_array_key from tasks WHERE _json_array_key IS NOT NULL");
-    const rows = q.allEntries({taskid: taskId}).map(r => {
-        delete r["_json_array_key"];
-        return r;
+    const stmt = db.prepare("SELECT * FROM tasks");
+    const allTasks = stmt.all();
+    const dependentTasks = allTasks.filter(task => {
+        try {
+            const dependsOn = JSON.parse(task.dependsOn || '[]');
+            return dependsOn.includes(taskId);
+        } catch (e) {
+            return false;
+        }
     });
-    return parseAllSQLTasks(rows);
+    return parseAllSQLTasks(dependentTasks);
 }
 
 function removeTaskFromAllDependsOn(taskId: string) {
-    // This doesn't work in a single query for some reason in this version of sqlite... :(
-    const q = db.prepareQuery("SELECT *, (SELECT key FROM json_each(dependsOn) WHERE value = :taskid) as key from tasks WHERE key IS NOT NULL");
-    const rows = q.allEntries({taskid: taskId});
-    rows.forEach(row => {
-        const query = db.prepareQuery("UPDATE tasks SET dependsOn = JSON_REMOVE(dependsOn, '$[' || :k || ']')");
-        query.execute({k: row.key as string});
+    const stmt = db.prepare("SELECT * FROM tasks");
+    const allTasks = stmt.all();
+    
+    allTasks.forEach(task => {
+        try {
+            const dependsOn = JSON.parse(task.dependsOn || '[]');
+            const depIndex = dependsOn.indexOf(taskId);
+            if (depIndex !== -1) {
+                dependsOn.splice(depIndex, 1);
+                const updateStmt = db.prepare("UPDATE tasks SET dependsOn = ? WHERE id = ?");
+                updateStmt.run(JSON.stringify(dependsOn), task.id);
+            }
+        } catch (e) {
+            // Skip tasks with malformed dependsOn
+        }
     });
 }
 
