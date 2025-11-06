@@ -4,6 +4,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
     <link rel="stylesheet" href="style.css">
     <link rel="icon" href="logo.png" type="image/png">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/typescript.min.js"></script>
     <script src="element-table.js" type="module"></script>
     <script src="element-grid.js" type="module"></script>
@@ -95,30 +96,26 @@
             const scriptItem = library.find(item => item.filename === selectedScript);
             if (!scriptItem) return;
 
-            const formData = new FormData();
-            formData.append('script', scriptItem.filename); // Assuming script content, but actually need to fetch or use filename?
-            // Wait, the POST /tasks expects script content, but in addtask.ts, it gets the script content.
-            // For web UI, perhaps we need to fetch the script content from /scripts/{filename}
-            // But /scripts/ serves static, but for task creation, it needs the script text.
-
-            // Actually, looking back, POST /tasks takes 'script' as the content.
-            // So, we need to fetch the script content first.
-
             fetch(`/scripts/${selectedScript}`)
                 .then(res => res.text())
                 .then(scriptContent => {
-                    formData.append('script', scriptContent);
-                    formData.append('name', document.getElementById('taskName').value);
-                    formData.append('data', document.getElementById('taskData').value);
-                    formData.append('ephemeral', document.getElementById('ephemeral').value);
-                    formData.append('status', document.getElementById('status').value);
-                    formData.append('type', selectedScript.endsWith('.py') ? 'python' : 'deno');
-                    formData.append('capabilitiesSchema', JSON.stringify(scriptItem.capabilitiesSchema));
+                    const body = {
+                        script: scriptContent,
+                        name: document.getElementById('taskName').value || undefined,
+                        data: JSON.parse(document.getElementById('taskData').value || '{}'),
+                        ephemeral: parseInt(document.getElementById('ephemeral').value),
+                        status: parseInt(document.getElementById('status').value),
+                        type: selectedScript.endsWith('.py') ? 'python' : 'deno',
+                        capabilitiesSchema: scriptItem.capabilitiesSchema
+                    };
 
                     return fetch('/tasks', {
                         method: 'POST',
-                        headers: headers,
-                        body: formData
+                        headers: {
+                            'Content-Type': 'application/json',
+                            ...headers
+                        },
+                        body: JSON.stringify(body)
                     });
                 })
                 .then(res => res.json())
