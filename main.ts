@@ -9,7 +9,7 @@ import { validateSheetName } from "./lib/sheet_validator.ts";
 import { upsert, validateTableName } from "./lib/data_providers/sqlite/lib.ts";
 import { SheetDB } from "./lib/data_providers/sqlite/sheetdb.ts";
 import { UserDB } from "./lib/data_providers/sqlite/userdb.ts";
-import { createInjectDependenciesMiddleware } from "./lib/middleware.ts";
+import { createInjectDependenciesMiddleware, createGetScriptMiddleware, createGetTaskMiddleware } from "./lib/middleware.ts";
 
 const SECRET_KEY = new TextDecoder().decode(Deno.readFileSync("./secret.txt"));
 
@@ -197,6 +197,8 @@ function getTask(taskId: string, filter_by_status?: TaskStatus) {
     }
 }
 
+const getTaskMiddleware = createGetTaskMiddleware(getTask);
+const getScript = createGetScriptMiddleware(getTask);
 const injectDependencies = createInjectDependenciesMiddleware(getTask);
 
 function updateTaskStatus(taskId: string, status: TaskStatus) {
@@ -543,8 +545,8 @@ app.get("/scripts/agent(\.ts|\.py)?", (req, res) => {
     }
 });
 
-app.get("/scripts/:id\.?.*", injectDependencies, (req, res) => {
-    const task = getTask(req.params.id);
+app.get("/scripts/:id\.?.*", getTaskMiddleware, getScript, injectDependencies, (req, res) => {
+    const task = res.locals.task;
     if (task) {
         if (req.path.endsWith(".ts")) {
             res.contentType("application/typescript");
@@ -553,7 +555,7 @@ app.get("/scripts/:id\.?.*", injectDependencies, (req, res) => {
         } else if (req.path.endsWith(".py")) {
             res.contentType("text/x-python");
         }
-        res.send(res.locals.injectedScript);
+        res.send(res.locals.script);
     } else {
         res.status(404);
         res.send();
