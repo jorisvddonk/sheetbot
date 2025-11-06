@@ -5,7 +5,8 @@ export function createAgentTrackingMiddleware(eventEmitter: AgentEventEmitter) {
     onAgentConnected: (req, res, next) => {
       // Middleware to emit agent connection events
       const ip = req.ip || req.connection.remoteAddress || req.socket.remoteAddress || 'unknown';
-      eventEmitter.emitAgentConnected(ip);
+      const capabilities = req.body?.capabilities;
+      eventEmitter.emitAgentConnected(ip, capabilities);
       next();
     }
   };

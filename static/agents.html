@@ -79,10 +79,18 @@
                     "datatype": "STRING"
                 },
                 {
+                    "name": "capabilities",
+                    "widgettype": "code",
+                    "maxwidth": 400,
+                    "maxheight": 150,
+                    "columnorder": 2,
+                    "datatype": "TEXT"
+                },
+                {
                     "name": "lastSeenTimestamp",
                     "widgettype": "text",
                     "minwidth": 120,
-                    "columnorder": 2,
+                    "columnorder": 3,
                     "datatype": "NUMERIC"
                 }
             ];
@@ -92,6 +100,7 @@
                 d.push([
                     agent.ip,
                     formatTimestamp(agent.lastSeen),
+                    agent.capabilities ? JSON.stringify(agent.capabilities, null, 2) : 'No capabilities reported',
                     agent.lastSeen
                 ]);
             });
