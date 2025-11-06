@@ -1,6 +1,8 @@
 import { DatabaseSync } from "node:sqlite";
 
 
+import { SQLInputValue } from "node:sqlite";
+
 const ALLOWED_TABLE_NAME_REGEX = /^[a-zA-Z0-9-_ ]+$/;
 const ALLOWED_COLUMN_NAME_REGEX = /^[a-zA-Z0-9-_ .]+$/;
 
@@ -117,6 +119,6 @@ export function upsert(db: DatabaseSync, tablename: string, data: [string, unkno
     const sql = `INSERT INTO "${tablename}" ${columnize(columns)} VALUES ${questionmark_valuesize(columns)} ON CONFLICT(key) DO UPDATE SET ${settize(columns.slice(1))}`;
     const vals = values.concat(values.slice(1));
     const stmt = db.prepare(sql);
-    const result = stmt.run(...vals);
+    const result = stmt.run(...(vals as SQLInputValue[]));
     return result;
 }

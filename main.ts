@@ -262,7 +262,7 @@ function getAllTasksThatDependOn(taskId: string) {
     const allTasks = stmt.all();
     const dependentTasks = allTasks.filter(task => {
         try {
-            const dependsOn = JSON.parse(task.dependsOn || '[]');
+            const dependsOn = JSON.parse(String(task.dependsOn) || '[]');
             return dependsOn.includes(taskId);
         } catch (e) {
             return false;
@@ -277,7 +277,7 @@ function removeTaskFromAllDependsOn(taskId: string) {
     
     allTasks.forEach(task => {
         try {
-            const dependsOn = JSON.parse(task.dependsOn || '[]');
+            const dependsOn = JSON.parse(String(task.dependsOn) || '[]');
             const depIndex = dependsOn.indexOf(taskId);
             if (depIndex !== -1) {
                 dependsOn.splice(depIndex, 1);
@@ -334,7 +334,7 @@ app.post("/login", async (req, res) => {
         if (!loginvalid) {
           return res.status(401).json({ error: 'Authentication failed' });
         }
-        const token = jsonwebtoken.sign({ userId: username, permissions: user.permissions.split(",") }, SECRET_KEY, { expiresIn: '1h' });
+        const token = jsonwebtoken.sign({ userId: username, permissions: String(user.permissions).split(",") }, SECRET_KEY, { expiresIn: '1h' });
         res.json({ token });
       } catch (e) {
         console.log(e); 

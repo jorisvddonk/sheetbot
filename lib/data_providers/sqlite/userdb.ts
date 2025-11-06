@@ -62,7 +62,7 @@ export class UserDB {
      */
     async verifyLogin(username: string, hashed_salted_password: string) {
         const user = await this.findUser(username);
-        return bcrypt.compare(hashed_salted_password, user.hashed_salted_password);
+        return bcrypt.compare(hashed_salted_password, String(user.hashed_salted_password));
     }
 
     /**

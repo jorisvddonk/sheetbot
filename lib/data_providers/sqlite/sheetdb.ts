@@ -98,9 +98,9 @@ export class SheetDB {
                 const columnData = row[columnEntry.name];
                 if (columnEntry.datatype === "JSON") {
                     try {
-                        returnrow.push(JSON.parse(columnData));
+                        returnrow.push(JSON.parse(String(columnData)));
                     } catch (e) {
-                        returnrow.push(columnData); // data is actually a string, so return a string
+                        returnrow.push(String(columnData)); // data is actually a string, so return a string
                     }
                 } else {
                     returnrow.push(columnData);
