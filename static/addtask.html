@@ -73,6 +73,14 @@
                     option.textContent = item.name || item.filename;
                     select.appendChild(option);
                 });
+
+                // Check for script parameter in URL
+                const urlParams = new URLSearchParams(window.location.search);
+                const scriptParam = urlParams.get('script');
+                if (scriptParam) {
+                    select.value = scriptParam;
+                    select.dispatchEvent(new Event('change')); // Trigger change event to fill form
+                }
             })
             .catch(err => console.error('Failed to load library:', err));
 

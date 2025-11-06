@@ -16,8 +16,10 @@
     <script src="widget-tasktype.js" type="module"></script>
     <script src="widget-taskid.js" type="module"></script>
     <script src="widget-taskname.js" type="module"></script>
-    <script src="widget-hashimg.js" type="module"></script>
-    <script src="widget-multi.js" type="module"></script>
+     <script src="widget-hashimg.js" type="module"></script>
+     <script src="widget-multi.js" type="module"></script>
+     <script src="widget-schedule-task.js" type="module"></script>
+     <script src="widget-text-centered.js" type="module"></script>
     <script src="header.js"></script>
 </head>
 
@@ -36,20 +38,20 @@
             return response.json()
         }).then(data => {
             const columns = [
-                {
-                    "name": "filename",
-                    "widgettype": "text",
-                    "minwidth": 200,
-                    "columnorder": 0,
-                    "datatype": "STRING"
-                },
-                {
-                    "name": "name",
-                    "widgettype": "text",
-                    "minwidth": 200,
-                    "columnorder": 1,
-                    "datatype": "STRING"
-                },
+                 {
+                     "name": "filename",
+                     "widgettype": "text-centered",
+                     "minwidth": 200,
+                     "columnorder": 0,
+                     "datatype": "STRING"
+                 },
+                 {
+                     "name": "name",
+                     "widgettype": "text-centered",
+                     "minwidth": 200,
+                     "columnorder": 1,
+                     "datatype": "STRING"
+                 },
                 {
                     "name": "capabilitiesSchema",
                     "widgettype": "code",
@@ -66,20 +68,31 @@
                     "columnorder": 3,
                     "datatype": "TEXT"
                 },
-                {
-                    "name": "comments",
-                    "widgettype": "text",
-                    "maxwidth": 400,
-                    "columnorder": 4,
-                    "datatype": "STRING"
-                }
+                 {
+                     "name": "comments",
+                     "widgettype": "text-centered",
+                     "maxwidth": 400,
+                     "columnorder": 4,
+                     "datatype": "STRING"
+                 },
+                 {
+                     "name": "schedule",
+                     "widgettype": "schedule-task",
+                     "minwidth": 120,
+                     "columnorder": 5,
+                     "datatype": "STRING"
+                 }
             ];
 
             const d = [];
             data.forEach(row => {
                 const r = [];
                 columns.forEach(column => {
-                    r.push(row[column.name]);
+                    if (column.name === 'schedule') {
+                        r.push(row.filename); // Use filename for schedule button
+                    } else {
+                        r.push(row[column.name]);
+                    }
                 });
                 d.push(r);
             })
