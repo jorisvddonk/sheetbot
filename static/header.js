@@ -4,6 +4,7 @@ function loadHeader() {
     .then(html => {
         document.getElementById('header-placeholder').innerHTML = html;
         showWelcomeMessage();
+        setupLogout();
     });
 }
 
@@ -25,6 +26,7 @@ function showWelcomeMessage() {
         const payload = decodeJWT(token);
         if (payload && payload.userId) {
             document.getElementById('welcome-message').textContent = `Welcome, ${payload.userId}`;
+            document.getElementById('user-name').textContent = payload.userId;
         } else {
             console.log('No payload or userId:', payload);
         }
@@ -87,6 +89,16 @@ function loadAgentStats(token) {
         const statsDiv = document.getElementById('agent-stats');
         statsDiv.textContent = 'Agent stats unavailable';
     });
+}
+
+function setupLogout() {
+    const logoutBtn = document.getElementById('logout-btn');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', () => {
+            localStorage.removeItem('jwt_token');
+            window.location.href = 'index.html';
+        });
+    }
 }
 
 // Update stats every 30 seconds
