@@ -133,6 +133,29 @@ Agents with matching capabilities (e.g., `{"os": "linux", "nodeVersion": "18.0.0
 
 Task designers have full control over `capabilitiesSchema`; SheetBot enforces no predefined schemas, allowing complete customization for agent matching.
 
+#### Setting Up Dynamic Capabilities
+
+Agents can use a dynamic capabilities file to compute runtime capabilities like software versions, memory, and load averages. To set up:
+
+1. **Download the capabilities library**:
+   ```bash
+   curl -o .capabilities.dynamic.ts <sheetbot_baseurl>/scripts/lib/capabilities.ts
+   ```
+
+2. **Or create a dynamic import file** `.capabilities.dynamic.ts`:
+   ```typescript
+   async function getCapabilities(staticCapabilities) {
+       const lib = await import(Deno.env.get("SHEETBOT_BASEURL") + "/scripts/lib/capabilities.ts");
+       return await lib.getCapabilities(staticCapabilities);
+   }
+
+   export { getCapabilities };
+   ```
+
+3. **Modify agent templates** to use the dynamic capabilities file by importing and calling `getCapabilities()` with static capabilities.
+
+The dynamic capabilities include detected software versions (git, clang, cmake, etc.), OS details, memory info, load averages, and hostname.
+
 ### Data Management
 
 #### Task Data
