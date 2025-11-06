@@ -29,6 +29,7 @@ function showWelcomeMessage() {
             console.log('No payload or userId:', payload);
         }
         loadTaskStats(token);
+        loadAgentStats(token);
     } else {
         console.log('No JWT token in localStorage');
     }
@@ -61,11 +62,39 @@ function loadTaskStats(token) {
     });
 }
 
+function loadAgentStats(token) {
+    fetch('/agenttracker', {
+        headers: {
+            'Authorization': `Bearer ${token}`
+        }
+    })
+    .then(response => {
+        if (response.ok) {
+            return response.json();
+        } else {
+            throw new Error('Failed to fetch agent stats');
+        }
+    })
+    .then(stats => {
+        const statsDiv = document.getElementById('agent-stats');
+        const timeDisplay = stats.windowMinutes >= 120
+            ? `${Math.round(stats.windowMinutes / 60)}h`
+            : `${stats.windowMinutes}m`;
+        statsDiv.textContent = `Agents: ${stats.activeAgents}/${stats.totalUniqueAgents} (${timeDisplay})`;
+    })
+    .catch(error => {
+        console.log('Error loading agent stats:', error);
+        const statsDiv = document.getElementById('agent-stats');
+        statsDiv.textContent = 'Agent stats unavailable';
+    });
+}
+
 // Update stats every 30 seconds
 setInterval(() => {
     const token = localStorage.getItem('jwt_token');
     if (token) {
         loadTaskStats(token);
+        loadAgentStats(token);
     }
 }, 30000);
 

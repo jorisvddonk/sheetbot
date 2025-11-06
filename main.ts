@@ -13,6 +13,9 @@ import { createInjectDependenciesMiddleware, createGetScriptMiddleware, createGe
 import { TaskTracker } from "./lib/tasktracker.ts";
 import { TaskEventEmitter } from "./lib/task-events.ts";
 import { createTaskTrackingMiddleware } from "./lib/task-tracking-middleware.ts";
+import { AgentTracker } from "./lib/agenttracker.ts";
+import { AgentEventEmitter } from "./lib/agent-events.ts";
+import { createAgentTrackingMiddleware } from "./lib/agent-tracking-middleware.ts";
 import OpenApiValidator from "npm:express-openapi-validator@5.6.0";
 
 const SECRET_KEY = new TextDecoder().decode(Deno.readFileSync("./secret.txt"));
@@ -49,6 +52,9 @@ const userdb = new UserDB();
 const taskEventEmitter = new TaskEventEmitter();
 const taskTracker = new TaskTracker(taskEventEmitter);
 const taskTrackingMiddleware = createTaskTrackingMiddleware(taskEventEmitter);
+const agentEventEmitter = new AgentEventEmitter();
+const agentTracker = new AgentTracker(agentEventEmitter);
+const agentTrackingMiddleware = createAgentTrackingMiddleware(agentEventEmitter);
 
 const ajv = new (Ajv as any)();
 
@@ -366,6 +372,11 @@ app.get("/tasktracker", requiresLogin, (req, res) => {
     res.json(taskTracker.getStats(minutes));
 });
 
+app.get("/agenttracker", requiresLogin, (req, res) => {
+    const minutes = parseInt(req.query.minutes as string) || 1440;
+    res.json(agentTracker.getStats(minutes));
+});
+
 app.post("/tasks", requiresLogin, requiresPermission(PERMISSION_CREATE_TASKS), taskTrackingMiddleware.onTaskCreated, upload.array('file'), async (req, res) => {
     const task = taskify(req.body.script);
     if (req.body.id) {
@@ -414,7 +425,7 @@ app.post("/tasks", requiresLogin, requiresPermission(PERMISSION_CREATE_TASKS), t
     res.send();
 });
 
-app.post("/tasks/get", requiresLogin, requiresPermission(PERMISSION_PERFORM_TASKS), (req, res) => {
+app.post("/tasks/get", requiresLogin, requiresPermission(PERMISSION_PERFORM_TASKS), agentTrackingMiddleware.onAgentConnected, (req, res) => {
     const task = getTaskToComplete(req.body.type, req.body.capabilities, TaskStatus.AWAITING);
     if (task) {
         const extension = req.body.type === "python" ? ".py" : ".ts";

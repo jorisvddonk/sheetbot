@@ -237,6 +237,31 @@ components:
           type: integer
           description: Time window in minutes used for the statistics
 
+    AgentTrackerStats:
+      type: object
+      properties:
+        totalUniqueAgents:
+          type: integer
+          description: Total number of unique agents ever seen
+        activeAgents:
+          type: integer
+          description: Number of agents active in the time window
+        agents:
+          type: array
+          items:
+            type: object
+            properties:
+              ip:
+                type: string
+                description: Agent IP address
+              lastSeen:
+                type: integer
+                format: int64
+                description: Timestamp of last agent connection
+        windowMinutes:
+          type: integer
+          description: Time window in minutes used for the statistics
+
 security:
   - bearerAuth: []
 
@@ -395,6 +420,34 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TaskTrackerStats'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /agenttracker:
+    get:
+      summary: Get agent statistics
+      description: Retrieve rolling statistics for connected agents based on IP addresses (data retained for up to 1 day)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: minutes
+          in: query
+          schema:
+            type: integer
+            default: 1440
+            minimum: 1
+          description: Time window in minutes for statistics (default 1440)
+      responses:
+        '200':
+          description: Agent statistics for the specified time window
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentTrackerStats'
         '401':
           description: Unauthorized
           content:
