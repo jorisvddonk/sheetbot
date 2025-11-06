@@ -1,0 +1,92 @@
+<html>
+
+<head>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" href="logo.png" type="image/png">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/typescript.min.js"></script>
+    <script src="element-table.js" type="module"></script>
+    <script src="element-grid.js" type="module"></script>
+    <script src="element-contextmenu.js" type="module"></script>
+    <script src="widget-image.js" type="module"></script>
+    <script src="widget-code.js" type="module"></script>
+    <script src="widget-text.js" type="module"></script>
+    <script src="widget-taskstatus.js" type="module"></script>
+    <script src="widget-taskephemeral.js" type="module"></script>
+    <script src="widget-tasktype.js" type="module"></script>
+    <script src="widget-taskid.js" type="module"></script>
+    <script src="widget-taskname.js" type="module"></script>
+    <script src="widget-hashimg.js" type="module"></script>
+    <script src="widget-multi.js" type="module"></script>
+    <script src="header.js"></script>
+</head>
+
+<body>
+    <div id="header-placeholder"></div>
+    <element-grid id="table"></element-grid>
+
+    <script>
+        const headers = {};
+        if (localStorage.hasOwnProperty("jwt_token")) {
+            headers["Authorization"] = `Bearer ${localStorage["jwt_token"]}`;
+        }
+        const data = fetch("/library", {
+            headers: headers
+        }).then(response => {
+            return response.json()
+        }).then(data => {
+            const columns = [
+                {
+                    "name": "filename",
+                    "widgettype": "text",
+                    "minwidth": 200,
+                    "columnorder": 0,
+                    "datatype": "STRING"
+                },
+                {
+                    "name": "name",
+                    "widgettype": "text",
+                    "minwidth": 200,
+                    "columnorder": 1,
+                    "datatype": "STRING"
+                },
+                {
+                    "name": "capabilitiesSchema",
+                    "widgettype": "code",
+                    "maxwidth": 300,
+                    "maxheight": 150,
+                    "columnorder": 2,
+                    "datatype": "TEXT"
+                },
+                {
+                    "name": "suggestedData",
+                    "widgettype": "code",
+                    "maxwidth": 300,
+                    "maxheight": 150,
+                    "columnorder": 3,
+                    "datatype": "TEXT"
+                },
+                {
+                    "name": "comments",
+                    "widgettype": "text",
+                    "maxwidth": 400,
+                    "columnorder": 4,
+                    "datatype": "STRING"
+                }
+            ];
+
+            const d = [];
+            data.forEach(row => {
+                const r = [];
+                columns.forEach(column => {
+                    r.push(row[column.name]);
+                });
+                d.push(r);
+            })
+            document.getElementById('table').setAttribute('data', JSON.stringify({data: d, columns: columns}));
+        });
+
+    </script>
+</body>
+
+</html>

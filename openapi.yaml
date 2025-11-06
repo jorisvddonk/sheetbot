@@ -262,6 +262,27 @@ components:
           type: integer
           description: Time window in minutes used for the statistics
 
+    ScriptLibraryItem:
+      type: object
+      properties:
+        filename:
+          type: string
+          description: Script filename
+        name:
+          type: string
+          description: Human-readable script name
+        capabilitiesSchema:
+          type: object
+          description: JSON Schema for agent capabilities
+        suggestedData:
+          type: object
+          description: Suggested default data for the task
+        comments:
+          type: string
+          description: Comments about the task
+      required:
+        - filename
+
 security:
   - bearerAuth: []
 
@@ -394,6 +415,28 @@ paths:
                 $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /library:
+    get:
+      summary: Get script library
+      description: Retrieve list of available scripts with metadata
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of scripts with metadata
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ScriptLibraryItem'
+        '401':
+          description: Unauthorized
           content:
             application/json:
               schema:

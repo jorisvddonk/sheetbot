@@ -1,0 +1,137 @@
+<html>
+
+<head>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" href="logo.png" type="image/png">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/typescript.min.js"></script>
+    <script src="element-table.js" type="module"></script>
+    <script src="element-grid.js" type="module"></script>
+    <script src="element-contextmenu.js" type="module"></script>
+    <script src="widget-image.js" type="module"></script>
+    <script src="widget-code.js" type="module"></script>
+    <script src="widget-text.js" type="module"></script>
+    <script src="widget-taskstatus.js" type="module"></script>
+    <script src="widget-taskephemeral.js" type="module"></script>
+    <script src="widget-tasktype.js" type="module"></script>
+    <script src="widget-taskid.js" type="module"></script>
+    <script src="widget-taskname.js" type="module"></script>
+    <script src="widget-hashimg.js" type="module"></script>
+    <script src="widget-multi.js" type="module"></script>
+    <script src="header.js"></script>
+</head>
+
+<body>
+    <div id="header-placeholder"></div>
+    <h2>Add New Task</h2>
+    <form id="addTaskForm">
+        <label for="scriptSelect">Select Script:</label>
+        <select id="scriptSelect" required>
+            <option value="">-- Choose a script --</option>
+        </select><br><br>
+
+        <label for="taskName">Task Name:</label>
+        <input type="text" id="taskName" placeholder="Optional task name"><br><br>
+
+        <label for="taskData">Data (JSON):</label>
+        <textarea id="taskData" rows="10" cols="50" placeholder='{"key": "value"}'></textarea><br><br>
+
+        <label for="ephemeral">Ephemeral:</label>
+        <select id="ephemeral">
+            <option value="0">Persistent</option>
+            <option value="1">Ephemeral on Success</option>
+            <option value="2">Ephemeral Always</option>
+        </select><br><br>
+
+        <label for="status">Initial Status:</label>
+        <select id="status">
+            <option value="0">Awaiting</option>
+            <option value="4">Paused</option>
+        </select><br><br>
+
+        <button type="submit">Add Task</button>
+    </form>
+
+    <script>
+        const headers = {};
+        if (localStorage.hasOwnProperty("jwt_token")) {
+            headers["Authorization"] = `Bearer ${localStorage["jwt_token"]}`;
+        }
+
+        let library = [];
+
+        // Fetch library
+        fetch("/library", { headers })
+            .then(response => response.json())
+            .then(data => {
+                library = data;
+                const select = document.getElementById('scriptSelect');
+                data.forEach(item => {
+                    const option = document.createElement('option');
+                    option.value = item.filename;
+                    option.textContent = item.name || item.filename;
+                    select.appendChild(option);
+                });
+            })
+            .catch(err => console.error('Failed to load library:', err));
+
+        // Handle script selection
+        document.getElementById('scriptSelect').addEventListener('change', function() {
+            const selected = library.find(item => item.filename === this.value);
+            if (selected) {
+                document.getElementById('taskName').value = selected.name || '';
+                document.getElementById('taskData').value = JSON.stringify(selected.suggestedData, null, 2);
+                // Could show comments somewhere, e.g., alert or div
+                if (selected.comments) {
+                    alert(`Comments: ${selected.comments}`);
+                }
+            }
+        });
+
+        // Handle form submission
+        document.getElementById('addTaskForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const selectedScript = document.getElementById('scriptSelect').value;
+            const scriptItem = library.find(item => item.filename === selectedScript);
+            if (!scriptItem) return;
+
+            const formData = new FormData();
+            formData.append('script', scriptItem.filename); // Assuming script content, but actually need to fetch or use filename?
+            // Wait, the POST /tasks expects script content, but in addtask.ts, it gets the script content.
+            // For web UI, perhaps we need to fetch the script content from /scripts/{filename}
+            // But /scripts/ serves static, but for task creation, it needs the script text.
+
+            // Actually, looking back, POST /tasks takes 'script' as the content.
+            // So, we need to fetch the script content first.
+
+            fetch(`/scripts/${selectedScript}`)
+                .then(res => res.text())
+                .then(scriptContent => {
+                    formData.append('script', scriptContent);
+                    formData.append('name', document.getElementById('taskName').value);
+                    formData.append('data', document.getElementById('taskData').value);
+                    formData.append('ephemeral', document.getElementById('ephemeral').value);
+                    formData.append('status', document.getElementById('status').value);
+                    formData.append('type', selectedScript.endsWith('.py') ? 'python' : 'deno');
+                    formData.append('capabilitiesSchema', JSON.stringify(scriptItem.capabilitiesSchema));
+
+                    return fetch('/tasks', {
+                        method: 'POST',
+                        headers: headers,
+                        body: formData
+                    });
+                })
+                .then(res => res.json())
+                .then(data => {
+                    alert(`Task added! ID: ${data.id}`);
+                    // Maybe redirect to task.html or clear form
+                })
+                .catch(err => {
+                    console.error('Failed to add task:', err);
+                    alert('Failed to add task');
+                });
+        });
+    </script>
+</body>
+
+</html>
