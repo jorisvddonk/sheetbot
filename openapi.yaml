@@ -141,22 +141,6 @@ components:
       required:
         - type
 
-    TaskGetResponse:
-      type: object
-      properties:
-        script:
-          type: string
-          format: uri
-          description: URL to task script
-        id:
-          type: string
-          format: uuid
-          description: Task ID
-        type:
-          type: string
-          enum: ["deno", "python"]
-          description: Task type
-
     TaskCompleteRequest:
       type: object
       properties:
@@ -383,9 +367,20 @@ paths:
           content:
             application/json:
               schema:
-                oneOf:
-                  - $ref: '#/components/schemas/TaskGetResponse'
-                  - type: object
+                type: object
+                properties:
+                  script:
+                    type: string
+                    format: uri
+                    description: URL to task script
+                  id:
+                    type: string
+                    format: uuid
+                    description: Task ID
+                  type:
+                    type: string
+                    enum: ["deno", "python"]
+                    description: Task type
         '401':
           description: Unauthorized
           content:
