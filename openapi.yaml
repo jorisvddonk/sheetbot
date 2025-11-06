@@ -725,6 +725,7 @@ paths:
     parameters:
       - name: extension
         in: path
+        required: true
         schema:
           type: string
           enum: [".ts", ".py", ""]
@@ -745,24 +746,50 @@ paths:
                 type: string
             text/x-python:
               schema:
+                 type: string
+
+  /scripts/{filename_with_extension}:
+    parameters:
+      - name: filename_with_extension
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: '.*\..*'
+        description: Filename with extension
+
+    get:
+      summary: Get static script template
+      description: Retrieve a templated static script
+      responses:
+        '200':
+          description: Static script template
+          content:
+            application/typescript:
+              schema:
+                type: string
+            application/javascript:
+              schema:
+                type: string
+            text/x-python:
+              schema:
+                type: string
+        '404':
+          description: Script not found
+          content:
+            text/plain:
+              schema:
                 type: string
 
-  /scripts/{id}{extension}:
+  /scripts/{uuid}:
     parameters:
-      - name: id
+      - name: uuid
         in: path
         required: true
         schema:
           type: string
           format: uuid
         description: Task ID
-      - name: extension
-        in: path
-        required: true
-        schema:
-          type: string
-          pattern: '\..*'
-        description: File extension
 
     get:
       summary: Get task script
