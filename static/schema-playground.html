@@ -1,0 +1,293 @@
+<html>
+
+<head>
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" href="logo.png" type="image/png">
+    <script src="https://cdn.jsdelivr.net/npm/ajv@6/dist/ajv.min.js"></script>
+    <title>JSON Schema Playground</title>
+</head>
+
+<body>
+    <div style="display: flex; align-items: center; justify-content: flex-start; padding: 10px;">
+      <img src="logo.png" alt="SheetBot Logo" style="height: 50px;">
+      <span id="welcome-message" style="margin-left: 10px;"></span>
+       <nav style="margin-left: 20px;">
+         <a href="index.html" style="margin-right: 15px; text-decoration: none; color: #333;">Home</a>
+         <a href="agents.html" style="margin-right: 15px; text-decoration: none; color: #333;">Agents</a>
+         <a href="task.html" style="margin-right: 15px; text-decoration: none; color: #333;">Tasks</a>
+          <a href="library.html" style="margin-right: 15px; text-decoration: none; color: #333;">Library</a>
+          <a href="schema-playground.html" style="margin-right: 15px; text-decoration: none; color: #333;">Schema Playground</a>
+          <a href="addtask.html" style="margin-right: 15px; text-decoration: none; color: #333;">Add Task</a>
+         <a href="sheet.html" style="text-decoration: none; color: #333;">Sheets</a>
+       </nav>
+      <div style="margin-left: auto; display: flex; gap: 20px; align-items: baseline;">
+        <div id="user-profile" style="font-size: 14px; color: #666;">
+          <span id="user-name"></span>
+          <button id="logout-btn" style="margin-left: 10px; padding: 5px 10px; background: #f0f0f0; border: 1px solid #ccc; cursor: pointer;">Logout</button>
+        </div>
+        <div id="agent-stats" style="font-size: 14px; color: #666; white-space: nowrap; line-height: 1.2;"></div>
+        <div id="task-stats" style="font-size: 14px; color: #666; white-space: nowrap; line-height: 1.2;"></div>
+      </div>
+    </div>
+    <div class="container">
+        <h1>JSON Schema Playground</h1>
+        <p>Test capability JSONs against schemas.</p>
+
+        <div id="prefill-section" style="display: none;">
+            <label for="source-select">Prefill from:</label>
+            <select id="source-select">
+                <option value="">Select...</option>
+                <option value="task">Task</option>
+                <option value="agent">Agent</option>
+            </select>
+            <select id="item-select" style="display: none;">
+                <option value="">Select item...</option>
+            </select>
+            <button id="prefill-btn">Prefill</button>
+        </div>
+
+        <div class="form-group">
+            <label for="json-input">Capability JSON:</label>
+            <textarea id="json-input" rows="10" placeholder="Paste your capability JSON here..."></textarea>
+        </div>
+
+        <div class="form-group">
+            <label for="schema-input">Schema JSON:</label>
+            <textarea id="schema-input" rows="10" placeholder="Paste your JSON schema here..."></textarea>
+        </div>
+
+        <button id="validate-btn">Validate</button>
+
+        <div id="output" class="output"></div>
+    </div>
+
+    <script>
+        function decodeJWT(token) {
+            try {
+                const payload = token.split('.')[1];
+                const decoded = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')));
+                return decoded;
+            } catch (e) {
+                console.log('JWT decode failed:', e);
+                return null;
+            }
+        }
+
+        function showWelcomeMessage() {
+            const token = localStorage.getItem('jwt_token');
+            if (token) {
+                console.log('JWT token found');
+                const payload = decodeJWT(token);
+                if (payload && payload.userId) {
+                    document.getElementById('welcome-message').textContent = `Welcome, ${payload.userId}`;
+                    document.getElementById('user-name').textContent = payload.userId;
+                } else {
+                    console.log('No payload or userId:', payload);
+                }
+                loadTaskStats(token);
+                loadAgentStats(token);
+            } else {
+                console.log('No JWT token in localStorage');
+            }
+        }
+
+        function loadTaskStats(token) {
+            fetch('/tasktracker', {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            })
+            .then(response => {
+                if (response.ok) {
+                    return response.json();
+                } else {
+                    throw new Error('Failed to fetch stats');
+                }
+            })
+            .then(stats => {
+                const statsDiv = document.getElementById('task-stats');
+                const timeDisplay = stats.windowMinutes >= 120
+                    ? `${Math.round(stats.windowMinutes / 60)}h`
+                    : `${stats.windowMinutes}m`;
+                statsDiv.textContent = `Tasks: +${stats.added} ✓${stats.completed} ✗${stats.failed} (${timeDisplay})`;
+            })
+            .catch(error => {
+                console.log('Error loading task stats:', error);
+                const statsDiv = document.getElementById('task-stats');
+                statsDiv.textContent = 'Stats unavailable';
+            });
+        }
+
+        function loadAgentStats(token) {
+            fetch('/agenttracker', {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            })
+            .then(response => {
+                if (response.ok) {
+                    return response.json();
+                } else {
+                    throw new Error('Failed to fetch agent stats');
+                }
+            })
+            .then(stats => {
+                const statsDiv = document.getElementById('agent-stats');
+                const timeDisplay = stats.windowMinutes >= 120
+                    ? `${Math.round(stats.windowMinutes / 60)}h`
+                    : `${stats.windowMinutes}m`;
+                statsDiv.textContent = `Agents: ${stats.activeAgents}/${stats.totalUniqueAgents} (${timeDisplay})`;
+            })
+            .catch(error => {
+                console.log('Error loading agent stats:', error);
+                const statsDiv = document.getElementById('agent-stats');
+                statsDiv.textContent = 'Agent stats unavailable';
+            });
+        }
+
+        function setupLogout() {
+            const logoutBtn = document.getElementById('logout-btn');
+            if (logoutBtn) {
+                logoutBtn.addEventListener('click', () => {
+                    localStorage.removeItem('jwt_token');
+                    globalThis.location.href = 'index.html';
+                });
+            }
+        }
+
+        const ajv = new Ajv();
+
+        document.getElementById('validate-btn').addEventListener('click', () => {
+            const jsonText = document.getElementById('json-input').value;
+            const schemaText = document.getElementById('schema-input').value;
+            const output = document.getElementById('output');
+
+            try {
+                const data = JSON.parse(jsonText);
+                const schema = JSON.parse(schemaText);
+                const validate = ajv.compile(schema);
+                const valid = validate(data);
+
+                if (valid) {
+                    output.innerHTML = '<div class="success">✓ Valid</div>';
+                } else {
+                    output.innerHTML = '<div class="error">✗ Invalid: ' + JSON.stringify(validate.errors, null, 2) + '</div>';
+                }
+            } catch (e) {
+                output.innerHTML = '<div class="error">Error: ' + e.message + '</div>';
+            }
+        });
+
+        // Check if logged in
+        if (localStorage.hasOwnProperty("jwt_token")) {
+            document.getElementById('prefill-section').style.display = 'block';
+            const headers = { "Authorization": `Bearer ${localStorage["jwt_token"]}` };
+
+            document.getElementById('source-select').addEventListener('change', async (e) => {
+                const source = e.target.value;
+                const itemSelect = document.getElementById('item-select');
+                itemSelect.innerHTML = '<option value="">Select item...</option>';
+                itemSelect.style.display = source ? 'inline-block' : 'none';
+
+                if (source === 'task') {
+                    try {
+                        const response = await fetch('/tasks', { headers });
+                        const tasks = await response.json();
+                        tasks.forEach(task => {
+                            const option = document.createElement('option');
+                            option.value = task.id;
+                            option.textContent = `${task.name || task.id} (${task.type})`;
+                            option.dataset.schema = task.capabilitiesSchema ? (typeof task.capabilitiesSchema === 'string' ? task.capabilitiesSchema : JSON.stringify(task.capabilitiesSchema)) : '';
+                            itemSelect.appendChild(option);
+                        });
+                    } catch (e) {
+                        console.error('Failed to fetch tasks:', e);
+                    }
+                } else if (source === 'agent') {
+                    try {
+                        const response = await fetch('/agenttracker', { headers });
+                        const data = await response.json();
+                        data.agents.forEach(agent => {
+                            const option = document.createElement('option');
+                            option.value = `${agent.ip}:${agent.type}`;
+                            option.textContent = `${agent.ip} (${agent.type})`;
+                            option.dataset.capabilities = JSON.stringify(agent.capabilities);
+                            itemSelect.appendChild(option);
+                        });
+                    } catch (e) {
+                        console.error('Failed to fetch agents:', e);
+                    }
+                }
+            });
+
+            document.getElementById('prefill-btn').addEventListener('click', () => {
+                const source = document.getElementById('source-select').value;
+                const itemSelect = document.getElementById('item-select');
+                const selectedOption = itemSelect.options[itemSelect.selectedIndex];
+
+                if (source === 'task') {
+                    document.getElementById('schema-input').value = selectedOption.dataset.schema || '';
+                } else if (source === 'agent') {
+                    document.getElementById('json-input').value = selectedOption.dataset.capabilities || '';
+                }
+            });
+        }
+
+        // Initialize header
+        showWelcomeMessage();
+        setupLogout();
+
+        // Update stats every 30 seconds
+        setInterval(() => {
+            const token = localStorage.getItem('jwt_token');
+            if (token) {
+                loadTaskStats(token);
+                loadAgentStats(token);
+            }
+        }, 30000);
+    </script>
+
+    <style>
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        textarea {
+            width: 100%;
+            font-family: monospace;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .output {
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            background-color: #f9f9f9;
+        }
+        .success {
+            color: green;
+        }
+        .error {
+            color: red;
+        }
+    </style>
+</body>
+
+</html>
