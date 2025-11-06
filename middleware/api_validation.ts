@@ -1,6 +1,76 @@
-import { validateRequest, validateResponse } from "../api_validator.ts";
+import Ajv from "npm:ajv";
+import { parse } from "https://deno.land/std@0.224.0/yaml/mod.ts";
 
-export function apiValidationMiddleware(req: any, res: any, next: any) {
+interface ValidationResult {
+  valid: boolean;
+  errors: string[];
+}
+
+export function createApiValidationMiddleware(specPath: string) {
+  const openapiSpec = parse(Deno.readTextFileSync(specPath)) as any;
+  const ajv = new (Ajv as any)({ allErrors: true, strict: false });
+  ajv.addFormat('uuid', {
+    type: 'string',
+    validate: (s: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s)
+  });
+
+  // Add all schemas to AJV for $ref resolution
+  for (const [name, schema] of Object.entries(openapiSpec.components.schemas)) {
+    ajv.addSchema(schema, `#/components/schemas/${name}`);
+  }
+
+
+
+  function findPathSpec(path: string, method: string) {
+    for (const [specPath, methods] of Object.entries(openapiSpec.paths)) {
+      const regex = new RegExp("^" + specPath.replace(/\{[^}]+\}/g, "[^/]+") + "$");
+      if (regex.test(path) && methods[method]) {
+        return methods[method];
+      }
+    }
+    return null;
+  }
+
+  function validateRequest(path: string, method: string, body: any): ValidationResult {
+    const spec = findPathSpec(path, method);
+    if (!spec || !spec.requestBody) {
+      return { valid: true, errors: [] }; // No validation needed
+    }
+
+  const schema = spec.requestBody.content?.['application/json']?.schema;
+  if (!schema) {
+    return { valid: true, errors: [] };
+  }
+
+  const validate = ajv.compile(schema);
+    const valid = validate(body);
+    return {
+      valid: !!valid,
+      errors: validate.errors ? validate.errors.map(e => e.message || '') : []
+    };
+  }
+
+  function validateResponse(path: string, method: string, statusCode: number, body: any): ValidationResult {
+    const spec = findPathSpec(path, method);
+    if (!spec || !spec.responses || !spec.responses[statusCode]) {
+      return { valid: true, errors: [] }; // No validation needed
+    }
+
+  const responseSpec = spec.responses[statusCode];
+  const schema = responseSpec.content?.['application/json']?.schema;
+  if (!schema) {
+    return { valid: true, errors: [] };
+  }
+
+  const validate = ajv.compile(schema);
+    const valid = validate(body);
+    return {
+      valid: !!valid,
+      errors: validate.errors ? validate.errors.map(e => e.message || '') : []
+    };
+  }
+
+  const middleware = function apiValidationMiddleware(req: any, res: any, next: any) {
   // Skip validation for static files and scripts
   if (req.path.startsWith('/static/') ||
       req.path.startsWith('/scripts/') ||
@@ -41,6 +111,9 @@ export function apiValidationMiddleware(req: any, res: any, next: any) {
   };
 
   res.send = function(body: any) {
+    if (typeof body === 'string') {
+      return originalSend.call(res, body);
+    }
     return validateAndSend(body, originalSend);
   };
 
@@ -48,5 +121,7 @@ export function apiValidationMiddleware(req: any, res: any, next: any) {
     return validateAndSend(body, originalJson);
   };
 
-  next();
+   next();
+  };
+  return middleware;
 }

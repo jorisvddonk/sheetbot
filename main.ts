@@ -10,7 +10,7 @@ import { upsert, validateTableName } from "./lib/data_providers/sqlite/lib.ts";
 import { SheetDB } from "./lib/data_providers/sqlite/sheetdb.ts";
 import { UserDB } from "./lib/data_providers/sqlite/userdb.ts";
 import { createInjectDependenciesMiddleware, createGetScriptMiddleware, createGetTaskMiddleware } from "./lib/middleware.ts";
-import { apiValidationMiddleware } from "./middleware/api_validation.ts";
+import { createApiValidationMiddleware } from "./middleware/api_validation.ts";
 
 const SECRET_KEY = new TextDecoder().decode(Deno.readFileSync("./secret.txt"));
 
@@ -53,7 +53,7 @@ app.use((req, res, next) => {
 
 // API validation middleware (only in development)
 if (Deno.env.get("NODE_ENV") !== "production") {
-    app.use(apiValidationMiddleware);
+    app.use(createApiValidationMiddleware("./openapi.yaml"));
 }
 
 interface Task {
@@ -643,7 +643,6 @@ app.get("/sheets", requiresLogin, (req, res) => {
     }
 
     res.json(retval);
-    res.send();
 });
 
 app.post('/tasks/:id/artefacts', requiresLogin, requiresPermission(PERMISSION_PERFORM_TASKS), upload.single('file'), async function (req, res) {
