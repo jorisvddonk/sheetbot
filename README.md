@@ -95,6 +95,17 @@ stateDiagram-v2
 - **Artefacts**: File outputs stored per task
 - **Runner Types**: SheetBot is agnostic to execution environments; it provides task management API while runners handle actual script execution
 
+### Artefacts
+
+Artefacts are file outputs associated with tasks, stored in the filesystem for persistence and sharing.
+
+- **Storage**: Files are stored in `./artefacts/tasks/{taskId}/` directories
+- **Uploading**: Agents can upload artefacts during execution via POST `/tasks/{id}/artefacts` with multipart/form-data
+- **Accessing**: Artefacts are accessible via GET `/tasks/{id}/artefacts/{filename}` which redirects to the direct file URL
+- **Listing**: Artefacts are listed in the task's `artefacts` array
+- **Deletion**: Individual artefacts can be deleted via DELETE `/tasks/{id}/artefacts/{filename}`
+- **Cloning**: When tasks are cloned, artefacts are copied to the new task directory
+
 #### Capabilities
 
 Capabilities enable fine-grained agent selection using JSON Schema validation:
