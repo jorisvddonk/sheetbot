@@ -4,6 +4,10 @@ export interface JSONSchema {
   [key: string]: any;
 }
 
+/**
+ * Represents a remote task that can be executed asynchronously with dependencies.
+ * @template T The return type of the task
+ */
 export class RemoteTask<T> {
   id: string;
   deps: RemoteTask<any>[];
@@ -16,6 +20,13 @@ export class RemoteTask<T> {
   private _executed = false;
   private _dispatched = false;
 
+  /**
+   * Creates a new RemoteTask instance.
+   * @param fn The function to execute
+   * @param args Arguments for the function
+   * @param deps Dependencies as other RemoteTask instances
+   * @param schema Optional JSON schema for validation
+   */
   constructor(
     fn: Function,
     args: any[],
@@ -50,6 +61,12 @@ export default result;
     Runtime.register(this);
   }
 
+  /**
+   * Attaches a fulfillment handler to the promise.
+   * @param onfulfilled Handler for success
+   * @param onrejected Handler for rejection
+   * @returns A new promise
+   */
   then<TResult1 = T, TResult2 = never>(
     onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | null,
     onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | null
@@ -61,6 +78,11 @@ export default result;
     return this._promise.then(onfulfilled, onrejected);
   }
 
+  /**
+   * Attaches a rejection handler to the promise.
+   * @param onrejected Handler for rejection
+   * @returns A new promise
+   */
   catch<TResult = never>(
     onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | null
   ): Promise<T | TResult> {
@@ -68,6 +90,12 @@ export default result;
   }
 }
 
+/**
+ * Creates a distributed function wrapper.
+ * @param fn The async function to wrap
+ * @param schema Optional schema
+ * @returns A function that returns a RemoteTask
+ */
 export function distributed<T extends any[], R>(
   fn: (...args: T) => Promise<R>,
   schema?: JSONSchema
@@ -85,10 +113,18 @@ export function distributed<T extends any[], R>(
   };
 }
 
+/**
+ * Adds schema requirement to a function.
+ * @param schema The JSON schema
+ * @returns A decorator function
+ */
 export function requires(schema: JSONSchema) {
   return <T extends any[], R>(fn: (...args: T) => Promise<R>) => distributed<T, R>(fn, schema);
 }
 
+/**
+ * Manages the execution of remote tasks.
+ */
 export class Runtime {
   static tasks = new Map<string, RemoteTask<any>>();
   static results = new Map<string, any>();
@@ -96,10 +132,19 @@ export class Runtime {
   static dispatchFunction?: (task: RemoteTask<any>) => Promise<void>;
   static offloadMode = false;
 
+  /**
+   * Registers a task with the runtime.
+   * @param task The task to register
+   */
   static register(task: RemoteTask<any>) {
     this.tasks.set(task.id, task);
   }
 
+  /**
+   * Executes the task and its dependencies.
+   * @param rootTask The root task to execute
+   * @returns The resolved task
+   */
   static async execute(rootTask: RemoteTask<any>) {
     const dag = this.buildDAG(rootTask);
 
@@ -123,10 +168,20 @@ export class Runtime {
     return rootTask; // Now resolved
   }
 
+  /**
+   * Gets the DAG for the task.
+   * @param rootTask The root task
+   * @returns The DAG map
+   */
   static getDAG(rootTask: RemoteTask<any>) {
     return this.buildDAG(rootTask);
   }
 
+  /**
+   * Builds the dependency graph.
+   * @param root The root task
+   * @returns The graph map
+   */
   private static buildDAG(root: RemoteTask<any>): Map<RemoteTask<any>, RemoteTask<any>[]> {
     const graph = new Map<RemoteTask<any>, RemoteTask<any>[]>();
     const visited = new Set<RemoteTask<any>>();
@@ -145,6 +200,11 @@ export class Runtime {
     return graph;
   }
 
+  /**
+   * Performs topological sort on the graph.
+   * @param graph The dependency graph
+   * @returns Levels of tasks
+   */
   private static topologicalSort(graph: Map<RemoteTask<any>, RemoteTask<any>[]>): RemoteTask<any>[][] {
     const inDegree = new Map<RemoteTask<any>, number>();
     const queue: RemoteTask<any>[] = [];
@@ -183,6 +243,10 @@ export class Runtime {
     return result;
   }
 
+  /**
+   * Dispatches a task for execution.
+   * @param task The task to dispatch
+   */
   private static async dispatchTask(task: RemoteTask<any>) {
     // Check cache
     if (this.results.has(task.id)) {
