@@ -30,13 +30,14 @@ export class HashImgWidget extends LitElement {
                 const hashBuffer = await crypto.subtle.digest('SHA-1', new TextEncoder().encode(d));
                 const hashArray = Array.from(new Uint8Array(hashBuffer));
 
-                const canvas = document.createElement("canvas");
-                canvas.setAttribute("style", `width: 128px; height: 128px; padding: 0px; margin: 0px;`)
-                const ctx = canvas.getContext("2d");
-                ctx.canvas.width = 128;
-                ctx.canvas.height = 128;
-                ctx.fillStyle = `rgb(255 255 255)`;
-                ctx.fillRect(0, 0, 128, 128);
+                 const canvas = document.createElement("canvas");
+                 canvas.setAttribute("style", `width: 128px; height: 128px; padding: 0px; margin: 0px;`)
+                 const ctx = canvas.getContext("2d");
+                 ctx.canvas.width = 128;
+                 ctx.canvas.height = 128;
+                 const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+                 ctx.fillStyle = isDark ? `rgb(0 0 0)` : `rgb(255 255 255)`;
+                 ctx.fillRect(0, 0, 128, 128);
                 for (let i = 0; i < 16; i++) {
                     ctx.fillStyle = `rgba(${hashArray[0]}, ${hashArray[1]}, ${hashArray[2]}, ${hashArray[i + 3] / 255})`;
                     const x = i % 4;
