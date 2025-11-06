@@ -1,4 +1,4 @@
-import tmp from "npm:tmp"
+import tmp from "npm:tmp@0.2.3"
 import $ from "https://deno.land/x/dax/mod.ts";
 import { existsSync } from "https://deno.land/std@0.140.0/node/fs.ts";
 import { walk } from "https://deno.land/std@0.220.1/fs/mod.ts";

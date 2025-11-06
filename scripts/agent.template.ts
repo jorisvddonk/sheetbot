@@ -1,5 +1,5 @@
 import fs from "https://deno.land/std@0.140.0/node/fs.ts";
-import * as path from "jsr:@std/path";
+import * as path from "jsr:@std/path@1.0.6";
 
 let SHEETBOT_BASEURL;
 if (!Deno.env.has("SHEETBOT_BASEURL")) {
@@ -92,7 +92,7 @@ const response = await checkForErrors(fetch(SHEETBOT_BASEURL + "/tasks/get", {
 }));
 
 const json = await response.json();
-if (json.hasOwnProperty("script")) {
+  if (Object.hasOwn(json, "script")) {
   Deno.env.set("SHEETBOT_TASK_ID", json.id);
   Deno.env.set("SHEETBOT_AUTHORIZATION_HEADER", headers["Authorization"]);
   Deno.env.set(

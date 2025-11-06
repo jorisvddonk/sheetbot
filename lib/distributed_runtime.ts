@@ -1,7 +1,7 @@
-import Ajv from "npm:ajv";
+import Ajv from "npm:ajv@8.17.1";
 
 export interface JSONSchema {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 /**
@@ -10,12 +10,12 @@ export interface JSONSchema {
  */
 export class RemoteTask<T> {
   id: string;
-  deps: RemoteTask<any>[];
+  deps: RemoteTask<unknown>[];
   schema?: JSONSchema;
   script: string;
   run: () => Promise<T>;
   _resolve?: (value: T) => void;
-  _reject?: (error: any) => void;
+  _reject?: (error: unknown) => void;
   private _promise: Promise<T>;
   private _executed = false;
   _dispatched = false;
@@ -28,9 +28,9 @@ export class RemoteTask<T> {
    * @param schema Optional JSON schema for validation
    */
   constructor(
-    fn: Function,
-    args: any[],
-    deps: RemoteTask<any>[] = [],
+    fn: (...args: unknown[]) => unknown,
+    args: unknown[],
+    deps: RemoteTask<unknown>[] = [],
     schema?: JSONSchema
   ) {
     this._promise = new Promise<T>((resolve, reject) => {
@@ -69,7 +69,7 @@ export default result;
    */
   then<TResult1 = T, TResult2 = never>(
     onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | null,
-    onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | null
+    onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null
   ): Promise<TResult1 | TResult2> {
     if (!this._executed) {
       this._executed = true;
@@ -84,7 +84,7 @@ export default result;
    * @returns A new promise
    */
   catch<TResult = never>(
-    onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | null
+    onrejected?: ((reason: unknown) => TResult | PromiseLike<TResult>) | null
   ): Promise<T | TResult> {
     return this._promise.catch(onrejected);
   }
@@ -96,13 +96,13 @@ export default result;
  * @param schema Optional schema
  * @returns A function that returns a RemoteTask
  */
-export function distributed<T extends any[], R>(
+export function distributed<T extends unknown[], R>(
   fn: (...args: T) => Promise<R>,
   schema?: JSONSchema
 ) {
-  return (...args: any[]): RemoteTask<R> => {
+  return (...args: unknown[]): RemoteTask<R> => {
     // Extract RemoteTask dependencies from args
-    const deps = args.filter(arg => arg instanceof RemoteTask) as RemoteTask<any>[];
+    const deps = args.filter(arg => arg instanceof RemoteTask) as RemoteTask<unknown>[];
 
     return new RemoteTask<R>(
       fn,
@@ -119,24 +119,24 @@ export function distributed<T extends any[], R>(
  * @returns A decorator function
  */
 export function requires(schema: JSONSchema) {
-  return <T extends any[], R>(fn: (...args: T) => Promise<R>) => distributed<T, R>(fn, schema);
+  return <T extends unknown[], R>(fn: (...args: T) => Promise<R>) => distributed<T, R>(fn, schema);
 }
 
 /**
  * Manages the execution of remote tasks.
  */
 export class Runtime {
-  static tasks = new Map<string, RemoteTask<any>>();
-  static results = new Map<string, any>();
-  static functions = new Map<string, Function>();
-  static dispatchFunction?: (task: RemoteTask<any>) => Promise<void>;
+  static tasks = new Map<string, RemoteTask<unknown>>();
+  static results = new Map<string, unknown>();
+  static functions = new Map<string, (...args: unknown[]) => unknown>();
+  static dispatchFunction?: (task: RemoteTask<unknown>) => Promise<void>;
   static offloadMode = false;
 
   /**
    * Registers a task with the runtime.
    * @param task The task to register
    */
-  static register(task: RemoteTask<any>) {
+  static register(task: RemoteTask<unknown>) {
     this.tasks.set(task.id, task);
   }
 
@@ -145,7 +145,7 @@ export class Runtime {
    * @param rootTask The root task to execute
    * @returns The resolved task
    */
-  static async execute(rootTask: RemoteTask<any>) {
+  static async execute(rootTask: RemoteTask<unknown>) {
     const dag = this.buildDAG(rootTask);
 
     if (this.offloadMode) {
@@ -173,7 +173,7 @@ export class Runtime {
    * @param rootTask The root task
    * @returns The DAG map
    */
-  static getDAG(rootTask: RemoteTask<any>) {
+  static getDAG(rootTask: RemoteTask<unknown>) {
     return this.buildDAG(rootTask);
   }
 
@@ -182,11 +182,11 @@ export class Runtime {
    * @param root The root task
    * @returns The graph map
    */
-  private static buildDAG(root: RemoteTask<any>): Map<RemoteTask<any>, RemoteTask<any>[]> {
+  private static buildDAG(root: RemoteTask<unknown>): Map<RemoteTask<unknown>, RemoteTask<unknown>[]> {
     const graph = new Map<RemoteTask<any>, RemoteTask<any>[]>();
-    const visited = new Set<RemoteTask<any>>();
+    const visited = new Set<RemoteTask<unknown>>();
 
-    const build = (task: RemoteTask<any>) => {
+    const build = (task: RemoteTask<unknown>) => {
       if (visited.has(task)) return;
       visited.add(task);
 
@@ -205,10 +205,10 @@ export class Runtime {
    * @param graph The dependency graph
    * @returns Levels of tasks
    */
-  private static topologicalSort(graph: Map<RemoteTask<any>, RemoteTask<any>[]>): RemoteTask<any>[][] {
-    const inDegree = new Map<RemoteTask<any>, number>();
-    const queue: RemoteTask<any>[] = [];
-    const result: RemoteTask<any>[][] = [];
+  private static topologicalSort(graph: Map<RemoteTask<unknown>, RemoteTask<unknown>[]>): RemoteTask<unknown>[][] {
+    const inDegree = new Map<RemoteTask<unknown>, number>();
+    const queue: RemoteTask<unknown>[] = [];
+    const result: RemoteTask<unknown>[][] = [];
 
     // Initialize in-degrees
     for (const [task, deps] of graph) {
@@ -247,7 +247,7 @@ export class Runtime {
    * Dispatches a task for execution.
    * @param task The task to dispatch
    */
-  private static async dispatchTask(task: RemoteTask<any>) {
+  private static async dispatchTask(task: RemoteTask<unknown>) {
     // Check cache
     if (this.results.has(task.id)) {
       const result = this.results.get(task.id);

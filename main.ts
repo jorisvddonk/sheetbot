@@ -1,16 +1,16 @@
-import jsonwebtoken from "npm:jsonwebtoken";
-import Ajv, { JSONSchemaType } from "npm:ajv";
+import jsonwebtoken from "npm:jsonwebtoken@9.0.2";
+import Ajv, { JSONSchemaType } from "npm:ajv@8.17.1";
 import https from "node:https";
 import { existsSync } from "https://deno.land/std@0.220.1/fs/mod.ts";
-import express from "npm:express";
-import multer from "npm:multer";
+import express from "npm:express@4.18.3";
+import multer from "npm:multer@2.0.2";
 import { DatabaseSync } from "node:sqlite";
 import { validateSheetName } from "./lib/sheet_validator.ts";
 import { upsert, validateTableName } from "./lib/data_providers/sqlite/lib.ts";
 import { SheetDB } from "./lib/data_providers/sqlite/sheetdb.ts";
 import { UserDB } from "./lib/data_providers/sqlite/userdb.ts";
 import { createInjectDependenciesMiddleware, createGetScriptMiddleware, createGetTaskMiddleware } from "./lib/middleware.ts";
-import OpenApiValidator from "npm:express-openapi-validator";
+import OpenApiValidator from "npm:express-openapi-validator@5.6.0";
 
 const SECRET_KEY = new TextDecoder().decode(Deno.readFileSync("./secret.txt"));
 
@@ -66,16 +66,16 @@ interface Task {
     name?: string,
     script: string,
     status: TaskStatus,
-    data: Object,
+    data: Record<string, unknown>,
     artefacts: string[],
     dependsOn: string[],
     ephemeral: Ephemeralness,
     type: string,
-    capabilitiesSchema: Object
+    capabilitiesSchema: Record<string, unknown>
 }
 
 interface TaskQ extends Task {
-    [name: string]: any
+    [name: string]: unknown
 }
 
 enum TaskStatus {
@@ -229,7 +229,7 @@ function setTaskStatus(taskId: string, status: number) {
     }
 }
 
-function updateTaskData(taskId: string, data: Object) {
+function updateTaskData(taskId: string, data: Record<string, unknown>) {
     const currentTask = getTask(taskId);
     if (currentTask) {
         const updatedData = { ...currentTask.data, ...data };
@@ -316,7 +316,7 @@ const requiresLogin = (req, res, next) => {
 
 const requiresPermission = (permission) => {
     return (req, res, next) => {
-        if (!req.user.hasOwnProperty("permissions")) {
+        if (!Object.hasOwn(req.user, "permissions")) {
             return res.status(403).json({ error: 'Forbidden' });
         }
         if (req.user.permissions.indexOf("*") === -1 && req.user.permissions.indexOf(permission) === -1) {
@@ -438,7 +438,7 @@ app.patch("/tasks/:id", requiresLogin, requiresPermission(PERMISSION_UPDATE_TASK
     const task = getTask(req.params.id);
     if (task) {
         try {
-            if (req.body.hasOwnProperty("status")) {
+            if (Object.hasOwn(req.body, "status")) {
                 // updating status
                 setTaskStatus(task.id, req.body.status);
             }
