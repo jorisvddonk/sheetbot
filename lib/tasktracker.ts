@@ -4,8 +4,8 @@ export class TaskTracker {
     private failed: number[] = [];
 
     constructor() {
-        // Clean up old entries every minute
-        setInterval(() => this.cleanup(10), 60000);
+        // Clean up old entries every hour to keep data up to 1 day
+        setInterval(() => this.cleanup(1440), 3600000);
     }
 
     addTask() {
@@ -41,6 +41,7 @@ export class TaskTracker {
         const now = Date.now();
         const cutoff = now - (maxMinutes * 60 * 1000);
 
+        // Remove entries older than maxMinutes (currently 1440 minutes = 1 day)
         this.added = this.added.filter(ts => ts > cutoff);
         this.completed = this.completed.filter(ts => ts > cutoff);
         this.failed = this.failed.filter(ts => ts > cutoff);

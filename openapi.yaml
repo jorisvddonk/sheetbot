@@ -377,7 +377,7 @@ paths:
   /tasktracker:
     get:
       summary: Get task statistics
-      description: Retrieve rolling statistics for task additions, completions, and failures
+      description: Retrieve rolling statistics for task additions, completions, and failures (data retained for up to 1 day)
       security:
         - bearerAuth: []
       parameters:
@@ -385,7 +385,7 @@ paths:
           in: query
           schema:
             type: integer
-            default: 5
+            default: 1440
             minimum: 1
           description: Time window in minutes for statistics (default 5)
       responses:

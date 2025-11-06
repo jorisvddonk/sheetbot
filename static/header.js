@@ -49,7 +49,10 @@ function loadTaskStats(token) {
     })
     .then(stats => {
         const statsDiv = document.getElementById('task-stats');
-        statsDiv.textContent = `Tasks: +${stats.added} ✓${stats.completed} ✗${stats.failed} (${stats.windowMinutes}m)`;
+        const timeDisplay = stats.windowMinutes >= 120
+            ? `${Math.round(stats.windowMinutes / 60)}h`
+            : `${stats.windowMinutes}m`;
+        statsDiv.textContent = `Tasks: +${stats.added} ✓${stats.completed} ✗${stats.failed} (${timeDisplay})`;
     })
     .catch(error => {
         console.log('Error loading task stats:', error);

@@ -358,7 +358,7 @@ app.get("/tasks", (req, res) => {
 });
 
 app.get("/tasktracker", requiresLogin, (req, res) => {
-    const minutes = parseInt(req.query.minutes as string) || 5;
+    const minutes = parseInt(req.query.minutes as string) || 1440;
     res.json(taskTracker.getStats(minutes));
 });
 
