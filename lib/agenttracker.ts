@@ -1,11 +1,12 @@
 import { AgentEventEmitter, AgentEvent, AgentEventData } from './agent-events.ts';
 
 export class AgentTracker {
-    private agents: Map<string, { timestamp: number, capabilities?: Record<string, any> }> = new Map();
+    private agents: Map<string, { ip: string, type: string, timestamp: number, capabilities?: Record<string, any> }> = new Map();
 
     constructor(eventEmitter: AgentEventEmitter) {
         eventEmitter.on(AgentEvent.CONNECTED, (data: AgentEventData) => {
-            this.agents.set(data.ip, { timestamp: data.timestamp, capabilities: data.capabilities });
+            const key = `${data.ip}:${data.type}`;
+            this.agents.set(key, { ip: data.ip, type: data.type, timestamp: data.timestamp, capabilities: data.capabilities });
         });
 
         // Clean up old agents every hour to keep data up to 1 day
@@ -18,8 +19,8 @@ export class AgentTracker {
         const cutoff = now - windowMs;
 
         const activeAgents = Array.from(this.agents.entries())
-            .filter(([ip, data]) => data.timestamp > cutoff)
-            .map(([ip, data]) => ({ ip, lastSeen: data.timestamp, capabilities: data.capabilities }));
+            .filter(([key, data]) => data.timestamp > cutoff)
+            .map(([key, data]) => ({ ip: data.ip, type: data.type, lastSeen: data.timestamp, capabilities: data.capabilities }));
 
         return {
             totalUniqueAgents: this.agents.size,
@@ -34,9 +35,9 @@ export class AgentTracker {
         const cutoff = now - (maxMinutes * 60 * 1000);
 
         // Remove agents not seen in the last maxMinutes (currently 1440 minutes = 1 day)
-        for (const [ip, data] of this.agents.entries()) {
+        for (const [key, data] of this.agents.entries()) {
             if (data.timestamp < cutoff) {
-                this.agents.delete(ip);
+                this.agents.delete(key);
             }
         }
     }

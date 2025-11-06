@@ -72,10 +72,17 @@
                     "datatype": "STRING"
                 },
                 {
+                    "name": "type",
+                    "widgettype": "tasktype",
+                    "minwidth": 100,
+                    "columnorder": 1,
+                    "datatype": "STRING"
+                },
+                {
                     "name": "lastSeen",
                     "widgettype": "text",
                     "minwidth": 150,
-                    "columnorder": 1,
+                    "columnorder": 2,
                     "datatype": "STRING"
                 },
                 {
@@ -83,14 +90,14 @@
                     "widgettype": "code",
                     "maxwidth": 400,
                     "maxheight": 150,
-                    "columnorder": 2,
+                    "columnorder": 3,
                     "datatype": "TEXT"
                 },
                 {
                     "name": "lastSeenTimestamp",
                     "widgettype": "text",
                     "minwidth": 120,
-                    "columnorder": 3,
+                    "columnorder": 4,
                     "datatype": "NUMERIC"
                 }
             ];
@@ -99,6 +106,7 @@
             stats.agents.forEach(agent => {
                 d.push([
                     agent.ip,
+                    agent.type,
                     formatTimestamp(agent.lastSeen),
                     agent.capabilities ? JSON.stringify(agent.capabilities, null, 2) : 'No capabilities reported',
                     agent.lastSeen
