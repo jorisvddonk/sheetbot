@@ -66,6 +66,7 @@ sequenceDiagram
 - **Capabilities**: JSON Schema matching for agent selection
 - **Ephemeral Tasks**: Auto-deleted after completion for cleanup
 - **Artefacts**: File outputs stored per task
+- **Runner Types**: SheetBot is agnostic to execution environments; it provides task management API while runners handle actual script execution
 
 ### Data Management
 
@@ -144,11 +145,35 @@ customElements.define('widget-my', MyWidget);
 
 ### Agent Workflow
 
+Agents poll for tasks based on their type and capabilities. SheetBot provides templates for common runners:
+
+- **Deno Runner**: For TypeScript/JavaScript tasks (`type: "deno"`)
+  - Template: `/scripts/agent.ts` or `/scripts/agent.js`
+  - Executes scripts in Deno runtime
+- **Python Runner**: For Python tasks (`type: "python"`)
+  - Template: `/scripts/agent.py`
+  - Executes scripts in Python environment
+
+Workflow:
 1. Poll `/tasks/get` with agent type and capabilities
 2. Receive task script URL if available
 3. Accept task via `/tasks/:id/accept`
-4. Execute script (dependencies injected as `__DEP_RESULT_<id>__`)
+4. Execute script (dependencies injected as `__DEP_RESULT_<taskId>__`)
 5. Report completion via `/tasks/:id/complete` with result data
+
+Runner implementations are flexible; SheetBot only requires adherence to the polling and reporting protocol.
+
+## Programmability and Extensibility
+
+SheetBot is designed for easy extension through code modification. Key extension points:
+
+- **Authentication**: Add custom middleware to `main.ts` for auth schemes (e.g., OAuth, LDAP)
+- **New Endpoints**: Extend the Express app with additional routes
+- **Data Providers**: Implement custom storage backends by extending data provider classes
+- **Widgets**: Add new widget types as shown above
+- **Task Types**: Support additional runner types by adding templates and logic
+
+The codebase is structured for straightforward modifications. For authentication, simply insert relevant middleware before route definitions in `main.ts`.
 
 ## Project Structure
 
