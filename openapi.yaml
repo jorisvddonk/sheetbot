@@ -1,0 +1,1058 @@
+openapi: 3.0.3
+info:
+  title: SheetBot Internal API
+  description: API for SheetBot task management and distributed execution system
+  version: 1.0.0
+servers:
+  - url: http://localhost:3000
+    description: Local development server
+  - url: https://localhost:443
+    description: Local HTTPS development server
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Task:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique task identifier
+        name:
+          type: string
+          description: Optional human-readable task name
+        script:
+          type: string
+          description: Task script content
+        status:
+          type: integer
+          enum: [0, 1, 2, 3, 4]
+          description: |
+            Task status:
+            * 0 - AWAITING (ready for execution)
+            * 1 - RUNNING (being executed)
+            * 2 - COMPLETED (finished successfully)
+            * 3 - FAILED (finished with error)
+            * 4 - PAUSED (not ready for execution)
+        data:
+          type: object
+          description: Arbitrary JSON data associated with the task
+        artefacts:
+          type: array
+          items:
+            type: string
+          description: List of artefact filenames
+        dependsOn:
+          type: array
+          items:
+            type: string
+          description: List of task IDs this task depends on
+        ephemeral:
+          type: integer
+          enum: [0, 1, 2]
+          description: |
+            Ephemeral behavior:
+            * 0 - PERSISTENT (task remains after completion)
+            * 1 - EPHEMERAL_ON_SUCCESS (deleted on successful completion)
+            * 2 - EPHEMERAL_ALWAYS (deleted on any completion)
+        type:
+          type: string
+          enum: ["deno", "python"]
+          description: Execution environment type
+        capabilitiesSchema:
+          type: object
+          description: JSON Schema for agent capability requirements
+      required:
+        - id
+        - script
+        - status
+        - data
+        - artefacts
+        - dependsOn
+        - ephemeral
+        - type
+        - capabilitiesSchema
+
+    TaskCreate:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Optional custom task ID
+        name:
+          type: string
+          description: Optional human-readable task name
+        script:
+          type: string
+          description: Task script content
+        data:
+          type: string
+          description: JSON string of task data
+        capabilitiesSchema:
+          type: string
+          description: JSON string of capability schema
+        type:
+          type: string
+          enum: ["deno", "python"]
+          description: Execution environment type
+        ephemeral:
+          type: integer
+          enum: [0, 1, 2]
+          default: 0
+        dependsOn:
+          oneOf:
+            - type: array
+              items:
+                type: string
+            - type: string
+          description: JSON string or array of dependency task IDs
+        status:
+          type: integer
+          enum: [0, 1, 2, 3, 4]
+          description: Initial task status
+      required:
+        - script
+
+    TaskUpdate:
+      type: object
+      properties:
+        status:
+          type: integer
+          enum: [0, 1, 2, 3, 4]
+          description: New task status
+
+    TaskGetRequest:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: ["deno", "python"]
+          description: Agent type
+        capabilities:
+          type: object
+          description: Agent capabilities for matching
+      required:
+        - type
+
+    TaskGetResponse:
+      type: object
+      properties:
+        script:
+          type: string
+          format: uri
+          description: URL to task script
+        id:
+          type: string
+          format: uuid
+          description: Task ID
+        type:
+          type: string
+          enum: ["deno", "python"]
+          description: Task type
+
+    TaskCompleteRequest:
+      type: object
+      properties:
+        data:
+          type: object
+          description: Result data to merge into task data
+
+    TaskDataUpdate:
+      type: object
+      properties:
+        data:
+          type: object
+          description: Data to merge into task data
+
+    LoginRequest:
+      type: object
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+      required:
+        - username
+        - password
+
+    LoginResponse:
+      type: string
+      description: JWT token for authentication
+
+    SheetData:
+      type: object
+      properties:
+        key:
+          type: string
+          description: Primary key for the row
+      additionalProperties: true
+      description: Arbitrary data with required 'key' property
+
+    SheetResponse:
+      type: object
+      properties:
+        columns:
+          type: array
+          items:
+            type: object
+            description: Column schema information
+        rows:
+          type: array
+          items:
+            type: array
+            description: Row data as array of cell values
+
+    ArtefactUploadResponse:
+      type: object
+      properties:
+        url:
+          type: string
+          format: uri
+          description: URL to access the artefact
+        directURL:
+          type: string
+          format: uri
+          description: Direct URL to the artefact file
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error message
+
+security:
+  - bearerAuth: []
+
+paths:
+  /login:
+    post:
+      summary: Authenticate user
+      description: Login with username and password to obtain JWT token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Successful login
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '401':
+          description: Authentication failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /:
+    get:
+      summary: Health check
+      description: Simple health check endpoint
+      responses:
+        '200':
+          description: Server is running
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "Hello World"
+
+  /tasks:
+    get:
+      summary: Get all tasks
+      description: Retrieve list of all tasks (no authentication required)
+      responses:
+        '200':
+          description: List of tasks
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Task'
+
+    post:
+      summary: Create new task
+      description: Create a new task with script and configuration
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                script:
+                  type: string
+                  description: Task script content
+                id:
+                  type: string
+                  format: uuid
+                  description: Optional custom task ID
+                name:
+                  type: string
+                  description: Optional task name
+                data:
+                  type: string
+                  description: JSON string of task data
+                capabilitiesSchema:
+                  type: string
+                  description: JSON string of capability schema
+                type:
+                  type: string
+                  enum: ["deno", "python"]
+                ephemeral:
+                  type: integer
+                  enum: [0, 1, 2]
+                dependsOn:
+                  type: string
+                  description: JSON string of dependency task IDs
+                status:
+                  type: integer
+                  enum: [0, 1, 2, 3, 4]
+                file:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+                  description: Artefact files to upload
+      responses:
+        '200':
+          description: Task created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /tasks/get:
+    post:
+      summary: Get task for execution
+      description: Poll for an available task matching agent capabilities
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskGetRequest'
+      responses:
+        '200':
+          description: Task available for execution or empty object if no task available
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/TaskGetResponse'
+                  - type: object
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /tasks/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Task ID
+
+    get:
+      summary: Get task details
+      description: Retrieve detailed information about a specific task
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Task details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Task not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      summary: Delete task
+      description: Delete a task and its artefacts
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Task deleted successfully
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Task not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    patch:
+      summary: Update task
+      description: Update task properties (currently only status)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskUpdate'
+      responses:
+        '204':
+          description: Task updated successfully
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Task not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /tasks/{id}/accept:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Task ID
+
+    post:
+      summary: Accept task for execution
+      description: Mark a task as accepted and change status to RUNNING
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Task accepted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Task not found or not in AWAITING status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /tasks/{id}/complete:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Task ID
+
+    post:
+      summary: Mark task as completed
+      description: Mark a running task as completed and optionally update its data
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskCompleteRequest'
+      responses:
+        '200':
+          description: Task completed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Task not found or not in RUNNING status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /tasks/{id}/data:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Task ID
+
+    post:
+      summary: Update task data
+      description: Merge additional data into an existing task's data object
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskDataUpdate'
+      responses:
+        '200':
+          description: Task data updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Task not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /tasks/{id}/failed:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Task ID
+
+    post:
+      summary: Mark task as failed
+      description: Mark a running task as failed
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Task marked as failed
+          content:
+            application/json:
+              schema:
+                type: object
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Task not found or not in RUNNING status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /tasks/{id}/clone:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Task ID
+
+    post:
+      summary: Clone task
+      description: Create a copy of an existing task with new ID
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Task cloned successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Task not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /scripts/agent{extension}:
+    parameters:
+      - name: extension
+        in: path
+        schema:
+          type: string
+          enum: [".ts", ".py", ""]
+        description: File extension (.ts for TypeScript, .py for Python, or empty)
+
+    get:
+      summary: Get agent template
+      description: Retrieve agent runner template for the specified language
+      responses:
+        '200':
+          description: Agent template script
+          content:
+            application/typescript:
+              schema:
+                type: string
+            application/javascript:
+              schema:
+                type: string
+            text/x-python:
+              schema:
+                type: string
+
+  /scripts/{id}{extension}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Task ID
+      - name: extension
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: '\..*'
+        description: File extension
+
+    get:
+      summary: Get task script
+      description: Retrieve the processed script for a task with dependency injection
+      responses:
+        '200':
+          description: Task script with injected dependencies
+          content:
+            application/typescript:
+              schema:
+                type: string
+            application/javascript:
+              schema:
+                type: string
+            text/x-python:
+              schema:
+                type: string
+        '404':
+          description: Task not found
+          content:
+            text/plain:
+              schema:
+                type: string
+
+  /sheets:
+    get:
+      summary: List sheets
+      description: Get list of available sheet names
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of sheet names
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /sheets/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: '^[a-zA-Z0-9_-]+$'
+        description: Sheet name
+
+    get:
+      summary: Get sheet data
+      description: Retrieve sheet schema and all rows
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Sheet data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SheetResponse'
+        '404':
+          description: Sheet not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Invalid sheet name or internal error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    post:
+      summary: Upsert sheet data
+      description: Insert or update a row in the sheet
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SheetData'
+      responses:
+        '200':
+          description: Data upserted successfully
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Invalid sheet name or data format
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /sheets/{id}/data/{key}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: '^[a-zA-Z0-9_-]+$'
+        description: Sheet name
+      - name: key
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Row key
+
+    delete:
+      summary: Delete sheet row
+      description: Delete a row from the sheet by key
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Row deleted successfully
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Invalid sheet name
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /tasks/{id}/artefacts:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Task ID
+
+    post:
+      summary: Upload artefact
+      description: Upload a file artefact for a task
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: File to upload
+      responses:
+        '200':
+          description: File uploaded successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ArtefactUploadResponse'
+        '400':
+          description: Task not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /tasks/{id}/artefacts/{filename}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Task ID
+      - name: filename
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Artefact filename
+
+    get:
+      summary: Get artefact
+      description: Redirect to the artefact file
+      responses:
+        '307':
+          description: Redirect to artefact file
+        '404':
+          description: Task or artefact not found
+
+    delete:
+      summary: Delete artefact
+      description: Delete an artefact file from a task
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Artefact deleted successfully
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Task or artefact not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /artefacts/{path}:
+    parameters:
+      - name: path
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Artefact file path
+
+    delete:
+      summary: Delete artefact file
+      description: Delete any artefact file by path
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: File deleted successfully
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: File not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
