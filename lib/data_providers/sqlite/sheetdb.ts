@@ -8,6 +8,9 @@ export const SHEETDB_COLUMNSTRUCTURE_TABLENAME = "columnstructure"; // used to s
 export const SHEETDB_COLUMNSTRUCTURE_VIEWNAME = "columnstructure_view"; // used to read table column structure metadata. This is a view as it also includes data that's from the table_info pragma.
 
 
+/**
+ * Represents column information.
+ */
 export interface ColumnInfo {
     columnorder: number,
     name: string,
@@ -17,6 +20,9 @@ export interface ColumnInfo {
     [name: string]: any
 }
 
+/**
+ * Error thrown when a sheet is not found.
+ */
 export class NotFoundError extends Error {
     constructor(message: string) {
         super(message);
@@ -24,9 +30,18 @@ export class NotFoundError extends Error {
     }
 }
 
+/**
+ * Manages sheet database operations.
+ */
 export class SheetDB {
     db: DatabaseSync;
-    
+
+    /**
+     * Initializes the SheetDB.
+     * @param filepath The database file path
+     * @param do_check_filepath Whether to check if file exists
+     * @throws NotFoundError if file doesn't exist and check is enabled
+     */
     constructor(filepath: string, do_check_filepath?: boolean) {
         if ((do_check_filepath == undefined || do_check_filepath === true) && !existsSync(filepath)) {
             throw new NotFoundError("Sheet does not exist");
@@ -61,10 +76,18 @@ export class SheetDB {
                 ORDER BY c.columnorder ASC`);
     }
 
+    /**
+     * Upserts data into the sheet.
+     * @param data Array of [column, value] pairs
+     */
     upsertData(data: [string, unknown][]) {
         upsert(this.db, SHEETDB_DATA_TABLENAME, data);
     }
 
+    /**
+     * Retrieves all rows from the sheet.
+     * @returns Array of rows
+     */
     getRows() {
         const columnsSchema = this.getSchema();
         const stmt = this.db.prepare(`SELECT * FROM "${SHEETDB_DATA_VIEWNAME}"`);
@@ -88,16 +111,28 @@ export class SheetDB {
         return rows;
     }
 
+    /**
+     * Deletes a row by key.
+     * @param key The row key
+     * @returns True if deleted
+     */
     deleteRow(key: string) {
         const stmt = this.db.prepare(`DELETE FROM "${SHEETDB_DATA_TABLENAME}" WHERE key = ?`);
         const result = stmt.run(key);
         return result.changes > 0;
     }
 
+    /**
+     * Closes the database connection.
+     */
     close() {
         this.db.close();
     }
 
+    /**
+     * Gets the schema of the sheet.
+     * @returns Array of column info
+     */
     getSchema() {
         const stmt = this.db.prepare(`SELECT * FROM "${SHEETDB_COLUMNSTRUCTURE_VIEWNAME}"`);
         return stmt.all() as ColumnInfo[];
