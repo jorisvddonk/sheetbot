@@ -93,11 +93,17 @@ components:
           type: string
           description: Task script content
         data:
-          type: string
-          description: JSON string of task data
+          oneOf:
+            - type: string
+              description: JSON string of task data
+            - type: object
+              description: Task data object
         capabilitiesSchema:
-          type: string
-          description: JSON string of capability schema
+          oneOf:
+            - type: string
+              description: JSON string of capability schema
+            - type: object
+              description: Capability schema object
         type:
           type: string
           enum: ["deno", "python"]
@@ -323,6 +329,9 @@ paths:
                     type: string
                     format: binary
                   description: Artefact files to upload
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskCreate'
       responses:
         '200':
           description: Task created successfully
