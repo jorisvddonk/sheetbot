@@ -59,6 +59,31 @@ sequenceDiagram
     end
 ```
 
+### Task State Diagram
+
+```mermaid
+stateDiagram-v2
+    [*] --> PAUSED : Task created (scripts/tools)
+    [*] --> AWAITING : Task created (API default)
+    PAUSED --> AWAITING : Manual activation
+    AWAITING --> RUNNING : Agent accepts task
+    RUNNING --> COMPLETED : Task succeeds
+    RUNNING --> FAILED : Task fails
+    COMPLETED --> [*] : Cleanup (if ephemeral)
+    FAILED --> [*] : Cleanup (if ephemeral)
+    note right of PAUSED
+        Tasks can start paused for
+        dependency setup before execution
+    end note
+    note right of AWAITING
+        Tasks ready for agent pickup
+        (default API creation state)
+    end note
+    note right of RUNNING
+        Task being executed by agent
+    end note
+```
+
 ### Key Concepts
 
 - **Tasks**: Units of work with scripts, dependencies, and capability requirements
