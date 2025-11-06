@@ -4,10 +4,15 @@
      <link rel="stylesheet" href="style.css">
       <link rel="icon" href="logo.png" type="image/png">
      <script src="element-login.js" type="module"></script>
+     <script>
+         fetch('header.html')
+         .then(response => response.text())
+         .then(html => document.getElementById('header-placeholder').innerHTML = html);
+     </script>
  </head>
 
 <body>
-    <img src="logo.png" alt="SheetBot Logo" style="height: 50px;">
+    <div id="header-placeholder"></div>
     <ul>
         <li><a href="/sheet.html">sheets</a></li>
         <li><a href="/task.html">tasks</a></li>

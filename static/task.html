@@ -17,11 +17,16 @@
     <script src="widget-taskid.js" type="module"></script>
     <script src="widget-taskname.js" type="module"></script>
     <script src="widget-hashimg.js" type="module"></script>
-    <script src="widget-multi.js" type="module"></script>
-</head>
+     <script src="widget-multi.js" type="module"></script>
+     <script>
+         fetch('header.html')
+         .then(response => response.text())
+         .then(html => document.getElementById('header-placeholder').innerHTML = html);
+     </script>
+ </head>
 
 <body>
-     <img src="logo.png" alt="SheetBot Logo" style="height: 50px;">
+     <div id="header-placeholder"></div>
      <element-grid id="table"></element-grid>
 
     <script>
