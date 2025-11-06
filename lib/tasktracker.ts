@@ -1,23 +1,26 @@
+import { TaskEventEmitter, TaskEvent, TaskEventData } from './task-events.ts';
+
 export class TaskTracker {
     private added: number[] = [];
     private completed: number[] = [];
     private failed: number[] = [];
 
-    constructor() {
+    constructor(eventEmitter: TaskEventEmitter) {
+        // Listen to task events instead of direct method calls
+        eventEmitter.on(TaskEvent.CREATED, (data: TaskEventData) => {
+            this.added.push(data.timestamp);
+        });
+
+        eventEmitter.on(TaskEvent.COMPLETED, (data: TaskEventData) => {
+            this.completed.push(data.timestamp);
+        });
+
+        eventEmitter.on(TaskEvent.FAILED, (data: TaskEventData) => {
+            this.failed.push(data.timestamp);
+        });
+
         // Clean up old entries every hour to keep data up to 1 day
         setInterval(() => this.cleanup(1440), 3600000);
-    }
-
-    addTask() {
-        this.added.push(Date.now());
-    }
-
-    completeTask() {
-        this.completed.push(Date.now());
-    }
-
-    failTask() {
-        this.failed.push(Date.now());
     }
 
     getStats(minutes: number) {
