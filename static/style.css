@@ -1,39 +1,82 @@
-* {
-    box-sizing: border-box;
-}
+ :root {
+     --bg-color: rgb(255, 255, 255);
+     --text-color: rgb(0, 0, 0);
+     --grid-bg: rgb(245, 245, 245);
+     --grid-border: rgb(200, 200, 200);
+     --cell-odd: rgb(240, 240, 255);
+     --cell-even: rgb(220, 220, 255);
+     --header-bg: rgba(70, 130, 180, 1);
+     --header-text: white;
+     --table-bg: rgba(100, 100, 255, .1);
+     --table-border: rgb(150, 200, 255);
+     --selected-border: rgb(100, 100, 100);
+     --selected-shadow: rgb(50, 50, 50);
+     --thead-bg: rgba(200, 200, 255, 0.5);
+     --code-bg: rgb(255, 255, 255);
+     --code-text: rgb(0, 0, 0);
+ }
 
-.grid {
-    display: grid;
-    grid-template-columns: auto;
-    grid-template-rows: 100px auto;
-    gap: 3px 1px;
-    background: rgb(10, 10, 10);
-    width: fit-content;
-    height: fit-content;
-    border: 5px solid rgb(10, 10, 10);
-}
+ @media (prefers-color-scheme: dark) {
+     :root {
+         --bg-color: rgb(10, 10, 10);
+         --text-color: rgb(255, 255, 255);
+         --grid-bg: rgb(10, 10, 10);
+         --grid-border: rgb(10, 10, 10);
+         --cell-odd: rgb(30, 30, 60);
+         --cell-even: rgb(20, 20, 40);
+         --header-bg: rgba(70, 70, 150, 1);
+         --header-text: white;
+         --table-bg: rgba(100, 100, 255, .1);
+         --table-border: rgb(150, 200, 255);
+         --selected-border: rgb(100, 100, 100);
+         --selected-shadow: rgb(50, 50, 50);
+         --thead-bg: rgba(200, 200, 255, 0.5);
+         --code-bg: rgb(30, 30, 30);
+         --code-text: rgb(255, 255, 255);
+     }
+ }
 
-.grid .cell.row-odd {
-    background: rgb(220, 220, 255);
-}
+ body {
+     background: var(--bg-color);
+     color: var(--text-color);
+ }
 
-.grid .cell.row-even {
-    background: rgb(200, 200, 255);
-}
+ * {
+     box-sizing: border-box;
+ }
 
-.grid .cell.header {
-    justify-self: stretch;
-    align-self: stretch;
-    font-weight: bold;
-    color: white;
-    background-color: rgba(70, 70, 150, 1);
-    width: 100%;
-    height: 100%;
-    display: grid;
-    grid-template-columns: auto;
-    grid-template-rows: auto;
-    padding: 5px;
-}
+ .grid {
+     display: grid;
+     grid-template-columns: auto;
+     grid-template-rows: 100px auto;
+     gap: 3px 1px;
+     background: var(--grid-bg);
+     width: fit-content;
+     height: fit-content;
+     border: 5px solid var(--grid-border);
+ }
+
+ .grid .cell.row-odd {
+     background: var(--cell-odd);
+ }
+
+ .grid .cell.row-even {
+     background: var(--cell-even);
+ }
+
+ .grid .cell.header {
+     justify-self: stretch;
+     align-self: stretch;
+     font-weight: bold;
+     color: var(--header-text);
+     background-color: var(--header-bg);
+     width: 100%;
+     height: 100%;
+     display: grid;
+     grid-template-columns: auto;
+     grid-template-rows: auto;
+     padding: 5px;
+ }
 
 .grid .cell.header span {
     justify-self: center;
@@ -83,34 +126,38 @@ code.hljs {
 
 
 
-table {
-    background-color: rgba(100, 100, 255, .1);
-    border-collapse: collapse;
-}
+ table {
+     background-color: var(--table-bg);
+     border-collapse: collapse;
+ }
 
-tr {
-    border: 0.1em solid rgb(150, 200, 255);
-}
+ tr {
+     border: 0.1em solid var(--table-border);
+ }
 
-th,
-td {
-    border-left: 0.1em solid rgb(150, 200, 255);
-}
+ th,
+ td {
+     border-left: 0.1em solid var(--table-border);
+ }
 
-td[selected="1"] {
-    border: 0.1em solid rgb(100, 100, 100);
-    box-shadow: inset 0px 0px 0.5em 0px rgb(50, 50, 50, 0.5);
-}
+ td[selected="1"] {
+     border: 0.1em solid var(--selected-border);
+     box-shadow: inset 0px 0px 0.5em 0px var(--selected-shadow);
+ }
 
-td[selected="2"] {
-    border: 0.1em solid rgb(0, 0, 0);
-    box-shadow: inset 0px 0px 0.5em 0px rgb(0, 0, 0, 1);
-}
+ td[selected="2"] {
+     border: 0.1em solid rgb(0, 0, 0);
+     box-shadow: inset 0px 0px 0.5em 0px rgb(0, 0, 0, 1);
+ }
 
-thead {
-    background-color: rgba(200, 200, 255, 0.5);
-}
+ thead {
+     background-color: var(--thead-bg);
+ }
 
-element-contextmenu {
-    z-index: 1000;
-}
+ element-contextmenu {
+     z-index: 1000;
+ }
+
+ widget-code {
+     background: transparent;
+ }
