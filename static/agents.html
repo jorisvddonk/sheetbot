@@ -11,13 +11,16 @@
     <script src="widget-image.js" type="module"></script>
     <script src="widget-code.js" type="module"></script>
     <script src="widget-text.js" type="module"></script>
-    <script src="widget-taskstatus.js" type="module"></script>
-    <script src="widget-taskephemeral.js" type="module"></script>
-    <script src="widget-tasktype.js" type="module"></script>
-    <script src="widget-taskid.js" type="module"></script>
-    <script src="widget-taskname.js" type="module"></script>
-    <script src="widget-hashimg.js" type="module"></script>
-      <script src="widget-multi.js" type="module"></script>
+     <script src="widget-taskstatus.js" type="module"></script>
+     <script src="widget-taskephemeral.js" type="module"></script>
+     <script src="widget-tasktype.js" type="module"></script>
+     <script src="widget-taskid.js" type="module"></script>
+     <script src="widget-taskname.js" type="module"></script>
+     <script src="widget-hashimg.js" type="module"></script>
+       <script src="widget-multi.js" type="module"></script>
+       <script src="widget-text-centered.js" type="module"></script>
+       <script src="widget-timestamp.js" type="module"></script>
+       <script src="widget-relative-timestamp.js" type="module"></script>
       <script src="header.js"></script>
  </head>
 
@@ -35,21 +38,7 @@
             headers["Authorization"] = `Bearer ${localStorage["jwt_token"]}`;
         }
 
-        function formatTimestamp(timestamp) {
-            const date = new Date(timestamp);
-            const now = new Date();
-            const diffMs = now - date;
-            const diffMins = Math.floor(diffMs / (1000 * 60));
-            const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-            const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
-            if (diffMins < 1) return 'Just now';
-            if (diffMins < 60) return `${diffMins}m ago`;
-            if (diffHours < 24) return `${diffHours}h ago`;
-            if (diffDays < 7) return `${diffDays}d ago`;
-
-            return date.toLocaleDateString();
-        }
 
         const data = fetch("/agenttracker", {
             headers: headers
@@ -66,7 +55,7 @@
             const columns = [
                 {
                     "name": "ip",
-                    "widgettype": "text",
+                    "widgettype": "text-centered",
                     "minwidth": 200,
                     "columnorder": 0,
                     "datatype": "STRING"
@@ -80,10 +69,10 @@
                 },
                 {
                     "name": "lastSeen",
-                    "widgettype": "text",
+                    "widgettype": "relative-timestamp",
                     "minwidth": 150,
                     "columnorder": 2,
-                    "datatype": "STRING"
+                    "datatype": "NUMERIC"
                 },
                 {
                     "name": "capabilities",
@@ -95,7 +84,7 @@
                 },
                 {
                     "name": "lastSeenTimestamp",
-                    "widgettype": "text",
+                    "widgettype": "timestamp",
                     "minwidth": 120,
                     "columnorder": 4,
                     "datatype": "NUMERIC"
@@ -107,7 +96,7 @@
                 d.push([
                     agent.ip,
                     agent.type,
-                    formatTimestamp(agent.lastSeen),
+                    agent.lastSeen,
                     agent.capabilities ? JSON.stringify(agent.capabilities, null, 2) : 'No capabilities reported',
                     agent.lastSeen
                 ]);
