@@ -68,6 +68,33 @@ sequenceDiagram
 - **Artefacts**: File outputs stored per task
 - **Runner Types**: SheetBot is agnostic to execution environments; it provides task management API while runners handle actual script execution
 
+#### Capabilities
+
+Capabilities enable fine-grained agent selection using JSON Schema validation:
+
+- **Task Schema**: Tasks specify `capabilitiesSchema` (JSON Schema) defining required agent capabilities
+- **Agent Capabilities**: Agents send a `capabilities` JSON object when polling `/tasks/get`
+- **Matching**: Server validates agent capabilities against task schema using AJV
+- **Static Capabilities**: Fixed properties like OS, CPU architecture, available tools
+- **Dynamic Capabilities**: Runtime-computed properties like current load, available memory, network status
+
+Example task schema requiring Linux with Node.js:
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "os": { "const": "linux" },
+    "nodeVersion": { "type": "string" }
+  },
+  "required": ["os", "nodeVersion"]
+}
+```
+
+Agents with matching capabilities (e.g., `{"os": "linux", "nodeVersion": "18.0.0"}`) can execute the task.
+
+Task designers have full control over `capabilitiesSchema`; SheetBot enforces no predefined schemas, allowing complete customization for agent matching.
+
 ### Data Management
 
 #### Task Data
@@ -90,6 +117,22 @@ Sheets provide persistent key-value storage using SQLite databases:
 - **Storage**: Each sheet is a SQLite DB file in `./sheets/` directory
 
 Sheets are useful for storing shared state, results, or configuration across tasks.
+
+### Sheet Updates During Tasks
+
+Tasks can update sheet data during execution:
+
+```mermaid
+sequenceDiagram
+    participant Agent
+    participant Server
+    participant SheetDB
+
+    Agent->>Server: POST /sheets/:id/data (key, data)
+    Server->>SheetDB: Upsert data
+    SheetDB->>Server: Confirm update
+    Server->>Agent: 200 OK
+```
 
 #### Sheet Views
 
