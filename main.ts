@@ -10,6 +10,7 @@ import { upsert, validateTableName } from "./lib/data_providers/sqlite/lib.ts";
 import { SheetDB } from "./lib/data_providers/sqlite/sheetdb.ts";
 import { UserDB } from "./lib/data_providers/sqlite/userdb.ts";
 import { createInjectDependenciesMiddleware, createGetScriptMiddleware, createGetTaskMiddleware } from "./lib/middleware.ts";
+import { TaskTracker } from "./lib/tasktracker.ts";
 import OpenApiValidator from "npm:express-openapi-validator@5.6.0";
 
 const SECRET_KEY = new TextDecoder().decode(Deno.readFileSync("./secret.txt"));
@@ -43,6 +44,7 @@ app.use(express.static('static'))
 const upload = multer({ dest: './artefacts/' });
 
 const userdb = new UserDB();
+const taskTracker = new TaskTracker();
 
 const ajv = new (Ajv as any)();
 
@@ -355,6 +357,10 @@ app.get("/tasks", (req, res) => {
     res.json(Array.from(getTasks()));
 });
 
+app.get("/tasktracker", requiresLogin, (req, res) => {
+    const minutes = parseInt(req.query.minutes as string) || 5;
+    res.json(taskTracker.getStats(minutes));
+});
 
 app.post("/tasks", requiresLogin, requiresPermission(PERMISSION_CREATE_TASKS), upload.array('file'), async (req, res) => {
     const task = taskify(req.body.script);
@@ -399,6 +405,7 @@ app.post("/tasks", requiresLogin, requiresPermission(PERMISSION_CREATE_TASKS), u
     task.artefacts = artefacts;
     task.dependsOn = dependsOn || [];
     addTask(task);
+    taskTracker.addTask();
     res.json(task);
     res.send();
 });
@@ -471,6 +478,7 @@ app.post("/tasks/:id/complete", requiresLogin, requiresPermission(PERMISSION_PER
     if (task) {
         updateTaskData(task.id, req.body.data);
         updateTaskStatus(task.id, TaskStatus.COMPLETED);
+        taskTracker.completeTask();
 
         if (task.ephemeral === Ephemeralness.EPHEMERAL_ALWAYS || task.ephemeral == Ephemeralness.EPHEMERAL_ON_SUCCESS) {
             removeTaskFromAllDependsOn(task.id);
@@ -500,6 +508,7 @@ app.post("/tasks/:id/failed", requiresLogin, requiresPermission(PERMISSION_PERFO
     const task = getTask(req.params.id, TaskStatus.RUNNING);
     if (task) {
         updateTaskStatus(task.id, TaskStatus.FAILED);
+        taskTracker.failTask();
 
         if (task.ephemeral === Ephemeralness.EPHEMERAL_ALWAYS) {
             // delete all tasks that depend on this ephemeral task that just failed

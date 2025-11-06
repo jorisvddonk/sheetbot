@@ -28,10 +28,43 @@ function showWelcomeMessage() {
         } else {
             console.log('No payload or userId:', payload);
         }
+        loadTaskStats(token);
     } else {
         console.log('No JWT token in localStorage');
     }
 }
+
+function loadTaskStats(token) {
+    fetch('/tasktracker', {
+        headers: {
+            'Authorization': `Bearer ${token}`
+        }
+    })
+    .then(response => {
+        if (response.ok) {
+            return response.json();
+        } else {
+            throw new Error('Failed to fetch stats');
+        }
+    })
+    .then(stats => {
+        const statsDiv = document.getElementById('task-stats');
+        statsDiv.textContent = `Tasks: +${stats.added} ✓${stats.completed} ✗${stats.failed} (${stats.windowMinutes}m)`;
+    })
+    .catch(error => {
+        console.log('Error loading task stats:', error);
+        const statsDiv = document.getElementById('task-stats');
+        statsDiv.textContent = 'Stats unavailable';
+    });
+}
+
+// Update stats every 30 seconds
+setInterval(() => {
+    const token = localStorage.getItem('jwt_token');
+    if (token) {
+        loadTaskStats(token);
+    }
+}, 30000);
 
 // Run when script loads
 loadHeader();

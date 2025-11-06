@@ -221,6 +221,22 @@ components:
           type: string
           description: Error message
 
+    TaskTrackerStats:
+      type: object
+      properties:
+        added:
+          type: integer
+          description: Number of tasks added in the time window
+        completed:
+          type: integer
+          description: Number of tasks completed in the time window
+        failed:
+          type: integer
+          description: Number of tasks failed in the time window
+        windowMinutes:
+          type: integer
+          description: Time window in minutes used for the statistics
+
 security:
   - bearerAuth: []
 
@@ -353,6 +369,34 @@ paths:
                 $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /tasktracker:
+    get:
+      summary: Get task statistics
+      description: Retrieve rolling statistics for task additions, completions, and failures
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: minutes
+          in: query
+          schema:
+            type: integer
+            default: 5
+            minimum: 1
+          description: Time window in minutes for statistics (default 5)
+      responses:
+        '200':
+          description: Task statistics for the specified time window
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskTrackerStats'
+        '401':
+          description: Unauthorized
           content:
             application/json:
               schema:
