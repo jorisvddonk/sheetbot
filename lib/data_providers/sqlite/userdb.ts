@@ -30,7 +30,7 @@ export class UserDB {
      * @returns The user row
      * @throws Error if not found
      */
-    async findUser(subject: string) {
+    findUser(subject: string) {
         const stmt = this.db.prepare(`SELECT * FROM "${USERDB_DATA_TABLENAME}" WHERE id = ?`);
         const row = stmt.get(subject);
         if (row) {
@@ -61,8 +61,8 @@ export class UserDB {
      * @returns True if valid
      */
     async verifyLogin(username: string, hashed_salted_password: string) {
-        const user = await this.findUser(username);
-        return bcrypt.compare(hashed_salted_password, String(user.hashed_salted_password));
+        const user = this.findUser(username);
+        return await bcrypt.compare(hashed_salted_password, String(user.hashed_salted_password));
     }
 
     /**

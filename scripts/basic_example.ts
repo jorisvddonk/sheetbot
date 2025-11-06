@@ -30,7 +30,7 @@ Suggested capabilitiesSchema for this task: <capabilitiesSchema>
 async function setData(name, value) {
   const data = {};
   data[name] = value;
-  return submitData(data);
+  return await submitData(data);
 }
 
 const taskData = await getData();

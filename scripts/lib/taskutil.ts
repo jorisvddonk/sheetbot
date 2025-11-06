@@ -2,42 +2,50 @@ import { checkError } from "./commonutil.ts";
 import { dirname, basename } from "https://deno.land/std@0.220.1/path/mod.ts";
 
 export async function addTask(taskspec) {
-    return fetch(Deno.env.get("SHEETBOT_BASEURL")! + "/tasks", {
+    const res = await fetch(Deno.env.get("SHEETBOT_BASEURL")! + "/tasks", {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
             'Authorization': Deno.env.get("SHEETBOT_AUTHORIZATION_HEADER")
         },
         body: JSON.stringify(taskspec)
-    }).then(checkError).then(res => res.json());
+    });
+    checkError(res);
+    return res.json();
 }
 
 export async function getTask(taskid?: string) {
-    return fetch(taskid === undefined ? Deno.env.get("SHEETBOT_TASK_BASEURL") : `${Deno.env.get("SHEETBOT_BASEURL")!}/tasks/${taskid}`, {
+    const res = await fetch(taskid === undefined ? Deno.env.get("SHEETBOT_TASK_BASEURL") : `${Deno.env.get("SHEETBOT_BASEURL")!}/tasks/${taskid}`, {
         method: 'GET',
         headers: {
             'Authorization': Deno.env.get("SHEETBOT_AUTHORIZATION_HEADER")
         }
-    }).then(checkError).then(res => res.json());
+    });
+    checkError(res);
+    return res.json();
 }
 
 export async function getData(taskid?: string) {
-    return getTask(taskid).then(data => data.data);
+    const data = await getTask(taskid);
+    return data.data;
 }
 
 export async function getArtefacts(taskid?: string) {
-    return getTask(taskid).then(data => data.artefacts);
+    const data = await getTask(taskid);
+    return data.artefacts;
 }
 
 export async function submitData(data, taskid?: string) {
-    return await fetch(taskid === undefined ? Deno.env.get("SHEETBOT_TASK_DATAURL") : `${Deno.env.get("SHEETBOT_BASEURL")!}/tasks/${taskid}/data`, {
+    const res = await fetch(taskid === undefined ? Deno.env.get("SHEETBOT_TASK_DATAURL") : `${Deno.env.get("SHEETBOT_BASEURL")!}/tasks/${taskid}/data`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
             'Authorization': Deno.env.get("SHEETBOT_AUTHORIZATION_HEADER")
         },
         body: JSON.stringify({ data })
-    }).then(checkError).then(res => res.json());
+    });
+    checkError(res);
+    return res.json();
 }
 
 export async function uploadArtefact(filename, file: Uint8Array, taskid?: string) {

@@ -329,7 +329,7 @@ const requiresPermission = (permission) => {
 app.post("/login", async (req, res) => {
     try {
         const { username, password } = req.body;
-        const user = await userdb.findUser(username);
+        const user = userdb.findUser(username);
         const loginvalid = await userdb.verifyLogin(username, password);
         if (!loginvalid) {
           return res.status(401).json({ error: 'Authentication failed' });

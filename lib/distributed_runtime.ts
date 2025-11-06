@@ -14,11 +14,11 @@ export class RemoteTask<T> {
   schema?: JSONSchema;
   script: string;
   run: () => Promise<T>;
-  private _resolve?: (value: T) => void;
-  private _reject?: (error: any) => void;
+  _resolve?: (value: T) => void;
+  _reject?: (error: any) => void;
   private _promise: Promise<T>;
   private _executed = false;
-  private _dispatched = false;
+  _dispatched = false;
 
   /**
    * Creates a new RemoteTask instance.
@@ -100,7 +100,7 @@ export function distributed<T extends any[], R>(
   fn: (...args: T) => Promise<R>,
   schema?: JSONSchema
 ) {
-  return (...args: T): RemoteTask<R> => {
+  return (...args: any[]): RemoteTask<R> => {
     // Extract RemoteTask dependencies from args
     const deps = args.filter(arg => arg instanceof RemoteTask) as RemoteTask<any>[];
 

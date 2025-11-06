@@ -102,7 +102,7 @@ let additional_build_flags = taskdata.additional_build_flags !== undefined ? tas
 async function subtask_statusupdate(subtaskname, completed) {
   const data = {};
   data["subtask/" + subtaskname] = completed ? true : false;
-  return submitData(data);
+  return await submitData(data);
 }
 
 await subtask_statusupdate("git clone", false);

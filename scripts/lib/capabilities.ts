@@ -39,14 +39,14 @@ async function getGenericCmdVersion(cmdName, commandStr) {
 }
 
 async function getGit() {
-    return getGenericCmdVersion('git', 'git --version');
+    return await getGenericCmdVersion('git', 'git --version');
 }
 
 async function getVirtualbox() {
-    return getGenericCmdVersion('virtualbox', 'vboxmanage --version');
+    return await getGenericCmdVersion('virtualbox', 'vboxmanage --version');
 }
 
-async function getDeno() {
+function getDeno() {
     return transformToVersion('deno', Deno.version.deno);
 }
 
@@ -79,10 +79,10 @@ async function getScons() {
 }
 
 async function getCMake() {
-    return getGenericCmdVersion('cmake', 'cmake --version');
+    return await getGenericCmdVersion('cmake', 'cmake --version');
 }
 
-async function getOS() {
+function getOS() {
     try {
         const version = Deno.osRelease();
         return {
@@ -100,7 +100,7 @@ async function getOS() {
     return {};
 }
 
-async function getMemory() {
+function getMemory() {
     const memoryInfo = Deno.systemMemoryInfo();
     return {
         total: memoryInfo.total / 1024 / 1024,
@@ -110,7 +110,7 @@ async function getMemory() {
     }
 }
 
-async function getLoadAvg() {
+function getLoadAvg() {
     const loadAvg = Deno.loadavg();
     return {
         '1min': loadAvg[0],
@@ -143,11 +143,11 @@ async function getCapabilities(staticCapabilities) {
     software = Object.assign(software, await getVirtualbox());
     software = Object.assign(software, await getClang());
     software = Object.assign(software, await getCMake());
-    software = Object.assign(software, await getDeno());
+    software = Object.assign(software, getDeno());
     software = Object.assign(software, await getScons());
 
     let os = {}
-    os = Object.assign(os, await getOS());
+    os = Object.assign(os, getOS());
 
     let linux = undefined;
     let windows = undefined;
@@ -156,9 +156,9 @@ async function getCapabilities(staticCapabilities) {
     }
 
     let memory = {}
-    memory = await getMemory();
+    memory = getMemory();
 
-    let loadavg = await getLoadAvg();
+    let     loadavg = getLoadAvg();
 
     const packages = Array.from(new Set(Object.keys(software).concat(staticCapabilities?.packages || [])));
     return Object.assign({}, staticCapabilities, {
