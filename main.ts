@@ -9,6 +9,7 @@ import { validateSheetName } from "./lib/sheet_validator.ts";
 import { upsert, validateTableName } from "./lib/data_providers/sqlite/lib.ts";
 import { SheetDB } from "./lib/data_providers/sqlite/sheetdb.ts";
 import { UserDB } from "./lib/data_providers/sqlite/userdb.ts";
+import { createInjectDependenciesMiddleware } from "./lib/middleware.ts";
 
 const SECRET_KEY = new TextDecoder().decode(Deno.readFileSync("./secret.txt"));
 
@@ -195,6 +196,8 @@ function getTask(taskId: string, filter_by_status?: TaskStatus) {
         return parseOneSQLTask(result);
     }
 }
+
+const injectDependencies = createInjectDependenciesMiddleware(getTask);
 
 function updateTaskStatus(taskId: string, status: TaskStatus) {
     const stmt = db.prepare("UPDATE tasks SET status = ? WHERE id = ?");
@@ -540,7 +543,7 @@ app.get("/scripts/agent(\.ts|\.py)?", (req, res) => {
     }
 });
 
-app.get("/scripts/:id\.?.*", (req, res) => {
+app.get("/scripts/:id\.?.*", injectDependencies, (req, res) => {
     const task = getTask(req.params.id);
     if (task) {
         if (req.path.endsWith(".ts")) {
@@ -550,17 +553,7 @@ app.get("/scripts/:id\.?.*", (req, res) => {
         } else if (req.path.endsWith(".py")) {
             res.contentType("text/x-python");
         }
-        let script = task.script;
-        // Replace dependency placeholders with actual results
-        for (const depId of task.dependsOn) {
-            const placeholder = `__DEP_RESULT_${depId}__`;
-            const depTask = getTask(depId);
-            if (depTask && depTask.data && depTask.data.default !== undefined) {
-                const result = depTask.data.default;
-                script = script.replace(new RegExp(placeholder, 'g'), JSON.stringify(result));
-            }
-        }
-        res.send(script);
+        res.send(res.locals.injectedScript);
     } else {
         res.status(404);
         res.send();
