@@ -9,3 +9,4 @@ csr.pem
 secret.txt
 .capabilities.json
 .capabilities.dynamic.ts
+.vscode/
