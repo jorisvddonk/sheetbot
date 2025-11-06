@@ -10,7 +10,7 @@ import { upsert, validateTableName } from "./lib/data_providers/sqlite/lib.ts";
 import { SheetDB } from "./lib/data_providers/sqlite/sheetdb.ts";
 import { UserDB } from "./lib/data_providers/sqlite/userdb.ts";
 import { createInjectDependenciesMiddleware, createGetScriptMiddleware, createGetTaskMiddleware } from "./lib/middleware.ts";
-import { createApiValidationMiddleware } from "./middleware/api_validation.ts";
+import OpenApiValidator from "npm:express-openapi-validator";
 
 const SECRET_KEY = new TextDecoder().decode(Deno.readFileSync("./secret.txt"));
 
@@ -53,7 +53,12 @@ app.use((req, res, next) => {
 
 // API validation middleware (only in development)
 if (Deno.env.get("NODE_ENV") !== "production") {
-    app.use(createApiValidationMiddleware("./openapi.yaml"));
+    app.use(OpenApiValidator.middleware({
+        apiSpec: './openapi.yaml',
+        validateRequests: true,
+        validateResponses: true,
+        ignorePaths: /^\/(static|scripts|artefacts)/,
+    }));
 }
 
 interface Task {
