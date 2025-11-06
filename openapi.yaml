@@ -183,8 +183,11 @@ components:
         - password
 
     LoginResponse:
-      type: string
-      description: JWT token for authentication
+      type: object
+      properties:
+        token:
+          type: string
+          description: JWT token for authentication
 
     SheetData:
       type: object
@@ -841,6 +844,17 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+
+
+  /sheets/{id}/data:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: '^[a-zA-Z0-9_-]+$'
+        description: Sheet name
     post:
       summary: Upsert sheet data
       description: Insert or update a row in the sheet
@@ -873,7 +887,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-
   /sheets/{id}/data/{key}:
     parameters:
       - name: id
