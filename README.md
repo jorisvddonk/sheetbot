@@ -4,7 +4,7 @@ A TypeScript-based automation and task management system using Deno.
 
 ## Features
 
-- Distributed runtime for executing tasks
+- [Distributed runtime](Distributed_Runtime.md) for executing tasks
 - SQLite data providers for sheets and users
 - Web interface for managing sheets and tasks
 - Various utility scripts for different operations
@@ -106,6 +106,20 @@ Tasks store arbitrary JSON data that can be updated during execution:
 - **Dependency injection**: Completed task data is injected into dependent scripts using `__DEP_RESULT_<taskId>__` placeholders
 
 Example: A compilation task might store build artifacts or error logs in its data.
+
+#### Dependency Injection
+
+When serving task scripts, SheetBot injects dependency results:
+
+- **Placeholders**: Use `__DEP_RESULT_<taskId>__` in scripts
+- **Injection**: Server replaces placeholders with JSON-stringified `depTask.data.default` values
+- **Usage**: Scripts can reference dependency outputs directly
+
+Example script:
+```typescript
+const depResult = __DEP_RESULT_abc123__; // Becomes actual data
+console.log(depResult);
+```
 
 #### Sheet Data
 
