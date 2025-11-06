@@ -35,7 +35,7 @@ export class HashImgWidget extends LitElement {
                  const ctx = canvas.getContext("2d");
                  ctx.canvas.width = 128;
                  ctx.canvas.height = 128;
-                 const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+                 const isDark = globalThis.matchMedia && globalThis.matchMedia('(prefers-color-scheme: dark)').matches;
                  ctx.fillStyle = isDark ? `rgb(0 0 0)` : `rgb(255 255 255)`;
                  ctx.fillRect(0, 0, 128, 128);
                 for (let i = 0; i < 16; i++) {

@@ -65,7 +65,7 @@ export class ImageWidget extends LitElement {
       return [{text: 'delete', action: () => {
         this.delete();
       }}, {text: 'open in new tab', action: () => {
-        window.open(this.data);
+        globalThis.open(this.data);
       }}]
     }
   }
