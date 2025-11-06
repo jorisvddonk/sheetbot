@@ -96,7 +96,7 @@ function setupLogout() {
     if (logoutBtn) {
         logoutBtn.addEventListener('click', () => {
             localStorage.removeItem('jwt_token');
-            window.location.href = 'index.html';
+            globalThis.location.href = 'index.html';
         });
     }
 }
