@@ -1,0 +1,105 @@
+<html>
+
+<head>
+      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+     <link rel="stylesheet" href="style.css">
+     <link rel="icon" href="logo.png" type="image/png">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/typescript.min.js"></script>
+    <script src="element-table.js" type="module"></script>
+    <script src="element-grid.js" type="module"></script>
+    <script src="element-contextmenu.js" type="module"></script>
+    <script src="widget-image.js" type="module"></script>
+    <script src="widget-code.js" type="module"></script>
+    <script src="widget-text.js" type="module"></script>
+    <script src="widget-taskstatus.js" type="module"></script>
+    <script src="widget-taskephemeral.js" type="module"></script>
+    <script src="widget-tasktype.js" type="module"></script>
+    <script src="widget-taskid.js" type="module"></script>
+    <script src="widget-taskname.js" type="module"></script>
+    <script src="widget-hashimg.js" type="module"></script>
+      <script src="widget-multi.js" type="module"></script>
+      <script src="header.js"></script>
+ </head>
+
+<body>
+     <div id="header-placeholder"></div>
+     <div style="padding: 20px;">
+         <h2>Agent Statistics</h2>
+         <div id="summary-stats" style="margin-bottom: 20px; font-size: 16px;"></div>
+         <element-grid id="table"></element-grid>
+     </div>
+
+    <script>
+        const headers = {};
+        if (localStorage.hasOwnProperty("jwt_token")) {
+            headers["Authorization"] = `Bearer ${localStorage["jwt_token"]}`;
+        }
+
+        function formatTimestamp(timestamp) {
+            const date = new Date(timestamp);
+            const now = new Date();
+            const diffMs = now - date;
+            const diffMins = Math.floor(diffMs / (1000 * 60));
+            const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+            const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+            if (diffMins < 1) return 'Just now';
+            if (diffMins < 60) return `${diffMins}m ago`;
+            if (diffHours < 24) return `${diffHours}h ago`;
+            if (diffDays < 7) return `${diffDays}d ago`;
+
+            return date.toLocaleDateString();
+        }
+
+        const data = fetch("/agenttracker", {
+            headers: headers
+        }).then(response => {
+            return response.json()
+        }).then(stats => {
+            // Update summary stats
+            const summaryDiv = document.getElementById('summary-stats');
+            const timeDisplay = stats.windowMinutes >= 120
+                ? `${Math.round(stats.windowMinutes / 60)}h`
+                : `${stats.windowMinutes}m`;
+            summaryDiv.textContent = `Total Unique Agents: ${stats.totalUniqueAgents} | Active Agents (${timeDisplay}): ${stats.activeAgents}`;
+
+            const columns = [
+                {
+                    "name": "ip",
+                    "widgettype": "text",
+                    "minwidth": 200,
+                    "columnorder": 0,
+                    "datatype": "STRING"
+                },
+                {
+                    "name": "lastSeen",
+                    "widgettype": "text",
+                    "minwidth": 150,
+                    "columnorder": 1,
+                    "datatype": "STRING"
+                },
+                {
+                    "name": "lastSeenTimestamp",
+                    "widgettype": "text",
+                    "minwidth": 120,
+                    "columnorder": 2,
+                    "datatype": "NUMERIC"
+                }
+            ];
+
+            const d = [];
+            stats.agents.forEach(agent => {
+                d.push([
+                    agent.ip,
+                    formatTimestamp(agent.lastSeen),
+                    agent.lastSeen
+                ]);
+            });
+
+            document.getElementById('table').setAttribute('data', JSON.stringify({data: d, columns: columns}));
+        });
+
+    </script>
+</body>
+
+</html>
