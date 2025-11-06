@@ -239,6 +239,7 @@ paths:
     post:
       summary: Authenticate user
       description: Login with username and password to obtain JWT token
+      security: []
       requestBody:
         required: true
         content:
