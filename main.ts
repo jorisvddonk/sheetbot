@@ -343,7 +343,7 @@ app.post("/login", async (req, res) => {
 });
 
 app.get("/", function (req, res) {
-  res.send("Hello World");
+  res.sendFile("static/index.html", { root: "." });
 });
 
 app.get("/openapi.yaml", function (req, res) {

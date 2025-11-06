@@ -1,4 +1,6 @@
-# SheetBot Internal
+# SheetBot
+
+<img src="static/logo.png" width="128px">
 
 A TypeScript-based automation and task management system using Deno.
 
