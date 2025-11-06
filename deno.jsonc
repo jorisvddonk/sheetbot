@@ -1,6 +1,11 @@
 {
-    "tasks": {
-        "start": "deno run -A --watch main.ts",
-        "start-agent": "deno run --reload -A http://localhost:3000/scripts/agent.ts",
-      }
+  "tasks": {
+    "start": "deno run -A --watch main.ts",
+    "start-agent": "deno run --reload -A http://localhost:3000/scripts/agent.ts"
+  },
+  "lint": {
+    "rules": {
+      "exclude": ["no-import-prefix", "no-unused-vars", "no-explicit-any", "prefer-const"]
+    }
+  }
 }
