@@ -20,7 +20,7 @@ jobs:
         deno-version: v2.x
 
     - name: Type check
-      run: deno check
+      run: deno check --allow-import
 
     - name: Lint
-      run: deno lint
+      run: deno lint --allow-import
