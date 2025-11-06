@@ -174,7 +174,7 @@ for await (const e of walk('./bin', { match: [ARTEFACT_REGEX] })) {
             [tgz_filename]: artefactdata.directURL
         });
 
-        console.log("Done! with artefact ", foundArtefact.path);
+        console.log("Done! with artefact ", foundArtefact);
     }
 }
 await subtask_statusupdate("upload artefacts", true);

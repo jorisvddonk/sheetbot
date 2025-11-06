@@ -146,7 +146,7 @@ async function getCapabilities(staticCapabilities) {
     software = Object.assign(software, getDeno());
     software = Object.assign(software, await getScons());
 
-    let os = {}
+    let os: Record<string, unknown> = {}
     os = Object.assign(os, getOS());
 
     let linux = undefined;

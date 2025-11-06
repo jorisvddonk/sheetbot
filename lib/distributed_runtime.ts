@@ -27,12 +27,12 @@ export class RemoteTask<T> {
    * @param deps Dependencies as other RemoteTask instances
    * @param schema Optional JSON schema for validation
    */
-  constructor(
-    fn: (...args: unknown[]) => unknown,
-    args: unknown[],
-    deps: RemoteTask<unknown>[] = [],
-    schema?: JSONSchema
-  ) {
+   constructor(
+     fn: (...args: unknown[]) => Promise<unknown>,
+     args: unknown[],
+     deps: RemoteTask<unknown>[] = [],
+     schema?: JSONSchema
+   ) {
     this._promise = new Promise<T>((resolve, reject) => {
       this._resolve = resolve;
       this._reject = reject;
@@ -42,7 +42,7 @@ export class RemoteTask<T> {
     this.schema = schema;
 
     // Generate run function
-    this.run = () => fn(...args);
+    this.run = () => fn(...args) as Promise<T>;
 
     // Generate script for remote execution
     const fnScript = fn.toString();

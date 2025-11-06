@@ -50,7 +50,7 @@ export async function submitData(data, taskid?: string) {
 
 export async function uploadArtefact(filename, file: Uint8Array, taskid?: string) {
     const body = new FormData();
-    const blob = new Blob([file]);
+    const blob = new Blob([file as Uint8Array<ArrayBuffer>]);
     body.set("file", blob, filename);
     return await fetch(taskid === undefined ? Deno.env.get("SHEETBOT_TASK_ARTEFACTURL") : `${Deno.env.get("SHEETBOT_BASEURL")}/tasks/${taskid}/artefacts`, {
         method: "POST",
