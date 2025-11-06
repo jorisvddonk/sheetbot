@@ -6,7 +6,7 @@ import { Select, Input } from "https://deno.land/x/cliffy@v1.0.0-rc.4/prompt/mod
 const script: string = await Select.prompt({
     message: "Pick a script",
     search: true,
-    options: Array.from(Deno.readDirSync("./scripts/").map(x => x.name).filter(x => x.endsWith(".ts") || x.endsWith(".js")))
+    options: Array.from(Deno.readDirSync("./scripts/").map(x => x.name).filter(x => x.endsWith(".ts") || x.endsWith(".js") || x.endsWith(".py")))
 });
 
 console.log("Adding task, please login first");
@@ -23,7 +23,7 @@ const token = await fetch(`${baseurl}/login`, {
         username,
         password
     })
-}).catch(checkError).then(res => res.json()).then(json => json.token);
+}).then(checkError).then(res => res.json()).then(json => json.token);
 
 Deno.env.set("SHEETBOT_AUTHORIZATION_HEADER", `Bearer ${token}`);
 Deno.env.set("SHEETBOT_BASEURL", baseurl);
@@ -47,11 +47,19 @@ if (localOrRemote === 1) {
     scriptStuff = await getScript(`/scripts/${script}`);
 } else {
     const scriptText = new TextDecoder().decode(Deno.readFileSync(`./scripts/${script}`));
-    const capabilitiesSchema = JSON.parse(scriptText.substr(scriptText.indexOf("<capabilitiesSchema>") + 20, scriptText.indexOf("</capabilitiesSchema>") - scriptText.indexOf("<capabilitiesSchema>") - 21));
-    scriptStuff = {
-        script: scriptText,
-        capabilitiesSchema
-    };
+    let capabilitiesText = scriptText.substr(scriptText.indexOf("<capabilitiesSchema>") + 20, scriptText.indexOf("</capabilitiesSchema>") - scriptText.indexOf("<capabilitiesSchema>") - 21);
+    capabilitiesText = capabilitiesText.split('\n').filter(line => !line.trim().startsWith('#')).join('\n');
+    try {
+        const capabilitiesSchema = JSON.parse(capabilitiesText);
+        scriptStuff = {
+            script: scriptText,
+            capabilitiesSchema
+        };
+    } catch (e) {
+        console.error(e);
+        console.log(capabilitiesText);
+        throw e;
+    }
 }
 
 try {
@@ -64,7 +72,9 @@ try {
 
 let suggestedData = {};
 try {
-    suggestedData = JSON.parse(scriptStuff.script.substr(scriptStuff.script.indexOf("<data>") + 6, scriptStuff.script.indexOf("</data>") - scriptStuff.script.indexOf("<data>") - 6));
+    let dataText = scriptStuff.script.substr(scriptStuff.script.indexOf("<data>") + 6, scriptStuff.script.indexOf("</data>") - scriptStuff.script.indexOf("<data>") - 6);
+    dataText = dataText.split('\n').filter(line => !line.trim().startsWith('#')).join('\n');
+    suggestedData = JSON.parse(dataText);
 } catch (e) {
     console.warn("Could not parse suggested data - using default {}")
 }
@@ -113,12 +123,12 @@ if (name == "") {
 
 
 await addTask({
-    type: "deno",
+    type: script.endsWith(".py") ? "python" : "deno",
     ...scriptStuff,
     ephemeral,
     status,
     name,
     data
-}).catch(checkError).then(task => {
+}).then(task => {
     console.log(`Done! Task ID is ${task.id}`);
 });

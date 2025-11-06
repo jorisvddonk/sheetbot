@@ -15,15 +15,25 @@ export class TaskTypeWidget extends LitElement {
         align-self: center;
       }
 
-      .deno {
-        background-image: url('Deno_2021.svg');
-        background-repeat: no-repeat;
-        background-size: 50%;
-        background-position: center;
-      }
-      .deno span {
-        display: none;
-      }
+       .deno {
+         background-image: url('Deno_2021.svg');
+         background-repeat: no-repeat;
+         background-size: 50%;
+         background-position: center;
+       }
+       .deno span {
+         display: none;
+       }
+
+       .python {
+         background-image: url('python.svg');
+         background-repeat: no-repeat;
+         background-size: 50%;
+         background-position: center;
+       }
+       .python span {
+         display: none;
+       }
     `;
   
     static properties = {

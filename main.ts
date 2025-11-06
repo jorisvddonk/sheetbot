@@ -385,8 +385,9 @@ app.post("/tasks", requiresLogin, requiresPermission(PERMISSION_CREATE_TASKS), u
 app.post("/tasks/get", requiresLogin, requiresPermission(PERMISSION_PERFORM_TASKS), (req, res) => {
     const task = getTaskToComplete(req.body.type, req.body.capabilities, TaskStatus.AWAITING);
     if (task) {
-        const taskScriptURL = `${req.protocol}://${req.get('host')}/scripts/${task.id}.ts`;
-        res.json({script: taskScriptURL, id: task.id, type: "deno"})
+        const extension = req.body.type === "python" ? ".py" : ".ts";
+        const taskScriptURL = `${req.protocol}://${req.get('host')}/scripts/${task.id}${extension}`;
+        res.json({script: taskScriptURL, id: task.id, type: req.body.type})
         return;
     }
     res.json({});
@@ -515,18 +516,28 @@ app.post("/tasks/:id/clone", requiresLogin, requiresPermission(PERMISSION_CREATE
 });
 
 app.use('/scripts', express.static('scripts'));
-app.get("/scripts/agent(\.ts)?", (req, res) => {
-    if (req.path.endsWith(".ts")) {
-        res.contentType("application/typescript");
-    } else if (req.path.endsWith(".js")) {
-        res.contentType("application/javascript");
+app.get("/scripts/agent(\.ts|\.py)?", (req, res) => {
+    if (req.path.endsWith(".py")) {
+        res.contentType("text/x-python");
+        res.send(new TextDecoder().decode(
+            Deno.readFileSync("./scripts/agent.template.py")
+        )
+        .replaceAll("${req.protocol}", req.protocol)
+        .replaceAll("${req.get('host')}", req.get('host')
+        ));
+    } else {
+        if (req.path.endsWith(".ts")) {
+            res.contentType("application/typescript");
+        } else if (req.path.endsWith(".js")) {
+            res.contentType("application/javascript");
+        }
+        res.send(new TextDecoder().decode(
+            Deno.readFileSync("./scripts/agent.template.ts")
+        )
+        .replaceAll("${req.protocol}", req.protocol)
+        .replaceAll("${req.get('host')}", req.get('host')
+        ));
     }
-    res.send(new TextDecoder().decode(
-        Deno.readFileSync("./scripts/agent.template.ts")
-    )
-    .replaceAll("${req.protocol}", req.protocol)
-    .replaceAll("${req.get('host')}", req.get('host')
-    ));
 });
 
 app.get("/scripts/:id\.?.*", (req, res) => {
@@ -536,6 +547,8 @@ app.get("/scripts/:id\.?.*", (req, res) => {
             res.contentType("application/typescript");
         } else if (req.path.endsWith(".js")) {
             res.contentType("application/javascript");
+        } else if (req.path.endsWith(".py")) {
+            res.contentType("text/x-python");
         }
         let script = task.script;
         // Replace dependency placeholders with actual results
@@ -569,7 +582,8 @@ app.post("/sheets/:id/data", requiresLogin, requiresPermission(PERMISSION_PUT_SH
     
     const sheetdb = new SheetDB(`./sheets/${req.params.id}.db`, false); // TODO: move to a map? what's the performance of this?
     const data = Object.entries(Object.assign({key: req.body.key}, req.body)); // Need to put the primary key first... This is terrible and I guess slow as well, but it works.
-    sheetdb.upsertData(data); 
+    // console.log('Upsert data:', data);
+    sheetdb.upsertData(data);
     sheetdb.close();
     res.status(200);
     res.send();
