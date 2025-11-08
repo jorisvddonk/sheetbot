@@ -40,7 +40,7 @@ export function setOffloadHttpDispatcher() {
               type: "deno",
               capabilitiesSchema: task.schema || {},
               dependsOn: task.deps.map(dep => dep.id),
-              ephemeral: 0,
+              transitions: [],
             }),
           }).catch(err => console.error("Failed to dispatch task in offload mode:", err));
 

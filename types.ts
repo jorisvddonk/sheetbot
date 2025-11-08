@@ -165,8 +165,8 @@ export interface paths {
                         capabilitiesSchema?: string;
                         /** @enum {string} */
                         type?: "deno" | "python";
-                        /** @enum {integer} */
-                        ephemeral?: 0 | 1 | 2;
+                        /** @description JSON string of transitions array */
+                        transitions?: string;
                         /** @description JSON string of dependency task IDs */
                         dependsOn?: string;
                         /** @enum {integer} */
@@ -174,6 +174,7 @@ export interface paths {
                         /** @description Artefact files to upload */
                         file?: string[];
                     };
+                    "application/json": components["schemas"]["TaskCreate"];
                 };
             };
             responses: {
@@ -215,6 +216,156 @@ export interface paths {
                 };
             };
         };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/library": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get script library
+         * @description Retrieve list of available scripts with metadata
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description List of scripts with metadata */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ScriptLibraryItem"][];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tasktracker": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get task statistics
+         * @description Retrieve rolling statistics for task additions, completions, and failures (data retained for up to 1 day)
+         */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description Time window in minutes for statistics (default 5) */
+                    minutes?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Task statistics for the specified time window */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["TaskTrackerStats"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agenttracker": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get agent statistics
+         * @description Retrieve rolling statistics for connected agents based on IP addresses (data retained for up to 1 day)
+         */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description Time window in minutes for statistics (default 1440) */
+                    minutes?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Agent statistics for the specified time window */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AgentTrackerStats"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1560,14 +1711,30 @@ export interface components {
             artefacts: string[];
             /** @description List of task IDs this task depends on */
             dependsOn: string[];
-            /**
-             * @description Ephemeral behavior:
-             *     * 0 - PERSISTENT (task remains after completion)
-             *     * 1 - EPHEMERAL_ON_SUCCESS (deleted on successful completion)
-             *     * 2 - EPHEMERAL_ALWAYS (deleted on any completion)
-             * @enum {integer}
-             */
-            ephemeral: 0 | 1 | 2;
+            /** @description Array of timed status transitions for the task */
+            transitions: {
+                /** @description Array of status names where this transition is active */
+                statuses: ("AWAITING" | "RUNNING" | "COMPLETED" | "FAILED" | "PAUSED" | "DELETED")[];
+                /** @description JSON Schema that specifies additional task transition conditions */
+                condition: Record<string, never>;
+                /** @description Timing configuration for the transition */
+                timing: {
+                    /** @description How often to check (e.g., "1h", "30m", "1s") */
+                    every?: string;
+                    /**
+                     * @description If true, evaluates synchronously on status entry
+                     * @default false
+                     */
+                    immediate: boolean;
+                };
+                /**
+                 * @description Status name to transition to
+                 * @enum {string}
+                 */
+                transitionTo: "AWAITING" | "RUNNING" | "COMPLETED" | "FAILED" | "PAUSED" | "DELETED";
+                /** @description Optional data mutations to apply (JSON Merge Patch) */
+                dataMutations?: Record<string, never>;
+            }[];
             /**
              * @description Execution environment type
              * @enum {string}
@@ -1586,20 +1753,37 @@ export interface components {
             name?: string;
             /** @description Task script content */
             script: string;
-            /** @description JSON string of task data */
-            data?: string;
-            /** @description JSON string of capability schema */
-            capabilitiesSchema?: string;
+            data?: string | Record<string, never>;
+            capabilitiesSchema?: string | Record<string, never>;
             /**
              * @description Execution environment type
              * @enum {string}
              */
             type?: "deno" | "python";
-            /**
-             * @default 0
-             * @enum {integer}
-             */
-            ephemeral: 0 | 1 | 2;
+            /** @description Array of timed status transitions for the task */
+            transitions?: {
+                /** @description Array of status names where this transition is active */
+                statuses: ("AWAITING" | "RUNNING" | "COMPLETED" | "FAILED" | "PAUSED" | "DELETED")[];
+                /** @description JSON Schema that specifies additional task transition conditions */
+                condition: Record<string, never>;
+                /** @description Timing configuration for the transition */
+                timing: {
+                    /** @description How often to check (e.g., "1h", "30m", "1s") */
+                    every?: string;
+                    /**
+                     * @description If true, evaluates synchronously on status entry
+                     * @default false
+                     */
+                    immediate: boolean;
+                };
+                /**
+                 * @description Status name to transition to
+                 * @enum {string}
+                 */
+                transitionTo: "AWAITING" | "RUNNING" | "COMPLETED" | "FAILED" | "PAUSED" | "DELETED";
+                /** @description Optional data mutations to apply (JSON Merge Patch) */
+                dataMutations?: Record<string, never>;
+            }[];
             /** @description JSON string or array of dependency task IDs */
             dependsOn?: string[] | string;
             /**
@@ -1666,6 +1850,45 @@ export interface components {
         Error: {
             /** @description Error message */
             error?: string;
+        };
+        TaskTrackerStats: {
+            /** @description Number of tasks added in the time window */
+            added?: number;
+            /** @description Number of tasks completed in the time window */
+            completed?: number;
+            /** @description Number of tasks failed in the time window */
+            failed?: number;
+            /** @description Time window in minutes used for the statistics */
+            windowMinutes?: number;
+        };
+        AgentTrackerStats: {
+            /** @description Total number of unique agents ever seen */
+            totalUniqueAgents?: number;
+            /** @description Number of agents active in the time window */
+            activeAgents?: number;
+            agents?: {
+                /** @description Agent IP address */
+                ip?: string;
+                /**
+                 * Format: int64
+                 * @description Timestamp of last agent connection
+                 */
+                lastSeen?: number;
+            }[];
+            /** @description Time window in minutes used for the statistics */
+            windowMinutes?: number;
+        };
+        ScriptLibraryItem: {
+            /** @description Script filename */
+            filename: string;
+            /** @description Human-readable script name */
+            name?: string;
+            /** @description JSON Schema for agent capabilities */
+            capabilitiesSchema?: Record<string, never>;
+            /** @description Suggested default data for the task */
+            suggestedData?: Record<string, never>;
+            /** @description Comments about the task */
+            comments?: string;
         };
     };
     responses: never;

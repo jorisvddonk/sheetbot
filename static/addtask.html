@@ -13,7 +13,6 @@
     <script src="widget-code.js" type="module"></script>
     <script src="widget-text.js" type="module"></script>
     <script src="widget-taskstatus.js" type="module"></script>
-    <script src="widget-taskephemeral.js" type="module"></script>
     <script src="widget-tasktype.js" type="module"></script>
     <script src="widget-taskid.js" type="module"></script>
     <script src="widget-taskname.js" type="module"></script>
@@ -37,12 +36,8 @@
         <label for="taskData">Data (JSON):</label>
         <textarea id="taskData" rows="10" cols="50" placeholder='{"key": "value"}'></textarea><br><br>
 
-        <label for="ephemeral">Ephemeral:</label>
-        <select id="ephemeral">
-            <option value="0">Persistent</option>
-            <option value="1">Ephemeral on Success</option>
-            <option value="2">Ephemeral Always</option>
-        </select><br><br>
+        <label for="transitions">Transitions (JSON):</label>
+        <textarea id="transitions" rows="5" cols="50" placeholder='[]'></textarea><br><br>
 
         <label for="status">Initial Status:</label>
         <select id="status">
@@ -111,7 +106,7 @@
                         script: scriptContent,
                         name: document.getElementById('taskName').value || undefined,
                         data: JSON.parse(document.getElementById('taskData').value || '{}'),
-                        ephemeral: parseInt(document.getElementById('ephemeral').value),
+                        transitions: JSON.parse(document.getElementById('transitions').value || '[]'),
                         status: parseInt(document.getElementById('status').value),
                         type: selectedScript.endsWith('.py') ? 'python' : 'deno',
                         capabilitiesSchema: scriptItem.capabilitiesSchema

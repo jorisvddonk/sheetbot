@@ -41,7 +41,7 @@ export function setHttpDispatcher() {
         type: "deno",
         capabilitiesSchema: task.schema || {},
         dependsOn: task.deps.map(dep => dep.id),
-        ephemeral: 0, // Keep for inspection
+        transitions: [], // Keep for inspection
       }),
     });
     if (!response.ok) {

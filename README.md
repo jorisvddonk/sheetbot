@@ -56,10 +56,7 @@ sequenceDiagram
     Note over Agent: Run script (with dep results injected)
     Agent->>Server: POST /tasks/:id/complete (with result data)
     Note over Server: Update task status
-    alt Task is ephemeral (EPHEMERAL_ALWAYS or EPHEMERAL_ON_SUCCESS)
-        Server->>Server: Remove from dependent tasks' dependsOn
-        Server->>Server: Delete task
-    end
+    Note over Server: Evaluate transitions for new status
 ```
 
 ### Failure Handling
@@ -71,10 +68,7 @@ sequenceDiagram
 
     Agent->>Server: POST /tasks/:id/failed
     Note over Server: Set status to FAILED
-    alt Task is ephemeral (EPHEMERAL_ALWAYS)
-        Server->>Server: Delete all dependent tasks
-        Server->>Server: Delete failed task
-    end
+    Note over Server: Evaluate transitions for new status
 ```
 
 ### Task State Diagram
@@ -87,8 +81,9 @@ stateDiagram-v2
     AWAITING --> RUNNING : Agent accepts task
     RUNNING --> COMPLETED : Task succeeds
     RUNNING --> FAILED : Task fails
-    COMPLETED --> [*] : Cleanup (if ephemeral)
-    FAILED --> [*] : Cleanup (if ephemeral)
+    COMPLETED --> DELETED : Transition (auto-delete)
+    FAILED --> DELETED : Transition (auto-delete)
+    COMPLETED --> AWAITING : Transition (periodic reset)
     note right of PAUSED
         Tasks can start paused for
         dependency setup before execution
@@ -100,6 +95,11 @@ stateDiagram-v2
     note right of RUNNING
         Task being executed by agent
     end note
+    note right of COMPLETED
+        Transitions can auto-delete,
+        reset for periodic tasks,
+        or apply other status changes
+    end note
 ```
 
 ### Key Concepts
@@ -107,9 +107,30 @@ stateDiagram-v2
 - **Tasks**: Units of work with scripts, dependencies, and capability requirements
 - **Dependencies**: Tasks can depend on others; execution waits for all deps to complete
 - **Capabilities**: JSON Schema matching for agent selection
-- **Ephemeral Tasks**: Auto-deleted after completion for cleanup
+- **Transitions**: Timed status changes for tasks (e.g., auto-delete, periodic reset)
 - **Artefacts**: File outputs stored per task
 - **Runner Types**: SheetBot is agnostic to execution environments; it provides task management API while runners handle actual script execution
+
+### Transitions
+
+Transitions enable automated status changes for tasks based on time and conditions:
+
+- **Configuration**: Tasks include a `transitions` array with status change rules
+- **Evaluation**: Transitions are checked when task status changes or at scheduled intervals
+- **Use Cases**: Auto-deletion after completion, periodic task resets, timeouts for awaiting tasks
+- **Condition Matching**: JSON Schema validation against task data and artefacts
+- **Timing**: Immediate evaluation or periodic checks (e.g., every 1h, 30m, 1s)
+
+Example transition for auto-deleting completed tasks after 1 hour:
+
+```json
+{
+  "statuses": ["COMPLETED"],
+  "condition": {},
+  "timing": {"every": "1h", "immediate": false},
+  "transitionTo": "DELETED"
+}
+```
 
 ### Artefacts
 

@@ -53,14 +53,44 @@ components:
           items:
             type: string
           description: List of task IDs this task depends on
-        ephemeral:
-          type: integer
-          enum: [0, 1, 2]
-          description: |
-            Ephemeral behavior:
-            * 0 - PERSISTENT (task remains after completion)
-            * 1 - EPHEMERAL_ON_SUCCESS (deleted on successful completion)
-            * 2 - EPHEMERAL_ALWAYS (deleted on any completion)
+        transitions:
+          type: array
+          items:
+            type: object
+            properties:
+              statuses:
+                type: array
+                items:
+                  type: string
+                  enum: ["AWAITING", "RUNNING", "COMPLETED", "FAILED", "PAUSED", "DELETED"]
+                description: Array of status names where this transition is active
+              condition:
+                type: object
+                description: JSON Schema that specifies additional task transition conditions
+              timing:
+                type: object
+                properties:
+                  every:
+                    type: string
+                    description: How often to check (e.g., "1h", "30m", "1s")
+                  immediate:
+                    type: boolean
+                    default: false
+                    description: If true, evaluates synchronously on status entry
+                description: Timing configuration for the transition
+              transitionTo:
+                type: string
+                enum: ["AWAITING", "RUNNING", "COMPLETED", "FAILED", "PAUSED", "DELETED"]
+                description: Status name to transition to
+              dataMutations:
+                type: object
+                description: Optional data mutations to apply (JSON Merge Patch)
+            required:
+              - statuses
+              - condition
+              - timing
+              - transitionTo
+          description: Array of timed status transitions for the task
         type:
           type: string
           enum: ["deno", "python"]
@@ -75,7 +105,7 @@ components:
         - data
         - artefacts
         - dependsOn
-        - ephemeral
+        - transitions
         - type
         - capabilitiesSchema
 
@@ -108,10 +138,44 @@ components:
           type: string
           enum: ["deno", "python"]
           description: Execution environment type
-        ephemeral:
-          type: integer
-          enum: [0, 1, 2]
-          default: 0
+        transitions:
+          type: array
+          items:
+            type: object
+            properties:
+              statuses:
+                type: array
+                items:
+                  type: string
+                  enum: ["AWAITING", "RUNNING", "COMPLETED", "FAILED", "PAUSED", "DELETED"]
+                description: Array of status names where this transition is active
+              condition:
+                type: object
+                description: JSON Schema that specifies additional task transition conditions
+              timing:
+                type: object
+                properties:
+                  every:
+                    type: string
+                    description: How often to check (e.g., "1h", "30m", "1s")
+                  immediate:
+                    type: boolean
+                    default: false
+                    description: If true, evaluates synchronously on status entry
+                description: Timing configuration for the transition
+              transitionTo:
+                type: string
+                enum: ["AWAITING", "RUNNING", "COMPLETED", "FAILED", "PAUSED", "DELETED"]
+                description: Status name to transition to
+              dataMutations:
+                type: object
+                description: Optional data mutations to apply (JSON Merge Patch)
+            required:
+              - statuses
+              - condition
+              - timing
+              - transitionTo
+          description: Array of timed status transitions for the task
         dependsOn:
           oneOf:
             - type: array
@@ -376,9 +440,9 @@ paths:
                 type:
                   type: string
                   enum: ["deno", "python"]
-                ephemeral:
-                  type: integer
-                  enum: [0, 1, 2]
+                transitions:
+                  type: string
+                  description: JSON string of transitions array
                 dependsOn:
                   type: string
                   description: JSON string of dependency task IDs

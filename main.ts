@@ -18,6 +18,8 @@ import { AgentEventEmitter } from "./lib/agent-events.ts";
 import { createAgentTrackingMiddleware } from "./lib/agent-tracking-middleware.ts";
 import OpenApiValidator from "npm:express-openapi-validator@5.6.0";
 
+const ajv = new (Ajv as any)();
+
 // Init system
 const initDir = "./init/";
 try {
@@ -54,10 +56,28 @@ CREATE TABLE IF NOT EXISTS tasks (
     data TEXT,
     artefacts TEXT,
     dependsOn TEXT,
-    ephemeral INTEGER NOT NULL,
+    transitions TEXT,
     type TEXT NOT NULL,
     capabilitiesSchema TEXT
 )
+`);
+
+db.exec(`
+CREATE TABLE IF NOT EXISTS transitions_schedule (
+    task_id TEXT NOT NULL,
+    transition_index INTEGER NOT NULL,
+    scheduled_at INTEGER NOT NULL,
+    PRIMARY KEY (task_id, transition_index),
+    FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE
+)
+`);
+
+db.exec(`
+CREATE INDEX IF NOT EXISTS idx_transitions_schedule_scheduled_at ON transitions_schedule(scheduled_at)
+`);
+
+db.exec(`
+CREATE INDEX IF NOT EXISTS idx_transitions_schedule_task_status ON transitions_schedule(task_id)
 `);
 
 const app = express();
@@ -73,12 +93,8 @@ const agentEventEmitter = new AgentEventEmitter();
 const agentTracker = new AgentTracker(agentEventEmitter);
 const agentTrackingMiddleware = createAgentTrackingMiddleware(agentEventEmitter);
 
-const ajv = new (Ajv as any)();
-
-app.use((req, res, next) => {
-    console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
-    next();
-  });
+// Start background worker for transitions
+setInterval(processScheduledTransitions, 1000); // Check every second
 
 // API validation middleware (only in development)
 if (Deno.env.get("NODE_ENV") !== "production") {
@@ -86,8 +102,25 @@ if (Deno.env.get("NODE_ENV") !== "production") {
         apiSpec: './openapi.yaml',
         validateRequests: true,
         validateResponses: true,
-        ignorePaths: /^\/(static|scripts|artefacts)/,
+        ignorePaths: /^\/(static|scripts|artefacts|\.well-known)/,
     }));
+
+    // Error handler for validation errors
+    app.use((err, req, res, next) => {
+        console.error(`Validation error for ${req.method} ${req.path}:`, err.message, err.stack);
+        res.status(err.status || 400).json({ error: err.message });
+    });
+}
+
+interface Transition {
+    statuses: string[],
+    condition: Record<string, unknown>,
+    timing: {
+        every?: string,
+        immediate?: boolean
+    },
+    transitionTo: string,
+    dataMutations?: Record<string, unknown>
 }
 
 interface Task {
@@ -98,7 +131,7 @@ interface Task {
     data: Record<string, unknown>,
     artefacts: string[],
     dependsOn: string[],
-    ephemeral: Ephemeralness,
+    transitions: Transition[],
     type: string,
     capabilitiesSchema: Record<string, unknown>
 }
@@ -113,12 +146,152 @@ enum TaskStatus {
     COMPLETED = 2,
     FAILED = 3,
     PAUSED = 4,
+    DELETED = 5,
 }
 
 enum Ephemeralness {
     PERSISTENT = 0, // task will not get auto-deleted on completion
     EPHEMERAL_ON_SUCCESS = 1, // task will get auto-deleted, but only if completed successful; this allows you to debug failures
     EPHEMERAL_ALWAYS = 2 // task will get auto-deleted when completed, regardless of if it completed succesfully or not
+}
+
+function statusToString(status: TaskStatus): string {
+    switch (status) {
+        case TaskStatus.AWAITING: return "AWAITING";
+        case TaskStatus.RUNNING: return "RUNNING";
+        case TaskStatus.COMPLETED: return "COMPLETED";
+        case TaskStatus.FAILED: return "FAILED";
+        case TaskStatus.PAUSED: return "PAUSED";
+        case TaskStatus.DELETED: return "DELETED";
+        default: return "UNKNOWN";
+    }
+}
+
+function stringToStatus(statusStr: string): TaskStatus {
+    switch (statusStr) {
+        case "AWAITING": return TaskStatus.AWAITING;
+        case "RUNNING": return TaskStatus.RUNNING;
+        case "COMPLETED": return TaskStatus.COMPLETED;
+        case "FAILED": return TaskStatus.FAILED;
+        case "PAUSED": return TaskStatus.PAUSED;
+        case "DELETED": return TaskStatus.DELETED;
+        default: return TaskStatus.AWAITING;
+    }
+}
+
+function evaluateTransitions(task: Task): Transition | null {
+    const currentStatusStr = statusToString(task.status);
+    for (const transition of task.transitions) {
+        if (transition.statuses.includes(currentStatusStr)) {
+            // Validate condition against task (excluding status since it's checked above)
+            const taskForValidation = { ...task };
+            delete taskForValidation.status; // Status is handled by statuses array
+            const validate = ajv.compile(transition.condition);
+            if (validate(taskForValidation)) {
+                return transition;
+            }
+        }
+    }
+    return null;
+}
+
+function executeTransition(task: Task, transition: Transition) {
+    // Apply data mutations if any
+    if (transition.dataMutations) {
+        const mergedData = { ...task.data, ...transition.dataMutations };
+        updateTaskData(task.id, mergedData);
+        task.data = mergedData;
+    }
+
+    // Special handling for DELETED
+    if (transition.transitionTo === "DELETED") {
+        removeTaskFromAllDependsOn(task.id);
+        deleteTask(task.id);
+    } else {
+        // Update status
+        updateTaskStatus(task.id, stringToStatus(transition.transitionTo));
+    }
+}
+
+function scheduleTransition(task: Task, transition: Transition) {
+    // Calculate scheduled time
+    const now = Date.now();
+    const scheduledAt = Math.floor((now + parseDuration(transition.timing.every!)) / 1000);
+    console.log(`[DEBUG] Scheduling transition for task ${task.id} at ${scheduledAt} (${new Date(scheduledAt * 1000).toISOString()})`);
+
+    // Insert into transitions_schedule
+    const stmt = db.prepare(`
+        INSERT INTO transitions_schedule (task_id, transition_index, scheduled_at)
+        VALUES (?, ?, ?)
+    `);
+    const transitionIndex = task.transitions.indexOf(transition);
+    stmt.run(task.id, transitionIndex, scheduledAt);
+}
+
+function parseDuration(duration: string): number {
+    const match = duration.match(/^(\d+)([smhd])$/);
+    if (!match) return 0;
+    const value = parseInt(match[1]);
+    const unit = match[2];
+    switch (unit) {
+        case 's': return value * 1000;
+        case 'm': return value * 60 * 1000;
+        case 'h': return value * 60 * 60 * 1000;
+        case 'd': return value * 24 * 60 * 60 * 1000;
+        default: return 0;
+    }
+}
+
+function processScheduledTransitions() {
+    const now = Math.floor(Date.now() / 1000);
+    console.log(`[DEBUG] Checking scheduled transitions at ${now}`);
+    const stmt = db.prepare(`
+        SELECT ts.*, t.* FROM transitions_schedule ts
+        JOIN tasks t ON ts.task_id = t.id
+        WHERE ts.scheduled_at <= ?
+        ORDER BY ts.scheduled_at ASC
+    `);
+    const results = stmt.all(now);
+    console.log(`[DEBUG] Found ${results.length} scheduled transitions`);
+
+    for (const result of results) {
+        const task = parseOneSQLTask(result);
+        const transitionIndex = Number(result.transition_index);
+        const transition = task.transitions[transitionIndex];
+        console.log(`[DEBUG] Processing task ${task.id}, transition ${transitionIndex}, status ${task.status}`);
+
+        if (transition) {
+            console.log(`[DEBUG] Transition: ${JSON.stringify(transition)}`);
+            // Re-evaluate condition
+            const currentTransition = evaluateTransitions(task);
+            if (currentTransition === transition) {
+                console.log(`[DEBUG] Executing transition to ${transition.transitionTo}`);
+                // Execute transition
+                executeTransition(task, transition);
+
+                // Remove from schedule
+                const deleteStmt = db.prepare(`
+                    DELETE FROM transitions_schedule WHERE task_id = ? AND transition_index = ?
+                `);
+                deleteStmt.run(task.id, transitionIndex);
+
+                // Re-schedule if every is set
+                if (transition.timing.every) {
+                    console.log(`[DEBUG] Re-scheduling transition`);
+                    scheduleTransition(task, transition);
+                }
+            } else {
+                console.log(`[DEBUG] Condition not met, removing from schedule`);
+                // Condition no longer met, remove from schedule
+                const deleteStmt = db.prepare(`
+                    DELETE FROM transitions_schedule WHERE task_id = ? AND transition_index = ?
+                `);
+                deleteStmt.run(task.id, transitionIndex);
+            }
+        } else {
+            console.log(`[DEBUG] Transition not found at index ${transitionIndex}`);
+        }
+    }
 }
 
 function taskify(script: string): Task {
@@ -129,14 +302,14 @@ function taskify(script: string): Task {
         data: {},
         artefacts: [],
         dependsOn: [],
-        ephemeral: Ephemeralness.PERSISTENT,
+        transitions: [],
         type: "deno",
         capabilitiesSchema: {}
     }
 }
 function addTask(task: Task) {
     const stmt = db.prepare(`
-        INSERT INTO tasks (id, name, script, status, data, artefacts, dependsOn, ephemeral, type, capabilitiesSchema) 
+        INSERT INTO tasks (id, name, script, status, data, artefacts, dependsOn, transitions, type, capabilitiesSchema)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
     stmt.run(
@@ -147,7 +320,7 @@ function addTask(task: Task) {
         JSON.stringify(task.data),
         JSON.stringify(task.artefacts),
         JSON.stringify(task.dependsOn),
-        task.ephemeral,
+        JSON.stringify(task.transitions),
         task.type,
         JSON.stringify(task.capabilitiesSchema)
     );
@@ -156,10 +329,11 @@ function addTask(task: Task) {
 function parseOneSQLTask(obj: any) {
     if (obj !== undefined) {
         return {
-            ...obj, 
-            data: JSON.parse(obj.data || '{}'), 
-            artefacts: JSON.parse(obj.artefacts || '[]'), 
-            dependsOn: JSON.parse(obj.dependsOn || '[]'), 
+            ...obj,
+            data: JSON.parse(obj.data || '{}'),
+            artefacts: JSON.parse(obj.artefacts || '[]'),
+            dependsOn: JSON.parse(obj.dependsOn || '[]'),
+            transitions: JSON.parse(obj.transitions || '[]'),
             capabilitiesSchema: JSON.parse(obj.capabilitiesSchema || '{}')
         };
     }
@@ -241,9 +415,35 @@ const getTaskMiddleware = createGetTaskMiddleware(getTask);
 const getScript = createGetScriptMiddleware(getTask);
 const injectDependencies = createInjectDependenciesMiddleware(getTask);
 
+function checkTransitions(task: Task) {
+    console.log(`[DEBUG] Checking transitions for task ${task.id}, status ${task.status}`);
+    const transition = evaluateTransitions(task);
+    if (transition) {
+        console.log(`[DEBUG] Found transition: ${JSON.stringify(transition)}`);
+        if (transition.timing.immediate) {
+            console.log(`[DEBUG] Executing immediate transition`);
+            // Execute transition immediately
+            executeTransition(task, transition);
+        } else if (transition.timing.every) {
+            console.log(`[DEBUG] Scheduling transition`);
+            // Schedule transition
+            scheduleTransition(task, transition);
+        }
+    } else {
+        console.log(`[DEBUG] No transition found`);
+    }
+}
+
 function updateTaskStatus(taskId: string, status: TaskStatus) {
     const stmt = db.prepare("UPDATE tasks SET status = ? WHERE id = ?");
     stmt.run(status, taskId);
+
+    // Check for transitions
+    const task = getTask(taskId);
+    if (task) {
+        task.status = status; // Update the task object
+        checkTransitions(task);
+    }
 }
 
 function deleteTask(taskId: string) {
@@ -462,7 +662,30 @@ app.post("/tasks", requiresLogin, requiresPermission(PERMISSION_CREATE_TASKS), t
     }
     task.name = req.body.name;
     task.type = req.body.type;
-    task.ephemeral = req.body.ephemeral || Ephemeralness.PERSISTENT;
+    try {
+        task.transitions = JSON.parse(req.body.transitions);
+    } catch (e) {
+        task.transitions = req.body.transitions || [];
+    }
+
+    // Validate transitions
+    for (const transition of task.transitions) {
+        if (!transition.statuses || !Array.isArray(transition.statuses)) {
+            return res.status(400).json({ error: "Invalid transition: statuses must be an array" });
+        }
+        if (!transition.condition || typeof transition.condition !== 'object') {
+            return res.status(400).json({ error: "Invalid transition: condition must be an object" });
+        }
+        if (!transition.timing || typeof transition.timing !== 'object') {
+            return res.status(400).json({ error: "Invalid transition: timing must be an object" });
+        }
+        if (transition.timing.every && !/^(\d+[smhd])$/.test(transition.timing.every)) {
+            return res.status(400).json({ error: "Invalid transition: timing.every must be in format like '1s', '30m', '1h', '1d'" });
+        }
+        if (typeof transition.transitionTo !== 'string' || !["AWAITING", "RUNNING", "COMPLETED", "FAILED", "PAUSED", "DELETED"].includes(transition.transitionTo)) {
+            return res.status(400).json({ error: "Invalid transition: transitionTo must be a valid status name" });
+        }
+    }
     let dependsOn: string[] = [];
     try {
         if (typeof req.body.dependsOn == "object") {
@@ -488,6 +711,7 @@ app.post("/tasks", requiresLogin, requiresPermission(PERMISSION_CREATE_TASKS), t
     task.artefacts = artefacts;
     task.dependsOn = dependsOn || [];
     addTask(task);
+    checkTransitions(task); // Schedule transitions for initial status
     res.locals.taskId = task.id; // Set for middleware
     res.json(task);
     res.send();
@@ -562,10 +786,6 @@ app.post("/tasks/:id/complete", requiresLogin, requiresPermission(PERMISSION_PER
         updateTaskData(task.id, req.body.data);
         updateTaskStatus(task.id, TaskStatus.COMPLETED);
 
-        if (task.ephemeral === Ephemeralness.EPHEMERAL_ALWAYS || task.ephemeral == Ephemeralness.EPHEMERAL_ON_SUCCESS) {
-            removeTaskFromAllDependsOn(task.id);
-            deleteTask(task.id);
-        }
         res.json({});
         console.log(`Task ${req.params.id} completed with data ${JSON.stringify(req.body.data)}`);
     } else {
@@ -591,14 +811,6 @@ app.post("/tasks/:id/failed", requiresLogin, requiresPermission(PERMISSION_PERFO
     if (task) {
         updateTaskStatus(task.id, TaskStatus.FAILED);
 
-        if (task.ephemeral === Ephemeralness.EPHEMERAL_ALWAYS) {
-            // delete all tasks that depend on this ephemeral task that just failed
-            getAllTasksThatDependOn(task.id).forEach(t => {
-                deleteTask(t.id);
-            });
-            // delete this task
-            deleteTask(task.id);
-        }
         res.json({});
     } else {
         res.status(404);

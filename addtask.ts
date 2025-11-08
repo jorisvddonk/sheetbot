@@ -81,24 +81,41 @@ try {
 let data = prompt("data (as JSON): ", JSON.stringify(suggestedData, null, 2));
 data = JSON.parse(data);
 
-const ephemeral: number = await Select.prompt({
-    message: "Ephemeralness?",
+const transitionsChoice: string = await Select.prompt({
+    message: "Transitions?",
     search: false,
     options: [
         {
-            name: "persistent            (task will not get automatically deleted on completion)",
-            value: 0
+            name: "none (persistent task)",
+            value: "none"
         },
         {
-            name: "ephemeral_on_success  (task will get removed on successful completion ONLY)",
-            value: 1
+            name: "auto-delete on success",
+            value: "ephemeral_on_success"
         },
         {
-            name: "ephemeral_always      (task will ALWAYS get automatically removed upon completion)",
-            value: 2
+            name: "auto-delete always",
+            value: "ephemeral_always"
         }
     ],
 });
+
+let transitions: any[] = [];
+if (transitionsChoice === "ephemeral_on_success") {
+    transitions = [{
+        statuses: ["COMPLETED"],
+        condition: {},
+        timing: { immediate: true },
+        transitionTo: "DELETED"
+    }];
+} else if (transitionsChoice === "ephemeral_always") {
+    transitions = [{
+        statuses: ["COMPLETED", "FAILED"],
+        condition: {},
+        timing: { immediate: true },
+        transitionTo: "DELETED"
+    }];
+}
 
 const status: number = await Select.prompt({
     message: "Initial status?",
@@ -125,7 +142,7 @@ if (name == "") {
 await addTask({
     type: script.endsWith(".py") ? "python" : "deno",
     ...scriptStuff,
-    ephemeral,
+    transitions,
     status,
     name,
     data
