@@ -372,6 +372,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/transitiontracker": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get transition statistics
+         * @description Retrieve rolling statistics for transition evaluations and executions (data retained for up to 1 day)
+         */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description Time window in minutes for statistics (default 1440) */
+                    minutes?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Transition statistics for the specified time window */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["TransitionTrackerStats"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/tasks/get": {
         parameters: {
             query?: never;
@@ -1875,6 +1926,25 @@ export interface components {
                  */
                 lastSeen?: number;
             }[];
+            /** @description Time window in minutes used for the statistics */
+            windowMinutes?: number;
+        };
+        TransitionTrackerStats: {
+            /** @description Total number of transition evaluations in the time window */
+            totalEvaluations?: number;
+            /** @description Total time spent evaluating transitions in milliseconds */
+            totalEvaluationTimeMs?: number;
+            /** @description Number of successful transitions in the time window */
+            successfulTransitions?: number;
+            /** @description Statistics grouped by transition target status */
+            transitionsByType?: {
+                [key: string]: {
+                    /** @description Number of transitions to this status */
+                    count?: number;
+                    /** @description Total evaluation time for transitions to this status in milliseconds */
+                    totalTime?: number;
+                };
+            };
             /** @description Time window in minutes used for the statistics */
             windowMinutes?: number;
         };

@@ -32,6 +32,7 @@ function showWelcomeMessage() {
         }
         loadTaskStats(token);
         loadAgentStats(token);
+        loadTransitionStats(token);
     } else {
         console.log('No JWT token in localStorage');
     }
@@ -91,6 +92,33 @@ function loadAgentStats(token) {
     });
 }
 
+function loadTransitionStats(token) {
+    fetch('/transitiontracker', {
+        headers: {
+            'Authorization': `Bearer ${token}`
+        }
+    })
+    .then(response => {
+        if (response.ok) {
+            return response.json();
+        } else {
+            throw new Error('Failed to fetch transition stats');
+        }
+    })
+    .then(stats => {
+        const statsDiv = document.getElementById('transition-stats');
+        const timeDisplay = stats.windowMinutes >= 120
+            ? `${Math.round(stats.windowMinutes / 60)}h`
+            : `${stats.windowMinutes}m`;
+        statsDiv.textContent = `Transitions: ${stats.totalEvaluations} eval, ${stats.successfulTransitions} ✓ (${timeDisplay})`;
+    })
+    .catch(error => {
+        console.log('Error loading transition stats:', error);
+        const statsDiv = document.getElementById('transition-stats');
+        statsDiv.textContent = 'Transition stats unavailable';
+    });
+}
+
 function setupLogout() {
     const logoutBtn = document.getElementById('logout-btn');
     if (logoutBtn) {
@@ -107,6 +135,7 @@ setInterval(() => {
     if (token) {
         loadTaskStats(token);
         loadAgentStats(token);
+        loadTransitionStats(token);
     }
 }, 30000);
 

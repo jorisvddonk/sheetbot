@@ -326,6 +326,34 @@ components:
           type: integer
           description: Time window in minutes used for the statistics
 
+    TransitionTrackerStats:
+      type: object
+      properties:
+        totalEvaluations:
+          type: integer
+          description: Total number of transition evaluations in the time window
+        totalEvaluationTimeMs:
+          type: integer
+          description: Total time spent evaluating transitions in milliseconds
+        successfulTransitions:
+          type: integer
+          description: Number of successful transitions in the time window
+        transitionsByType:
+          type: object
+          description: Statistics grouped by transition target status
+          additionalProperties:
+            type: object
+            properties:
+              count:
+                type: integer
+                description: Number of transitions to this status
+              totalTime:
+                type: integer
+                description: Total evaluation time for transitions to this status in milliseconds
+        windowMinutes:
+          type: integer
+          description: Time window in minutes used for the statistics
+
     ScriptLibraryItem:
       type: object
       properties:
@@ -555,6 +583,34 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AgentTrackerStats'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /transitiontracker:
+    get:
+      summary: Get transition statistics
+      description: Retrieve rolling statistics for transition evaluations and executions (data retained for up to 1 day)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: minutes
+          in: query
+          schema:
+            type: integer
+            default: 1440
+            minimum: 1
+          description: Time window in minutes for statistics (default 1440)
+      responses:
+        '200':
+          description: Transition statistics for the specified time window
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransitionTrackerStats'
         '401':
           description: Unauthorized
           content:

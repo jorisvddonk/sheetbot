@@ -16,6 +16,7 @@ import { createTaskTrackingMiddleware } from "./lib/task-tracking-middleware.ts"
 import { AgentTracker } from "./lib/agenttracker.ts";
 import { AgentEventEmitter } from "./lib/agent-events.ts";
 import { createAgentTrackingMiddleware } from "./lib/agent-tracking-middleware.ts";
+import { TransitionTracker } from "./lib/transitiontracker.ts";
 import OpenApiValidator from "npm:express-openapi-validator@5.6.0";
 
 const ajv = new (Ajv as any)();
@@ -92,6 +93,8 @@ const taskTrackingMiddleware = createTaskTrackingMiddleware(taskEventEmitter);
 const agentEventEmitter = new AgentEventEmitter();
 const agentTracker = new AgentTracker(agentEventEmitter);
 const agentTrackingMiddleware = createAgentTrackingMiddleware(agentEventEmitter);
+const transitionTracker = new TransitionTracker();
+transitionTracker.startCleanup();
 
 // Start background worker for transitions
 setInterval(processScheduledTransitions, 1000); // Check every second
@@ -180,6 +183,7 @@ function stringToStatus(statusStr: string): TaskStatus {
 }
 
 function evaluateTransitions(task: Task): Transition | null {
+    const startTime = performance.now();
     const currentStatusStr = statusToString(task.status);
     for (const transition of task.transitions) {
         if (transition.statuses.includes(currentStatusStr)) {
@@ -188,10 +192,29 @@ function evaluateTransitions(task: Task): Transition | null {
             delete taskForValidation.status; // Status is handled by statuses array
             const validate = ajv.compile(transition.condition);
             if (validate(taskForValidation)) {
+                const endTime = performance.now();
+                const evaluationTimeMs = endTime - startTime;
+                transitionTracker.recordEvaluation({
+                    taskId: task.id,
+                    transitionIndex: task.transitions.indexOf(transition),
+                    evaluationTimeMs,
+                    successful: true,
+                    transitionTo: transition.transitionTo
+                });
                 return transition;
             }
         }
     }
+    const endTime = performance.now();
+    const evaluationTimeMs = endTime - startTime;
+    // Record failed evaluation (no transition found)
+    transitionTracker.recordEvaluation({
+        taskId: task.id,
+        transitionIndex: -1, // No specific transition
+        evaluationTimeMs,
+        successful: false,
+        transitionTo: ""
+    });
     return null;
 }
 
@@ -643,6 +666,11 @@ app.get("/tasktracker", requiresLogin, (req, res) => {
 app.get("/agenttracker", requiresLogin, (req, res) => {
     const minutes = parseInt(req.query.minutes as string) || 1440;
     res.json(agentTracker.getStats(minutes));
+});
+
+app.get("/transitiontracker", requiresLogin, (req, res) => {
+    const minutes = parseInt(req.query.minutes as string) || 1440;
+    res.json(transitionTracker.getStats(minutes));
 });
 
 app.post("/tasks", requiresLogin, requiresPermission(PERMISSION_CREATE_TASKS), taskTrackingMiddleware.onTaskCreated, upload.array('file'), async (req, res) => {
