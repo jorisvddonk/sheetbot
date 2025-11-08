@@ -17,6 +17,22 @@ A TypeScript-based automation and task management system using Deno.
 2. Run the main server: `deno run --allow-all main.ts`
 3. Access the web interface at the configured port
 
+## Initialization
+
+SheetBot includes an initialization system that runs TypeScript scripts on every startup. Place `.ts` files in the `./init/` directory; they will be executed in lexicographic order based on their filenames. Scripts can export a default async function for asynchronous initialization tasks.
+
+Example init script (`./init/01_setup_db.ts`):
+
+```typescript
+export default async function() {
+    // Initialize database or other setup
+    console.log("Initializing database...");
+    // async operations here
+}
+```
+
+This is useful for setting up databases, loading configurations, or performing other startup tasks.
+
 ## Scripts
 
 Various scripts are available in the `scripts/` directory for specific tasks like compilation, system operations, and examples.

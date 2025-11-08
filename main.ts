@@ -18,6 +18,23 @@ import { AgentEventEmitter } from "./lib/agent-events.ts";
 import { createAgentTrackingMiddleware } from "./lib/agent-tracking-middleware.ts";
 import OpenApiValidator from "npm:express-openapi-validator@5.6.0";
 
+// Init system
+const initDir = "./init/";
+try {
+    await Deno.mkdir(initDir, { recursive: true });
+} catch {
+    // ignore
+}
+const initFiles = Array.from(Deno.readDirSync(initDir))
+    .filter(entry => entry.isFile && entry.name.endsWith('.ts'))
+    .sort((a, b) => a.name.localeCompare(b.name));
+for (const file of initFiles) {
+    const module = await import(`${initDir}${file.name}`);
+    if (module.default && typeof module.default === 'function') {
+        await module.default();
+    }
+}
+
 const SECRET_KEY = new TextDecoder().decode(Deno.readFileSync("./secret.txt"));
 
 const PERMISSION_VIEW_TASKS = "viewTasks";
