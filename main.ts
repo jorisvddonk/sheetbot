@@ -267,7 +267,7 @@ function parseDuration(duration: string): number {
 
 function processScheduledTransitions() {
     const now = Math.floor(Date.now() / 1000);
-    console.log(`[DEBUG] Checking scheduled transitions at ${now}`);
+    //console.log(`[DEBUG] Checking scheduled transitions at ${now}`);
     const stmt = db.prepare(`
         SELECT ts.*, t.* FROM transitions_schedule ts
         JOIN tasks t ON ts.task_id = t.id
@@ -275,7 +275,9 @@ function processScheduledTransitions() {
         ORDER BY ts.scheduled_at ASC
     `);
     const results = stmt.all(now);
-    console.log(`[DEBUG] Found ${results.length} scheduled transitions`);
+    if (results.length > 0) {
+        console.log(`[DEBUG] Found ${results.length} scheduled transitions`);
+    }
 
     for (const result of results) {
         const task = parseOneSQLTask(result);
