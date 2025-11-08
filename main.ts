@@ -474,13 +474,6 @@ function deleteTask(taskId: string) {
     stmt.run(taskId);
 }
 
-function setTaskStatus(taskId: string, status: number) {
-    if (typeof status === "number" && (status === 0 || status === 1 || status === 2 || status === 3 || status === 4)) {
-        const stmt = db.prepare("UPDATE tasks SET status = ? WHERE id = ?");
-        stmt.run(status, taskId);
-    }
-}
-
 function updateTaskData(taskId: string, data: Record<string, unknown>) {
     const currentTask = getTask(taskId);
     if (currentTask) {
@@ -782,7 +775,7 @@ app.patch("/tasks/:id", requiresLogin, requiresPermission(PERMISSION_UPDATE_TASK
         try {
             if (Object.hasOwn(req.body, "status")) {
                 // updating status
-                setTaskStatus(task.id, req.body.status);
+                updateTaskStatus(task.id, req.body.status);
             }
         } catch (e) {
             res.status(500);
