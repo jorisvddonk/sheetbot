@@ -333,7 +333,7 @@ components:
           type: integer
           description: Total number of transition evaluations in the time window
         totalEvaluationTimeMs:
-          type: integer
+          type: number
           description: Total time spent evaluating transitions in milliseconds
         successfulTransitions:
           type: integer
@@ -348,7 +348,7 @@ components:
                 type: integer
                 description: Number of transitions to this status
               totalTime:
-                type: integer
+                type: number
                 description: Total evaluation time for transitions to this status in milliseconds
         windowMinutes:
           type: integer

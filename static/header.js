@@ -110,7 +110,7 @@ function loadTransitionStats(token) {
         const timeDisplay = stats.windowMinutes >= 120
             ? `${Math.round(stats.windowMinutes / 60)}h`
             : `${stats.windowMinutes}m`;
-        statsDiv.textContent = `Transitions: ${stats.totalEvaluations} eval, ${stats.successfulTransitions} ✓ (${timeDisplay})`;
+        statsDiv.textContent = `Transitions: ${stats.totalEvaluations} eval (${stats.totalEvaluationTimeMs.toFixed(1)}ms), ${stats.successfulTransitions} ✓ (${timeDisplay})`;
     })
     .catch(error => {
         console.log('Error loading transition stats:', error);
