@@ -91,24 +91,24 @@ const transitionsChoice: string = await Select.prompt({
         },
         {
             name: "auto-delete on success",
-            value: "ephemeral_on_success"
+            value: "auto_delete_on_success"
         },
         {
             name: "auto-delete always",
-            value: "ephemeral_always"
+            value: "auto_delete_always"
         }
     ],
 });
 
 let transitions: any[] = [];
-if (transitionsChoice === "ephemeral_on_success") {
+if (transitionsChoice === "auto_delete_on_success") {
     transitions = [{
         statuses: ["COMPLETED"],
         condition: {},
         timing: { immediate: true },
         transitionTo: "DELETED"
     }];
-} else if (transitionsChoice === "ephemeral_always") {
+} else if (transitionsChoice === "auto_delete_always") {
     transitions = [{
         statuses: ["COMPLETED", "FAILED"],
         condition: {},
