@@ -21,6 +21,7 @@
       <script src="widget-text-centered.js" type="module"></script>
       <script src="widget-transitions.js" type="module"></script>
       <script src="widget-jsonschema.js" type="module"></script>
+      <script src="widget-jsonschema-explanation.js" type="module"></script>
       <script src="header.js"></script>
 </head>
 
@@ -53,14 +54,14 @@
                      "columnorder": 1,
                      "datatype": "STRING"
                  },
-                 {
-                     "name": "capabilitiesSchema",
-                     "widgettype": "jsonschema",
-                     "maxwidth": 300,
-                     "maxheight": 150,
-                     "columnorder": 2,
-                     "datatype": "TEXT"
-                 },
+                  {
+                      "name": "capabilitiesSchema",
+                      "widgettype": ["multi", "jsonschema-explanation", "jsonschema"],
+                      "maxwidth": 300,
+                      "maxheight": 150,
+                      "columnorder": 2,
+                      "datatype": "TEXT"
+                  },
                 {
                     "name": "suggestedData",
                     "widgettype": "code",

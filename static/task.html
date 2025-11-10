@@ -20,6 +20,7 @@
         <script src="widget-multi.js" type="module"></script>
         <script src="widget-transitions.js" type="module"></script>
         <script src="widget-jsonschema.js" type="module"></script>
+        <script src="widget-jsonschema-explanation.js" type="module"></script>
         <script src="header.js"></script>
  </head>
 
@@ -99,7 +100,7 @@
                 },
                 {
                     "name": "capabilitiesSchema",
-                    "widgettype": "jsonschema",
+                    "widgettype": ["multi", "jsonschema-explanation", "jsonschema"],
                     "maxwidth": 500,
                     "maxheight": 250,
                     "columnorder": 7,
