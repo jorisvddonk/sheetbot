@@ -266,9 +266,13 @@ export class JsonSchemaValidationWidget extends LitElement {
         return html`<div>Schema data is not a valid object</div>`;
       }
 
+      const headerText = this.validationResults && !this.validationResults.error
+        ? `Schema Validation Results ✓${this.validationResults.validCount} ✗${this.validationResults.invalidCount} (of ${this.validationResults.totalAgents})`
+        : 'Schema Validation Results';
+
       return html`<div>
         <div class="validation-container">
-          <div class="validation-header">Schema Validation Results</div>
+          <div class="validation-header">${headerText}</div>
           ${this.renderValidationResults()}
         </div>
       </div>`;
@@ -287,7 +291,6 @@ export class JsonSchemaValidationWidget extends LitElement {
 
       return html`
         <div class="validation-results">
-          Validated against ${totalAgents} agents: ${validCount} valid, ${invalidCount} invalid
           ${validAgents.map(agent => this.renderAgentItem(agent, true))}
           ${invalidAgents.map(item => this.renderAgentItem(item.agent, false, item.errors))}
         </div>
