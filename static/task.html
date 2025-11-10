@@ -2,9 +2,10 @@
 
 <head>
       <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
-     <link rel="stylesheet" href="style.css">
-     <link rel="icon" href="logo.png" type="image/png">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/typescript.min.js"></script>
+      <link rel="stylesheet" href="style.css">
+      <link rel="icon" href="logo.png" type="image/png">
+     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/typescript.min.js"></script>
+     <script src="https://cdn.jsdelivr.net/npm/ajv@6/dist/ajv.min.js"></script>
     <script src="element-table.js" type="module"></script>
     <script src="element-grid.js" type="module"></script>
     <script src="element-contextmenu.js" type="module"></script>
@@ -16,9 +17,10 @@
     <script src="widget-taskid.js" type="module"></script>
     <script src="widget-taskname.js" type="module"></script>
      <script src="widget-hashimg.js" type="module"></script>
-       <script src="widget-multi.js" type="module"></script>
-       <script src="widget-transitions.js" type="module"></script>
-       <script src="header.js"></script>
+        <script src="widget-multi.js" type="module"></script>
+        <script src="widget-transitions.js" type="module"></script>
+        <script src="widget-jsonschema.js" type="module"></script>
+        <script src="header.js"></script>
  </head>
 
 <body>
@@ -97,7 +99,7 @@
                 },
                 {
                     "name": "capabilitiesSchema",
-                    "widgettype": "code",
+                    "widgettype": "jsonschema",
                     "maxwidth": 500,
                     "maxheight": 250,
                     "columnorder": 7,
