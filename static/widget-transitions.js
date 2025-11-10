@@ -14,7 +14,6 @@ export class TransitionsWidget extends LitElement {
        }
 
       .transition {
-        border: 1px solid rgba(128, 128, 128, 0.3);
         margin: 0 1px 1px 1px;
         padding: 1px;
         background: rgba(255, 255, 255, 0.05);
