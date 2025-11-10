@@ -1,19 +1,23 @@
-import {html, css, LitElement} from 'https://cdn.jsdelivr.net/gh/lit/dist@3/all/lit-all.min.js';
-import Ajv from 'https://esm.sh/ajv@8';
-
 /**
  * JSON Schema explanation utilities
  * Provides human-readable explanations of JSON Schema constructs
  */
-class SchemaExplainer {
-  constructor(options = {}) {
+
+export interface SchemaExplanationOptions {
+  indent?: string;
+}
+
+export class SchemaExplainer {
+  private indent: string;
+
+  constructor(options: SchemaExplanationOptions = {}) {
     this.indent = options.indent || '';
   }
 
   /**
    * Generate a human-readable explanation of a JSON Schema
    */
-  explainSchema(schema, indent = '') {
+  explainSchema(schema: any, indent = ''): string {
     if (!schema || typeof schema !== 'object') {
       return 'Invalid schema';
     }
@@ -32,7 +36,7 @@ class SchemaExplainer {
     }
 
     if (schema.enum && !schema.type) {
-      explanation += `${indent}This must be one of: ${schema.enum.map(v => JSON.stringify(v)).join(', ')}\n`;
+      explanation += `${indent}This must be one of: ${schema.enum.map((v: any) => JSON.stringify(v)).join(', ')}\n`;
       return explanation;
     }
 
@@ -73,7 +77,7 @@ class SchemaExplainer {
 
     // Examples
     if (schema.examples && Array.isArray(schema.examples)) {
-      explanation += `${indent}Examples: ${schema.examples.map(ex => JSON.stringify(ex)).join(', ')}\n`;
+      explanation += `${indent}Examples: ${schema.examples.map((ex: any) => JSON.stringify(ex)).join(', ')}\n`;
     }
 
     // Format
@@ -129,7 +133,7 @@ class SchemaExplainer {
     return explanation;
   }
 
-  explainAllOfSchema(schema, indent) {
+  private explainAllOfSchema(schema: any, indent: string): string {
     let explanation = '';
 
     // First explain the base type if present
@@ -152,7 +156,7 @@ class SchemaExplainer {
     explanation += this.explainConstraintKeywords(schema, indent);
 
     // List all requirements
-    schema.allOf.forEach((subSchema, index) => {
+    schema.allOf.forEach((subSchema: any, index: number) => {
       explanation += `${indent}  Requirement ${index + 1}: ${this.explainSchema(subSchema, indent + '    ').trim()}\n`;
     });
 
@@ -178,7 +182,7 @@ class SchemaExplainer {
     return explanation;
   }
 
-  explainOneOfSchema(schema, indent) {
+  private explainOneOfSchema(schema: any, indent: string): string {
     let explanation = '';
 
     if (schema.type) {
@@ -191,14 +195,14 @@ class SchemaExplainer {
       explanation += `${indent}${schema.description}\n`;
     }
 
-    schema.oneOf.forEach((subSchema, index) => {
+    schema.oneOf.forEach((subSchema: any, index: number) => {
       explanation += `${indent}  Option ${index + 1}: ${this.explainSchema(subSchema, indent + '    ').trim()}\n`;
     });
 
     return explanation;
   }
 
-  explainAnyOfSchema(schema, indent) {
+  private explainAnyOfSchema(schema: any, indent: string): string {
     let explanation = '';
 
     if (schema.type) {
@@ -211,14 +215,14 @@ class SchemaExplainer {
       explanation += `${indent}${schema.description}\n`;
     }
 
-    schema.anyOf.forEach((subSchema, index) => {
+    schema.anyOf.forEach((subSchema: any, index: number) => {
       explanation += `${indent}  Option ${index + 1}: ${this.explainSchema(subSchema, indent + '    ').trim()}\n`;
     });
 
     return explanation;
   }
 
-  explainObjectSchema(schema, indent) {
+  private explainObjectSchema(schema: any, indent: string): string {
     let explanation = '';
 
     if (schema.properties) {
@@ -283,13 +287,13 @@ class SchemaExplainer {
     return explanation;
   }
 
-  explainArraySchema(schema, indent) {
+  private explainArraySchema(schema: any, indent: string): string {
     let explanation = '';
 
     if (schema.items) {
       if (Array.isArray(schema.items)) {
         explanation += `${indent}Items at specific positions:\n`;
-        schema.items.forEach((itemSchema, index) => {
+        schema.items.forEach((itemSchema: any, index: number) => {
           explanation += `${indent}  Position ${index}: ${this.explainSchema(itemSchema, indent + '    ').trim()}\n`;
         });
       } else {
@@ -308,27 +312,27 @@ class SchemaExplainer {
     return explanation;
   }
 
-  explainStringSchema(schema, indent) {
+  private explainStringSchema(schema: any, indent: string): string {
     let explanation = '';
 
     if (schema.enum) {
-      explanation += `${indent}Allowed values: ${schema.enum.map(v => JSON.stringify(v)).join(', ')}\n`;
+      explanation += `${indent}Allowed values: ${schema.enum.map((v: any) => JSON.stringify(v)).join(', ')}\n`;
     }
 
     return explanation;
   }
 
-  explainNumberSchema(schema, indent) {
+  private explainNumberSchema(schema: any, indent: string): string {
     let explanation = '';
 
     if (schema.enum) {
-      explanation += `${indent}Allowed values: ${schema.enum.map(v => JSON.stringify(v)).join(', ')}\n`;
+      explanation += `${indent}Allowed values: ${schema.enum.map((v: any) => JSON.stringify(v)).join(', ')}\n`;
     }
 
     return explanation;
   }
 
-  explainConditionalSchema(schema, indent) {
+  private explainConditionalSchema(schema: any, indent: string): string {
     let explanation = `${indent}Conditional validation:\n`;
 
     if (schema.if) {
@@ -346,7 +350,7 @@ class SchemaExplainer {
     return explanation;
   }
 
-  explainConstraintKeywords(schema, indent) {
+  private explainConstraintKeywords(schema: any, indent: string): string {
     let explanation = '';
 
     // Array constraints
@@ -424,215 +428,7 @@ class SchemaExplainer {
 /**
  * Convenience function to explain a schema with default options
  */
-function explainJsonSchema(schema) {
+export function explainJsonSchema(schema: any): string {
   const explainer = new SchemaExplainer();
   return explainer.explainSchema(schema);
 }
-
-export class JsonSchemaWidget extends LitElement {
-    static styles = css`
-      div {
-        width: 100%;
-        display: flex;
-        flex-direction: column;
-        overflow-x: hidden;
-        overflow-y: auto;
-        font-size: 11px;
-        font-family: sans-serif;
-        background: transparent;
-        color: inherit;
-        line-height: 1.0;
-        align-items: flex-start;
-        justify-content: flex-start;
-      }
-
-      .schema {
-        border: 1px solid rgba(128, 128, 128, 0.3);
-        margin: 0 1px 1px 1px;
-        padding: 1px;
-        background: rgba(255, 255, 255, 0.05);
-        border-radius: 2px;
-        width: calc(100% - 4px);
-      }
-
-      @media (prefers-color-scheme: dark) {
-        .schema {
-          background: rgba(255, 255, 255, 0.1);
-          border-color: rgba(255, 255, 255, 0.2);
-        }
-      }
-
-      .schema-header {
-        font-weight: bold;
-        margin-bottom: 1px;
-        color: inherit;
-      }
-
-      .schema-detail {
-        font-size: 10px;
-        color: inherit;
-        margin: 0 0 0 4px;
-        white-space: pre-wrap;
-        word-wrap: break-word;
-        overflow-wrap: break-word;
-        max-width: calc(100% - 4px);
-        font-family: monospace;
-      }
-
-      /* Scrollbar styling */
-      ::-webkit-scrollbar {
-        width: 8px;
-        height: 8px;
-      }
-
-      ::-webkit-scrollbar-track {
-        background: rgba(255, 255, 255, 0.1);
-        border-radius: 4px;
-      }
-
-      ::-webkit-scrollbar-thumb {
-        background: rgba(255, 255, 255, 0.3);
-        border-radius: 4px;
-      }
-
-      ::-webkit-scrollbar-thumb:hover {
-        background: rgba(255, 255, 255, 0.5);
-      }
-
-      @media (prefers-color-scheme: dark) {
-        ::-webkit-scrollbar-track {
-          background: rgba(255, 255, 255, 0.05);
-        }
-
-        ::-webkit-scrollbar-thumb {
-          background: rgba(255, 255, 255, 0.2);
-        }
-
-        ::-webkit-scrollbar-thumb:hover {
-          background: rgba(255, 255, 255, 0.4);
-        }
-      }
-    `;
-
-    static properties = {
-      data: {type: String},
-      rowkey: {type: String}
-    };
-
-    constructor() {
-      super();
-      this.data = '{}';
-      this.rowkey = "";
-    }
-
-    render() {
-      let schema = {};
-      try {
-        schema = JSON.parse(this.data);
-      } catch (e) {
-        return html`<div>Error parsing JSON schema</div>`;
-      }
-
-      if (typeof schema !== 'object' || schema === null) {
-        return html`<div>Schema data is not a valid object</div>`;
-      }
-
-      return html`<div>
-        <div class="schema">
-          <div class="schema-detail">${JSON.stringify(schema, null, 2)}</div>
-        </div>
-      </div>`;
-    }
-
-    getCopyText() {
-      return this.data;
-    }
-
-    async validateAgainstAgents() {
-      try {
-        const schema = JSON.parse(this.data);
-
-        // Fetch agents
-        const headers = {};
-        if ("jwt_token" in localStorage) {
-          headers["Authorization"] = `Bearer ${localStorage["jwt_token"]}`;
-        }
-
-        const response = await fetch('/agenttracker', { headers });
-        if (!response.ok) {
-          alert('Failed to fetch agents for validation');
-          return;
-        }
-
-        const agentData = await response.json();
-        const agents = agentData.agents || [];
-
-        if (agents.length === 0) {
-          alert('No agents found to validate against');
-          return;
-        }
-
-        // Validate schema against each agent
-        const ajv = new Ajv();
-        const validate = ajv.compile(schema);
-
-        let validCount = 0;
-        let invalidAgents = [];
-
-        for (const agent of agents) {
-          const valid = validate(agent.capabilities || {});
-          if (valid) {
-            validCount++;
-          } else {
-            invalidAgents.push({
-              ip: agent.ip,
-              errors: validate.errors
-            });
-          }
-        }
-
-        // Show results
-        if (invalidAgents.length === 0) {
-          alert(`✓ Schema is valid for all ${agents.length} agents`);
-        } else {
-          let message = `Schema validation results:\n✓ Valid for ${validCount}/${agents.length} agents\n`;
-          if (invalidAgents.length > 0) {
-            message += `\n✗ Invalid for ${invalidAgents.length} agents:\n`;
-            invalidAgents.forEach(agent => {
-              message += `\n${agent.ip}:\n${JSON.stringify(agent.errors, null, 2)}\n`;
-            });
-          }
-          alert(message);
-        }
-
-      } catch (e) {
-        alert('Error during validation: ' + e.message);
-      }
-    }
-
-    explainSchema() {
-      try {
-        const schema = JSON.parse(this.data);
-        const explanation = explainJsonSchema(schema);
-        alert(explanation);
-      } catch (e) {
-        alert('Error parsing schema: ' + e.message);
-      }
-    }
-
-    getContextMenuDefinition() {
-      return [
-        {
-          text: 'Validate against all agents', action: () => {
-            this.validateAgainstAgents();
-          }
-        },
-        {
-          text: 'Explain schema in natural language', action: () => {
-            this.explainSchema();
-          }
-        }
-      ];
-    }
-  }
-  customElements.define('widget-jsonschema', JsonSchemaWidget);
