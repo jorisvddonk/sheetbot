@@ -6,7 +6,8 @@ export class MultiWidget extends LitElement {
     static properties = {
         data: { type: String },
         selectedSlot: { type: Number },
-        numSlots: { type: Number }
+        numSlots: { type: Number },
+        slotTypes: { type: Array }
     };
 
     constructor() {
@@ -14,6 +15,7 @@ export class MultiWidget extends LitElement {
         this.data = '';
         this.selectedSlot = 1;
         this.numSlots = 1;
+        this.slotTypes = [];
     }
 
     showSlot(i) {
@@ -23,8 +25,9 @@ export class MultiWidget extends LitElement {
     getContextMenuDefinition() {
         const retval = [];
         for (let i = 0; i < this.numSlots; i++) {
+            const type = this.slotTypes[i] || 'unknown';
             retval.push({
-                text: `show slot ${i+1}`, action: () => {
+                text: `show slot ${i+1} (${type})`, action: () => {
                     this.showSlot(i+1);
                 }
             })

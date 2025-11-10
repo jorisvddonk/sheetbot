@@ -297,16 +297,17 @@ export class GridElement extends LitElement {
                             }
                             let elem;
                             const widgettype = tabledef.columns[columnindex].widgettype;
-                            if (Array.isArray(widgettype)) {
-                                // we have multiple widgets, slot them all into the first!
-                                elem = generateElement(widgettype[0]);
-                                elem.setAttribute("numslots", widgettype.length - 1);
-                                let innerHTML = "";
-                                for (let i = 1; i < widgettype.length; i++) {
-                                    innerHTML = innerHTML + `<div slot="${i}">${generateElement(widgettype[i]).outerHTML}</div>`;
-                                }
-                                elem.innerHTML = innerHTML;
-                            } else {
+                             if (Array.isArray(widgettype)) {
+                                 // we have multiple widgets, slot them all into the first!
+                                 elem = generateElement(widgettype[0]);
+                                 elem.setAttribute("numslots", widgettype.length - 1);
+                                 elem.slotTypes = widgettype.slice(1);
+                                 let innerHTML = "";
+                                 for (let i = 1; i < widgettype.length; i++) {
+                                     innerHTML = innerHTML + `<div slot="${i}">${generateElement(widgettype[i]).outerHTML}</div>`;
+                                 }
+                                 elem.innerHTML = innerHTML;
+                             } else {
                                 elem = generateElement(widgettype);
                             }
                             const tdref = createRef();
