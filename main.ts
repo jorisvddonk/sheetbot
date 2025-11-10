@@ -187,9 +187,8 @@ function evaluateTransitions(task: Task): Transition | null {
     const currentStatusStr = statusToString(task.status);
     for (const transition of task.transitions) {
         if (transition.statuses.includes(currentStatusStr)) {
-            // Validate condition against task (excluding status since it's checked above)
+            // Validate condition against task
             const taskForValidation = { ...task };
-            delete taskForValidation.status; // Status is handled by statuses array
             const validate = ajv.compile(transition.condition);
             if (validate(taskForValidation)) {
                 const endTime = performance.now();
@@ -300,18 +299,24 @@ function processScheduledTransitions() {
                 `);
                 deleteStmt.run(task.id, transitionIndex);
 
-                // Re-schedule if every is set
-                if (transition.timing.every) {
+                // Re-schedule if every is set and not deleting the task
+                if (transition.timing.every && transition.transitionTo !== "DELETED") {
                     console.log(`[DEBUG] Re-scheduling transition`);
                     scheduleTransition(task, transition);
                 }
             } else {
-                console.log(`[DEBUG] Condition not met, removing from schedule`);
-                // Condition no longer met, remove from schedule
-                const deleteStmt = db.prepare(`
-                    DELETE FROM transitions_schedule WHERE task_id = ? AND transition_index = ?
-                `);
-                deleteStmt.run(task.id, transitionIndex);
+                console.log(`[DEBUG] Condition not met, checking if still active`);
+                const currentStatusStr = statusToString(task.status);
+                if (transition.statuses.includes(currentStatusStr)) {
+                    console.log(`[DEBUG] Re-scheduling transition`);
+                    scheduleTransition(task, transition);
+                } else {
+                    console.log(`[DEBUG] Status no longer matches, removing from schedule`);
+                    const deleteStmt = db.prepare(`
+                        DELETE FROM transitions_schedule WHERE task_id = ? AND transition_index = ?
+                    `);
+                    deleteStmt.run(task.id, transitionIndex);
+                }
             }
         } else {
             console.log(`[DEBUG] Transition not found at index ${transitionIndex}`);
@@ -442,20 +447,21 @@ const injectDependencies = createInjectDependenciesMiddleware(getTask);
 
 function checkTransitions(task: Task) {
     console.log(`[DEBUG] Checking transitions for task ${task.id}, status ${task.status}`);
+    const currentStatusStr = statusToString(task.status);
+
+    // Handle immediate transitions (first-match)
     const transition = evaluateTransitions(task);
-    if (transition) {
-        console.log(`[DEBUG] Found transition: ${JSON.stringify(transition)}`);
-        if (transition.timing.immediate) {
-            console.log(`[DEBUG] Executing immediate transition`);
-            // Execute transition immediately
-            executeTransition(task, transition);
-        } else if (transition.timing.every) {
-            console.log(`[DEBUG] Scheduling transition`);
-            // Schedule transition
-            scheduleTransition(task, transition);
+    if (transition && transition.timing.immediate) {
+        console.log(`[DEBUG] Executing immediate transition: ${JSON.stringify(transition)}`);
+        executeTransition(task, transition);
+    }
+
+    // Schedule all transitions with every that match the current status
+    for (const trans of task.transitions) {
+        if (trans.statuses.includes(currentStatusStr) && trans.timing.every) {
+            console.log(`[DEBUG] Scheduling transition: ${JSON.stringify(trans)}`);
+            scheduleTransition(task, trans);
         }
-    } else {
-        console.log(`[DEBUG] No transition found`);
     }
 }
 
