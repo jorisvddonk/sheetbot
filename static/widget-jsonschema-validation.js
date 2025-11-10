@@ -27,7 +27,6 @@ export class JsonSchemaValidationWidget extends LitElement {
       }
 
       .validation-container {
-        border: 1px solid rgba(128, 128, 128, 0.3);
         margin: 0 1px 1px 1px;
         padding: 1px;
         background: rgba(255, 255, 255, 0.05);
@@ -69,6 +68,50 @@ export class JsonSchemaValidationWidget extends LitElement {
 
       .error {
         color: orange;
+      }
+
+      .agent-item {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        align-items: center;
+        margin: 2px 0;
+        padding: 2px 4px;
+        border-radius: 2px;
+        background: rgba(255, 255, 255, 0.05);
+        font-size: 10px;
+      }
+
+      .agent-status {
+        margin-right: 4px;
+        font-size: 12px;
+      }
+
+      .agent-info {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .agent-name {
+        font-weight: bold;
+      }
+
+      .agent-details {
+        font-size: 9px;
+        color: rgba(255, 255, 255, 0.7);
+      }
+
+      .agent-details.error {
+        color: orange;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        .agent-item {
+          background: rgba(255, 255, 255, 0.1);
+        }
+        .agent-details {
+          color: rgba(255, 255, 255, 0.6);
+        }
       }
 
       /* Scrollbar styling */
@@ -166,10 +209,10 @@ export class JsonSchemaValidationWidget extends LitElement {
         for (const agent of agents) {
           const valid = validate(agent.capabilities || {});
           if (valid) {
-            validAgents.push(agent.ip);
+            validAgents.push(agent);
           } else {
             invalidAgents.push({
-              ip: agent.ip,
+              agent,
               errors: validate.errors
             });
           }
@@ -242,19 +285,35 @@ export class JsonSchemaValidationWidget extends LitElement {
 
       const { totalAgents, validCount, invalidCount, validAgents, invalidAgents } = this.validationResults;
 
-      let resultsText = `Validated against ${totalAgents} agents:\n`;
-      resultsText += `✓ Valid: ${validCount} agents\n`;
-      if (validAgents.length > 0) {
-        resultsText += `  Agents: ${validAgents.join(', ')}\n`;
-      }
-      resultsText += `✗ Invalid: ${invalidCount} agents\n`;
-      if (invalidAgents.length > 0) {
-        invalidAgents.forEach(agent => {
-          resultsText += `  ${agent.ip}: ${agent.errors.map(err => `${err.instancePath} ${err.message}`).join(', ')}\n`;
-        });
-      }
+      return html`
+        <div class="validation-results">
+          Validated against ${totalAgents} agents: ${validCount} valid, ${invalidCount} invalid
+          ${validAgents.map(agent => this.renderAgentItem(agent, true))}
+          ${invalidAgents.map(item => this.renderAgentItem(item.agent, false, item.errors))}
+        </div>
+      `;
+    }
 
-      return html`<div class="validation-results">${resultsText}</div>`;
+    renderAgentItem(agent, isValid, errors = null) {
+      const capabilities = agent.capabilities || {};
+      const hostname = capabilities.hostname || agent.ip;
+      const arch = capabilities.arch || 'unknown';
+      const os = capabilities.os?.os || 'unknown';
+      const majorVersion = capabilities.os?.release?.major_version || 'unknown';
+
+      const statusEmoji = isValid ? '✅' : '❌';
+      const statusClass = isValid ? 'valid' : 'invalid';
+
+      return html`
+        <div class="agent-item">
+          <span class="agent-status ${statusClass}">${statusEmoji}</span>
+          <div class="agent-info">
+            <div class="agent-name">${hostname}</div>
+            <div class="agent-details">${os} ${majorVersion} • ${arch}</div>
+            ${!isValid && errors ? html`<div class="agent-details error">${errors.map(err => `${err.instancePath} ${err.message}`).join(', ')}</div>` : ''}
+          </div>
+        </div>
+      `;
     }
 
     getCopyText() {
