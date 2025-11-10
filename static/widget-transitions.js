@@ -2,20 +2,16 @@ import {html, css, LitElement} from 'https://cdn.jsdelivr.net/gh/lit/dist@3/all/
 
 export class TransitionsWidget extends LitElement {
     static styles = css`
-      div {
-        width: 100%;
-        display: flex;
-        flex-direction: column;
-        overflow-x: hidden;
-        overflow-y: auto;
-        font-size: 11px;
-        font-family: sans-serif;
-        background: transparent;
-        color: inherit;
-        line-height: 1.0;
-        align-items: flex-start;
-        justify-content: flex-start;
-      }
+       div {
+         width: 100%;
+         overflow-x: hidden;
+         overflow-y: auto;
+         font-size: 11px;
+         font-family: sans-serif;
+         background: transparent;
+         color: inherit;
+         line-height: 1.0;
+       }
 
       .transition {
         border: 1px solid rgba(128, 128, 128, 0.3);
@@ -33,11 +29,28 @@ export class TransitionsWidget extends LitElement {
         }
       }
 
-      .transition-header {
-        font-weight: bold;
-        margin-bottom: 1px;
-        color: inherit;
-      }
+       .transition-header {
+         font-weight: bold;
+         margin-bottom: 1px;
+         color: inherit;
+         white-space: nowrap;
+       }
+
+       .status-awaiting {
+         color: #fee440;
+       }
+       .status-running {
+         color: #f9dcc4;
+       }
+       .status-completed {
+         color: #00bbf9;
+       }
+       .status-failed {
+         color: #f15bb5;
+       }
+       .status-paused {
+         color: #777;
+       }
 
       .transition-detail {
         font-size: 10px;
@@ -112,7 +125,7 @@ export class TransitionsWidget extends LitElement {
           const timing = transition.timing?.immediate ? 'immediate' : transition.timing?.every ? transition.timing.every : 'Unk';
           return html`
             <div class="transition">
-              <div class="transition-header">T${index + 1}: ${transition.statuses?.join(',') || 'None'}→${transition.transitionTo || '?'} (${timing})</div>
+               <div class="transition-header">T${index + 1}: ${transition.statuses ? transition.statuses.map((s, i) => html`${i > 0 ? ', ' : ''}<span class="status-${s.toLowerCase()}">${s}</span>`).reduce((acc, curr) => html`${acc}${curr}`, html``) : html`None`}→<span class="status-${(transition.transitionTo || '').toLowerCase()}">${transition.transitionTo || '?'}</span> (${timing})</div>
               <div class="transition-detail">Cond: ${JSON.stringify(transition.condition || {}, null, 2)}</div>
               ${transition.dataMutations ? html`<div class="transition-detail">Mut: ${JSON.stringify(transition.dataMutations, null, 2)}</div>` : ''}
             </div>
