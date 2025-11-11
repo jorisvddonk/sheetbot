@@ -4,6 +4,10 @@
 
 A TypeScript-based automation and task management system using Deno.
 
+## Philosophy
+
+SheetBot embraces the philosophy of "automation through composition": building complex workflows from simple, reusable tasks that can run anywhere. By leveraging JSON Schema for capability matching and condition evaluation, SheetBot enables precise, declarative automation without sacrificing flexibility. Extensibility is core—modify the code to fit your needs, as SheetBot is designed for easy customization and integration into diverse environments. SheetBot is built with what you, or your AI tool of choice, already know: express, JSON Schema, and sqlite. Tasks in SheetBot are opaque to SheetBot itself, which allows you to write tasks in any langage that you can write a runner for. The API is trivial and it should take you only a few hours, or a single prompt of your AI tool, to make a runner for a new language/runtime.
+
 ## Features
 
 - [Distributed runtime](Distributed_Runtime.md) for executing tasks
@@ -118,7 +122,8 @@ Transitions enable automated status changes for tasks based on time and conditio
 - **Configuration**: Tasks include a `transitions` array with status change rules
 - **Evaluation**: Transitions are checked when task status changes or at scheduled intervals
 - **Use Cases**: Auto-deletion after completion, periodic task resets, timeouts for awaiting tasks
-- **Condition Matching**: JSON Schema validation against task data and artefacts
+- **Condition Matching**: JSON Schema validation against the entire task object (including id, name, script, status, data, artefacts, dependsOn, transitions, type, capabilitiesSchema)
+- **Data Mutations**: Optional `dataMutations` object to update task data when transitioning
 - **Timing**: Immediate evaluation or periodic checks (e.g., every 1h, 30m, 1s)
 
 Example transition for auto-deleting completed tasks after 1 hour:
@@ -129,6 +134,28 @@ Example transition for auto-deleting completed tasks after 1 hour:
   "condition": {},
   "timing": {"every": "1h", "immediate": false},
   "transitionTo": "DELETED"
+}
+```
+
+Example transition with condition and data mutation:
+
+```json
+{
+  "statuses": ["COMPLETED"],
+  "condition": {
+    "type": "object",
+    "properties": {
+      "data": {
+        "type": "object",
+        "properties": {
+          "errorCount": {"type": "number", "maximum": 5}
+        }
+      }
+    }
+  },
+  "timing": {"immediate": true},
+  "transitionTo": "AWAITING",
+  "dataMutations": {"retryCount": 1}
 }
 ```
 
