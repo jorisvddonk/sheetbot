@@ -8,6 +8,12 @@ A TypeScript-based automation and task management system using Deno.
 
 SheetBot embraces the philosophy of "automation through composition": building complex workflows from simple, reusable tasks that can run anywhere. By leveraging JSON Schema for capability matching and condition evaluation, SheetBot enables precise, declarative automation without sacrificing flexibility. Extensibility is core—modify the code to fit your needs, as SheetBot is designed for easy customization and integration into diverse environments. SheetBot is built with what you, or your AI tool of choice, already know: express, JSON Schema, and sqlite. Tasks in SheetBot are opaque to SheetBot itself, which allows you to write tasks in any langage that you can write a runner for. The API is trivial and it should take you only a few hours, or a single prompt of your AI tool, to make a runner for a new language/runtime.
 
+## Conceptual architecture
+
+..todo document..
+
+<img src="docs/assets/conceptual_architecture_diagram.excalidraw.png">
+
 ## Features
 
 - [Distributed runtime](Distributed_Runtime.md) for executing tasks
