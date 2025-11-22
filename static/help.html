@@ -67,6 +67,7 @@ deno run --reload -A ${SHEETBOT_BASEURL}/scripts/agent.ts</code></pre>
     <script src="widget-metric.js" type="module"></script>
     <script src="widget-video.js" type="module"></script>
     <script src="widget-audio.js" type="module"></script>
+    <script src="widget-qr-code.js" type="module"></script>
 
         <!-- Text Widgets -->
         <h4>Text Widgets</h4>
@@ -227,10 +228,11 @@ deno run --reload -A ${SHEETBOT_BASEURL}/scripts/agent.ts</code></pre>
                     { name: "widget_sheetkey", widgettype: "sheetkey", minwidth: 200, minheight: 200, columnorder: 1, datatype: "TEXT" },
                     { name: "widget_schedule_task", widgettype: "schedule-task", minwidth: 200, minheight: 200, columnorder: 2, datatype: "TEXT" },
                     { name: "widget_multi", widgettype: ["multi", "text", "code"], minwidth: 200, minheight: 200, columnorder: 3, datatype: "TEXT" },
-                    { name: "widget_transitions", widgettype: "transitions", minwidth: 200, minheight: 200, columnorder: 4, datatype: "TEXT" }
+                    { name: "widget_transitions", widgettype: "transitions", minwidth: 200, minheight: 200, columnorder: 4, datatype: "TEXT" },
+                    { name: "widget_qr_code", widgettype: "qr-code", minwidth: 200, minheight: 200, columnorder: 5, datatype: "TEXT" }
                 ],
                 rows: [
-                    ["sheet_001", "build.ts", "function build() {\n    console.log('Building project...');\n    return 'success';\n}", '[{"statuses":["COMPLETED"],"condition":{"type":"object","properties":{"data":{"type":"object","properties":{"errorCount":{"type":"number","maximum":3}}}}},"timing":{"every":"1h","immediate":false},"transitionTo":"DELETED"}]']
+                    ["sheet_001", "build.ts", "function build() {\n    console.log('Building project...');\n    return 'success';\n}", '[{"statuses":["COMPLETED"],"condition":{"type":"object","properties":{"data":{"type":"object","properties":{"errorCount":{"type":"number","maximum":3}}}}},"timing":{"every":"1h","immediate":false},"transitionTo":"DELETED"}]', "https://github.com/jorisvddonk/sheetbot"]
                 ]
             }
         };
