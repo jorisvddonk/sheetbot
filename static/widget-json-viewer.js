@@ -109,11 +109,13 @@ export class JsonViewerWidget extends LitElement {
 
     static properties = {
       data: {type: Object},
+      defaultDepth: {type: Number},
     };
 
     constructor() {
       super();
       this.data = null;
+      this.defaultDepth = 1; // Expand first level by default
     }
 
     render() {
@@ -201,8 +203,22 @@ export class JsonViewerWidget extends LitElement {
     getExpandedState(key) {
       if (!this._expandedStates) {
         this._expandedStates = new Set();
+        // Initialize with default expanded states based on depth
+        this.initializeDefaultExpansion(this.data, 0);
       }
       return this._expandedStates.has(key);
+    }
+
+    initializeDefaultExpansion(obj, currentDepth) {
+      if (!obj || currentDepth >= this.defaultDepth) return;
+
+      if (Array.isArray(obj)) {
+        this._expandedStates.add(`array-${currentDepth}`);
+        obj.forEach(item => this.initializeDefaultExpansion(item, currentDepth + 1));
+      } else if (typeof obj === 'object' && obj !== null) {
+        this._expandedStates.add(`object-${currentDepth}`);
+        Object.values(obj).forEach(value => this.initializeDefaultExpansion(value, currentDepth + 1));
+      }
     }
 
     toggleExpanded(key) {
