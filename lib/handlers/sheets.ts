@@ -3,6 +3,11 @@ import { SheetDB } from "../data_providers/sqlite/sheetdb.ts";
 
 const PERMISSION_PUT_SHEET_DATA = "putSheetData";
 
+/**
+ * Creates a handler that inserts or updates data in a sheet.
+ * Validates sheet name and ensures data contains a primary key.
+ * @returns {Function} Express route handler function
+ */
 export function createUpsertSheetDataHandler() {
     return (req: any, res: any) => {
         if (!validateSheetName(req.params.id)) {
@@ -27,6 +32,10 @@ export function createUpsertSheetDataHandler() {
     };
 }
 
+/**
+ * Creates a handler that deletes a row from a sheet by its primary key.
+ * @returns {Function} Express route handler function
+ */
 export function createDeleteSheetRowHandler() {
     return (req: any, res: any) => {
         if (!validateSheetName(req.params.id)) {
@@ -43,6 +52,11 @@ export function createDeleteSheetRowHandler() {
     };
 }
 
+/**
+ * Creates a handler that retrieves all data from a specific sheet.
+ * Returns column schema and row data.
+ * @returns {Function} Express route handler function
+ */
 export function createGetSheetHandler() {
     return (req: any, res: any) => {
         if (!validateSheetName(req.params.id)) {
@@ -71,6 +85,10 @@ export function createGetSheetHandler() {
     };
 }
 
+/**
+ * Creates a handler that lists all available sheets in the system.
+ * @returns {Function} Express route handler function
+ */
 export function createListSheetsHandler() {
     return (req: any, res: any) => {
         const retval = [];

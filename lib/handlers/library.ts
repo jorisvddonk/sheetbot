@@ -1,3 +1,8 @@
+/**
+ * Creates a handler that retrieves the library of available scripts/templates.
+ * Parses script files to extract metadata like capabilities, suggested data, and comments.
+ * @returns {Function} Express route handler function
+ */
 export function createGetLibraryHandler() {
     return (req: any, res: any) => {
         const scriptFiles = Array.from(Deno.readDirSync("./scripts/").filter(x => (x.name.endsWith(".ts") || x.name.endsWith(".js") || x.name.endsWith(".py")) && !x.name.includes(".template.")));

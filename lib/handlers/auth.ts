@@ -3,6 +3,11 @@ import { UserDB } from "../data_providers/sqlite/userdb.ts";
 
 const SECRET_KEY = new TextDecoder().decode(Deno.readFileSync("./secret.txt"));
 
+/**
+ * Creates a login handler that authenticates users and returns JWT tokens.
+ * @param {UserDB} userdb - The user database instance for authentication
+ * @returns {Function} Express route handler function
+ */
 export function createLoginHandler(userdb: UserDB) {
     return async (req: any, res: any) => {
         try {
@@ -21,12 +26,20 @@ export function createLoginHandler(userdb: UserDB) {
     };
 }
 
+/**
+ * Creates a handler that serves the main index page of the SheetBot web interface.
+ * @returns {Function} Express route handler function
+ */
 export function createIndexHandler() {
     return (req: any, res: any) => {
         res.sendFile("static/index.html", { root: "." });
     };
 }
 
+/**
+ * Creates a handler that serves the OpenAPI specification file.
+ * @returns {Function} Express route handler function
+ */
 export function createOpenApiHandler() {
     return (req: any, res: any) => {
         res.contentType("application/yaml");

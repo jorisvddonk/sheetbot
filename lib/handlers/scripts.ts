@@ -2,6 +2,11 @@ import { DatabaseSync } from "node:sqlite";
 import { createInjectDependenciesMiddleware, createGetScriptMiddleware, createGetTaskMiddleware } from "../middleware.ts";
 import { getTask } from "../tasks.ts";
 
+/**
+ * Creates a handler that serves agent template scripts for different languages.
+ * Dynamically replaces protocol and host placeholders in the template.
+ * @returns {Function} Express route handler function
+ */
 export function createGetAgentTemplateHandler() {
     return (req: any, res: any) => {
         if (req.path.endsWith(".py")) {
@@ -28,6 +33,12 @@ export function createGetAgentTemplateHandler() {
     };
 }
 
+/**
+ * Creates a handler that serves task scripts with dependency injection.
+ * Applies middleware to inject dependencies and serve the processed script.
+ * @param {DatabaseSync} db - The SQLite database instance
+ * @returns {Array} Array of middleware and handler functions for Express
+ */
 export function createGetTaskScriptHandler(db: DatabaseSync) {
     const getTaskMiddleware = createGetTaskMiddleware((id) => getTask(db, id));
     const getScript = createGetScriptMiddleware((id) => getTask(db, id));
