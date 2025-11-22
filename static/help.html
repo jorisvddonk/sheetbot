@@ -65,6 +65,8 @@ deno run --reload -A ${SHEETBOT_BASEURL}/scripts/agent.ts</code></pre>
         <script src="widget-duration.js" type="module"></script>
         <script src="widget-rating.js" type="module"></script>
     <script src="widget-metric.js" type="module"></script>
+    <script src="widget-video.js" type="module"></script>
+    <script src="widget-audio.js" type="module"></script>
 
         <!-- Text Widgets -->
         <h4>Text Widgets</h4>
@@ -170,10 +172,12 @@ deno run --reload -A ${SHEETBOT_BASEURL}/scripts/agent.ts</code></pre>
                 columns: [
                     { name: "widget_image", widgettype: "image", minwidth: 200, minheight: 200, maxwidth: 400, maxheight: 400, columnorder: 1, datatype: "TEXT" },
                     { name: "widget_download", widgettype: "download", minwidth: 200, minheight: 200, maxwidth: 400, maxheight: 400, columnorder: 2, datatype: "TEXT" },
-                    { name: "widget_hashimg", widgettype: "hashimg", minwidth: 200, minheight: 200, maxwidth: 400, maxheight: 400, columnorder: 3, datatype: "TEXT" }
+                    { name: "widget_hashimg", widgettype: "hashimg", minwidth: 200, minheight: 200, maxwidth: 400, maxheight: 400, columnorder: 3, datatype: "TEXT" },
+                    { name: "widget_video", widgettype: "video", minwidth: 200, minheight: 200, columnorder: 4, datatype: "TEXT" },
+                    { name: "widget_audio", widgettype: "audio", minwidth: 200, minheight: 200, columnorder: 5, datatype: "TEXT" }
                 ],
                 rows: [
-                    ["logo.png", "example.txt", "abc123"]
+                    ["logo.png", "example.txt", "abc123", "https://download.blender.org/peach/bigbuckbunny_movies/BigBuckBunny_640x360.m4v", "https://www.soundjay.com/misc/sounds/bell-ringing-05.wav"]
                 ]
             },
             task: {
