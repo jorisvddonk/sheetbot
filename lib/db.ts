@@ -2,7 +2,12 @@ import { DatabaseSync } from "node:sqlite";
 import { TransitionTracker } from "./transitiontracker.ts";
 import { processScheduledTransitions } from "./tasks.ts";
 
-export function initDatabase(): DatabaseSync {
+export function openDatabase(): DatabaseSync {
+    const db = new DatabaseSync("tasks.db");
+    return db;
+}
+
+export function initDatabaseTables(): void {
     const db = new DatabaseSync("tasks.db");
     db.exec(`
         CREATE TABLE IF NOT EXISTS tasks (
@@ -37,7 +42,8 @@ export function initDatabase(): DatabaseSync {
         CREATE INDEX IF NOT EXISTS idx_transitions_schedule_task_status ON transitions_schedule(task_id)
     `);
 
-    return db;
+    db.close();
+    console.log("Database tables initialized.");
 }
 
 export function startTransitionWorker(db: DatabaseSync, transitionTracker: TransitionTracker) {

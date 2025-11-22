@@ -8,7 +8,7 @@ import https from "node:https";
 import { existsSync } from "https://deno.land/std@0.220.1/fs/mod.ts";
 import express from "npm:express@4.18.3";
 import OpenApiValidator from "npm:express-openapi-validator@5.6.0";
-import { initDatabase, startTransitionWorker } from "./lib/db.ts";
+import { openDatabase, startTransitionWorker } from "./lib/db.ts";
 import { TaskTracker } from "./lib/tasktracker.ts";
 import { TaskEventEmitter } from "./lib/task-events.ts";
 import { createTaskTrackingMiddleware } from "./lib/task-tracking-middleware.ts";
@@ -54,7 +54,7 @@ for (const file of initFiles) {
 // ██  ██  ██ ██ ██   ██ ██   ██ ██      ██      ██ ███ ██ ██   ██ ██   ██ ██               ██ ██         ██    ██    ██ ██
 // ██      ██ ██ ██████  ██████  ███████ ███████  ███ ███  ██   ██ ██   ██ ███████     ███████ ███████    ██     ██████  ██
 
-const db = initDatabase();
+const db = openDatabase();
 const taskEventEmitter = new TaskEventEmitter();
 const taskTracker = new TaskTracker(taskEventEmitter);
 const taskTrackingMiddleware = createTaskTrackingMiddleware(taskEventEmitter);
