@@ -116,6 +116,12 @@ app.get("/", createIndexHandler());
 // GET /openapi.yaml - Serves the OpenAPI specification file for the API
 app.get("/openapi.yaml", createOpenApiHandler());
 
+//  █████  ██    ██ ████████ ██   ██     ██████   ██████  ██    ██ ████████ ███████ ███████ 
+// ██   ██ ██    ██    ██    ██   ██     ██   ██ ██    ██ ██    ██    ██    ██      ██      
+// ███████ ██    ██    ██    ███████     ██████  ██    ██ ██    ██    ██    █████   ███████ 
+// ██   ██ ██    ██    ██    ██   ██     ██   ██ ██    ██ ██    ██    ██    ██           ██ 
+// ██   ██  ██████     ██    ██   ██     ██   ██  ██████   ██████     ██    ███████ ███████ 
+
 // POST /login - Authenticates a user and returns a JWT token
 app.post("/login", createLoginHandler(userdb));
 
