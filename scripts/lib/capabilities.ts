@@ -79,6 +79,20 @@ async function getNode() {
     return {};
 }
 
+async function getUV() {
+    try {
+        const cmd = await $`uv --version`.text();
+        const match = Array.from(cmd.matchAll(/uv (?<version>\S*)/gi))[0];
+        const version = match?.groups?.version;
+        if (version) {
+            return transformToVersion('uv', version);
+        }
+    } catch (e) {
+        // ignore
+    }
+    return {};
+}
+
 async function getScons() {
     try {
         const cmd = await $`scons --version`.text();
@@ -159,6 +173,7 @@ async function getCapabilities(staticCapabilities) {
     software = Object.assign(software, await getClang());
     software = Object.assign(software, await getCMake());
     software = Object.assign(software, await getNode());
+    software = Object.assign(software, await getUV());
     software = Object.assign(software, getDeno());
     software = Object.assign(software, await getScons());
 
