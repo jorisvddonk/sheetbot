@@ -65,6 +65,46 @@ export class JsonViewerWidget extends LitElement {
       .json-indent {
         margin-left: 20px;
       }
+
+      @media (prefers-color-scheme: dark) {
+        .json-container {
+          background: #2d3748;
+          color: #e2e8f0;
+        }
+
+        .json-key {
+          color: #63b3ed;
+        }
+
+        .json-string {
+          color: #68d391;
+        }
+
+        .json-number {
+          color: #fbb6ce;
+        }
+
+        .json-boolean {
+          color: #d53f8c;
+        }
+
+        .json-null {
+          color: #a0aec0;
+        }
+
+        .json-toggle {
+          color: #4299e1;
+        }
+
+        .json-toggle:hover {
+          background: #4a5568;
+          color: #3182ce;
+        }
+
+        .json-bracket {
+          color: #e2e8f0;
+        }
+      }
     `;
 
     static properties = {
