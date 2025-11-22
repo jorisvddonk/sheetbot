@@ -162,7 +162,7 @@ deno run --reload -A ${SHEETBOT_BASEURL}/scripts/agent.ts</code></pre>
                     { name: "widget_json_viewer", widgettype: "json-viewer", minwidth: 200, minheight: 200, columnorder: 2, datatype: "TEXT" }
                 ],
                 rows: [
-                    ["console.log('Hello!')\nconst x = 42;", '{"name":"John","age":30,"nested":{"value":123,"array":[1,2,3]}}']
+                    ["console.log('Hello!')\nconst x = 42;", '{"user":{"name":"John Doe","age":30,"email":"john@example.com","active":true},"project":{"name":"SheetBot","version":"1.0.0","features":["automation","widgets","api"],"metadata":{"created":"2024-01-15","tags":["typescript","deno","database"],"stats":{"tasks":150,"completed":120,"failed":5}}},"config":{"database":{"type":"sqlite","path":"./sheets"},"agents":{"maxConcurrent":10,"timeout":"5m"},"transitions":[{"name":"cleanup","trigger":"COMPLETED","delay":"1h"}]}}']
                 ]
             },
             media: {
@@ -213,7 +213,7 @@ deno run --reload -A ${SHEETBOT_BASEURL}/scripts/agent.ts</code></pre>
                     { name: "widget_jsonschema_explanation", widgettype: "jsonschema-explanation", minwidth: 200, minheight: 200, columnorder: 3, datatype: "TEXT" }
                 ],
                 rows: [
-                    ['{"type":"string","maxLength":100}', "valid", '{"type":"object","required":["name"],"properties":{"name":{"type":"string"}}}']
+                    ['{"type":"string","maxLength":100}', '{"valid":true,"errors":[]}', '{"type":"object","required":["name"],"properties":{"name":{"type":"string"}}}']
                 ]
             },
             interactive: {
@@ -224,7 +224,7 @@ deno run --reload -A ${SHEETBOT_BASEURL}/scripts/agent.ts</code></pre>
                     { name: "widget_transitions", widgettype: "transitions", minwidth: 200, minheight: 200, columnorder: 4, datatype: "TEXT" }
                 ],
                 rows: [
-                    ["sheet_001", "build.ts", "Multi content", "[]"]
+                    ["sheet_001", "build.ts", "Multi content", '[{"statuses":["COMPLETED"],"condition":{"type":"object","properties":{"data":{"type":"object","properties":{"errorCount":{"type":"number","maximum":3}}}}},"timing":{"every":"1h","immediate":false},"transitionTo":"DELETED"}]']
                 ]
             }
         };
