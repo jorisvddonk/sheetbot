@@ -64,6 +64,7 @@ deno run --reload -A ${SHEETBOT_BASEURL}/scripts/agent.ts</code></pre>
         <script src="widget-progress.js" type="module"></script>
         <script src="widget-duration.js" type="module"></script>
         <script src="widget-rating.js" type="module"></script>
+    <script src="widget-metric.js" type="module"></script>
 
         <!-- Text Widgets -->
         <h4>Text Widgets</h4>
@@ -101,7 +102,7 @@ deno run --reload -A ${SHEETBOT_BASEURL}/scripts/agent.ts</code></pre>
             <pre><code id="task-data" class="language-json"></code></pre>
         </details>
 
-        <!-- Time & Progress Widgets</h4>
+        <h4>Time & Progress Widgets</h4>
         <p>Widgets for time display, progress tracking, and duration formatting</p>
         <element-grid id="time-widgets"></element-grid>
         <details style="margin-top: 10px;">
@@ -191,10 +192,11 @@ deno run --reload -A ${SHEETBOT_BASEURL}/scripts/agent.ts</code></pre>
                     { name: "widget_timestamp", widgettype: "timestamp", minwidth: 200, minheight: 200, columnorder: 1, datatype: "INTEGER" },
                     { name: "widget_relative_timestamp", widgettype: "relative-timestamp", minwidth: 200, minheight: 200, columnorder: 2, datatype: "INTEGER" },
                     { name: "widget_progress", widgettype: "progress", minwidth: 200, minheight: 200, columnorder: 3, datatype: "INTEGER" },
-                    { name: "widget_duration", widgettype: "duration", minwidth: 200, minheight: 200, columnorder: 4, datatype: "INTEGER" }
+                    { name: "widget_duration", widgettype: "duration", minwidth: 200, minheight: 200, columnorder: 4, datatype: "INTEGER" },
+                    { name: "widget_metric", widgettype: "metric", minwidth: 200, minheight: 200, columnorder: 5, datatype: "TEXT" }
                 ],
                 rows: [
-                    [1640995200, Math.floor(Date.now()/1000) - 3600, 75, 3661]
+                    [1640995200, Math.floor(Date.now()/1000) - 3600, 75, 3661, {value: 1024, unit: 'MB', label: 'File Size'}]
                 ]
             },
             rating: {
@@ -239,14 +241,21 @@ deno run --reload -A ${SHEETBOT_BASEURL}/scripts/agent.ts</code></pre>
 
         grids.forEach(gridId => {
             const element = document.getElementById(gridId);
-            if (element) {
-                const dataKey = gridId.replace('-widgets', '');
-                element.setAttribute('data', JSON.stringify({
+            const dataKey = gridId.replace('-widgets', '');
+            console.log(`Setting up ${gridId} with data key ${dataKey}`);
+            console.log('Element found:', !!element);
+            console.log('Data exists:', !!widgetData[dataKey]);
+
+            if (element && widgetData[dataKey]) {
+                const gridData = {
                     data: widgetData[dataKey].rows,
                     columns: widgetData[dataKey].columns
-                }));
+                };
+                console.log('Grid data:', gridData);
+                element.setAttribute('data', JSON.stringify(gridData));
+                console.log(`Successfully set data for ${gridId}`);
             } else {
-                console.error(`Grid element ${gridId} not found`);
+                console.error(`Failed to set up ${gridId} - element: ${!!element}, data: ${!!widgetData[dataKey]}`);
             }
         });
 
