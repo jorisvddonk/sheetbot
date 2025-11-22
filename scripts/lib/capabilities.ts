@@ -64,6 +64,20 @@ async function getClang() {
     return {};
 }
 
+async function getNode() {
+    try {
+        const cmd = await $`node --version`.text();
+        const match = Array.from(cmd.matchAll(/v(?<version>\S*)/gi))[0];
+        const version = match?.groups?.version;
+        if (version) {
+            return transformToVersion('node', version);
+        }
+    } catch (e) {
+        // ignore
+    }
+    return {};
+}
+
 async function getScons() {
     try {
         const cmd = await $`scons --version`.text();
@@ -143,6 +157,7 @@ async function getCapabilities(staticCapabilities) {
     software = Object.assign(software, await getVirtualbox());
     software = Object.assign(software, await getClang());
     software = Object.assign(software, await getCMake());
+    software = Object.assign(software, await getNode());
     software = Object.assign(software, getDeno());
     software = Object.assign(software, await getScons());
 
