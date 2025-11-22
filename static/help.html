@@ -1,0 +1,45 @@
+<html>
+
+<head>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" href="logo.png" type="image/png">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/bash.min.js"></script>
+    <script src="header.js"></script>
+    <style>
+        pre code.hljs {
+            height: auto;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="header-placeholder"></div>
+    <div style="padding: 20px;">
+        <h2>Help</h2>
+        <h3>Running Agents</h3>
+        <p>To run a Deno agent, use the following command:</p>
+        <pre><code id="deno-prod" class="language-bash">deno run --reload -A ${SHEETBOT_BASEURL}/scripts/agent.ts</code></pre>
+        <p>To run a Python agent with uv, use the following command:</p>
+        <pre><code id="python-prod" class="language-bash">uv run --script ${SHEETBOT_BASEURL}/scripts/agent.py</code></pre>
+        <p>For authentication, set SHEETBOT_AUTH_USER and SHEETBOT_AUTH_PASS if needed.</p>
+        <h3>Example Script</h3>
+        <p>You can create a bash script to run the agent with authentication:</p>
+        <pre><code id="example-script" class="language-bash">#!/bin/bash
+export SHEETBOT_AUTH_USER=username
+export SHEETBOT_AUTH_PASS=password
+export SHEETBOT_BASEURL={{BASE_URL}}
+
+deno run --reload -A ${SHEETBOT_BASEURL}/scripts/agent.ts</code></pre>
+    </div>
+    <script>
+        const baseUrl = window.location.origin;
+        document.getElementById('example-script').textContent = document.getElementById('example-script').textContent.replace('{{BASE_URL}}', baseUrl);
+        document.getElementById('deno-prod').textContent = document.getElementById('deno-prod').textContent.replace('${SHEETBOT_BASEURL}', baseUrl);
+        document.getElementById('python-prod').textContent = document.getElementById('python-prod').textContent.replace('${SHEETBOT_BASEURL}', baseUrl);
+        hljs.highlightAll();
+    </script>
+</body>
+
+</html>
