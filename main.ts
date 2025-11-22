@@ -73,6 +73,10 @@ if (Deno.env.get("NODE_ENV") !== "production") {
 
 // Define routes directly
 
+// =============================================================================
+// =                              BASIC ROUTES                                 =
+// =============================================================================
+
 // GET / - Serves the main index page of the SheetBot web interface
 app.get("/", createIndexHandler());
 
@@ -82,7 +86,9 @@ app.get("/openapi.yaml", createOpenApiHandler());
 // POST /login - Authenticates a user and returns a JWT token
 app.post("/login", createLoginHandler(userdb));
 
-// Task Management Routes
+// =============================================================================
+// =                       TASK MANAGEMENT ROUTES                            =
+// =============================================================================
 
 // GET /tasks - Retrieves a list of all tasks in the system
 app.get("/tasks", requiresLogin, createGetTasksHandler(db));
@@ -126,12 +132,16 @@ app.get('/tasks/:id/artefacts/:filename', createGetArtefactHandler(db));
 // DELETE /tasks/:id/artefacts/:filename - Removes an artefact file from a task
 app.delete('/tasks/:id/artefacts/:filename', requiresLogin, requiresPermission("deleteTasks"), createDeleteTaskArtefactHandler(db));
 
-// Library Routes
+// =============================================================================
+// =                           LIBRARY ROUTES                                =
+// =============================================================================
 
 // GET /library - Retrieves the library of available scripts/templates
 app.get("/library", requiresLogin, createGetLibraryHandler());
 
-// Monitoring Routes
+// =============================================================================
+// =                          MONITORING ROUTES                              =
+// =============================================================================
 
 // GET /tasktracker - Retrieves task execution statistics and metrics
 app.get("/tasktracker", requiresLogin, createGetTaskTrackerHandler(taskTracker));
@@ -142,7 +152,9 @@ app.get("/agenttracker", requiresLogin, createGetAgentTrackerHandler(agentTracke
 // GET /transitiontracker - Retrieves task transition evaluation statistics
 app.get("/transitiontracker", requiresLogin, createGetTransitionTrackerHandler(transitionTracker));
 
-// Script Routes
+// =============================================================================
+// =                           SCRIPT ROUTES                                 =
+// =============================================================================
 
 // Static file serving for scripts directory - Serves script files and templates
 app.use('/scripts', express.static('scripts'));
@@ -153,7 +165,9 @@ app.get("/scripts/agent(\.ts|\.py)?", createGetAgentTemplateHandler());
 // GET /scripts/:id.* - Serves the script for a specific task, with dependency injection
 app.get("/scripts/:id\.?.*", ...createGetTaskScriptHandler(db));
 
-// Sheet Data Routes
+// =============================================================================
+// =                          SHEET DATA ROUTES                              =
+// =============================================================================
 
 // POST /sheets/:id/data - Inserts or updates data in a sheet
 app.post("/sheets/:id/data", requiresLogin, requiresPermission("putSheetData"), createUpsertSheetDataHandler());
@@ -167,7 +181,9 @@ app.get("/sheets/:id", requiresLogin, createGetSheetHandler());
 // GET /sheets - Lists all available sheets in the system
 app.get("/sheets", requiresLogin, createListSheetsHandler());
 
-// Artefact Routes
+// =============================================================================
+// =                            ARTEFACT ROUTES                              =
+// =============================================================================
 
 // Static file serving for artefacts directory - Serves uploaded artefact files
 app.use('/artefacts', express.static('artefacts'));
