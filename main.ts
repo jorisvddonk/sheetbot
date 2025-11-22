@@ -84,62 +84,62 @@ app.post("/login", createLoginHandler(userdb));
 
 // Task Management Routes
 
-// GET /tasks - Retrieves a list of all tasks in the system (requires authentication)
+// GET /tasks - Retrieves a list of all tasks in the system
 app.get("/tasks", requiresLogin, createGetTasksHandler(db));
 
-// POST /tasks - Creates a new task with the provided configuration (requires authentication, createTasks permission)
+// POST /tasks - Creates a new task with the provided configuration
 app.post("/tasks", requiresLogin, requiresPermission("createTasks"), ...createCreateTaskHandler(db, transitionTracker, taskTrackingMiddleware));
 
-// GET /tasks/:id - Retrieves a specific task by its ID (requires authentication, viewTasks permission)
+// GET /tasks/:id - Retrieves a specific task by its ID
 app.get("/tasks/:id", requiresLogin, requiresPermission("viewTasks"), createGetTaskHandler(db));
 
-// DELETE /tasks/:id - Permanently deletes a task from the system (requires authentication, deleteTasks permission)
+// DELETE /tasks/:id - Permanently deletes a task from the system
 app.delete("/tasks/:id", requiresLogin, requiresPermission("deleteTasks"), createDeleteTaskHandler(db));
 
-// PATCH /tasks/:id - Updates a task's status or other properties (requires authentication, updateTasks permission)
+// PATCH /tasks/:id - Updates a task's status or other properties
 app.patch("/tasks/:id", requiresLogin, requiresPermission("updateTasks"), createUpdateTaskHandler(db, transitionTracker));
 
-// POST /tasks/:id/accept - Marks a task as accepted and changes its status to RUNNING (requires authentication, performTasks permission)
+// POST /tasks/:id/accept - Marks a task as accepted and changes its status to RUNNING
 app.post("/tasks/:id/accept", requiresLogin, requiresPermission("performTasks"), createAcceptTaskHandler(db, transitionTracker));
 
-// POST /tasks/:id/complete - Marks a task as completed with the provided result data (requires authentication, performTasks permission)
+// POST /tasks/:id/complete - Marks a task as completed with the provided result data
 app.post("/tasks/:id/complete", requiresLogin, requiresPermission("performTasks"), ...createCompleteTaskHandler(db, transitionTracker, taskTrackingMiddleware));
 
-// POST /tasks/:id/data - Updates a task's data object with additional information (requires authentication, performTasks permission)
+// POST /tasks/:id/data - Updates a task's data object with additional information
 app.post("/tasks/:id/data", requiresLogin, requiresPermission("performTasks"), createUpdateTaskDataHandler(db));
 
-// POST /tasks/:id/failed - Marks a task as failed, typically called by agents when execution fails (requires authentication, performTasks permission)
+// POST /tasks/:id/failed - Marks a task as failed, typically called by agents when execution fails
 app.post("/tasks/:id/failed", requiresLogin, requiresPermission("performTasks"), ...createFailTaskHandler(db, transitionTracker, taskTrackingMiddleware));
 
-// POST /tasks/:id/clone - Creates a copy of an existing task with all its artefacts (requires authentication, createTasks permission)
+// POST /tasks/:id/clone - Creates a copy of an existing task with all its artefacts
 app.post("/tasks/:id/clone", requiresLogin, requiresPermission("createTasks"), createCloneTaskHandler(db));
 
-// POST /tasks/get - Retrieves the next available task for an agent to execute (requires authentication, performTasks permission)
+// POST /tasks/get - Retrieves the next available task for an agent to execute
 app.post("/tasks/get", requiresLogin, requiresPermission("performTasks"), ...createGetTaskToCompleteHandler(db, agentTrackingMiddleware));
 
-// POST /tasks/:id/artefacts - Uploads a file artefact for a task (requires authentication, performTasks permission)
+// POST /tasks/:id/artefacts - Uploads a file artefact for a task
 app.post('/tasks/:id/artefacts', requiresLogin, requiresPermission("performTasks"), ...createUploadArtefactHandler(db));
 
 // GET /tasks/:id/artefacts/:filename - Downloads a specific artefact file from a task
 app.get('/tasks/:id/artefacts/:filename', createGetArtefactHandler(db));
 
-// DELETE /tasks/:id/artefacts/:filename - Removes an artefact file from a task (requires authentication, deleteTasks permission)
+// DELETE /tasks/:id/artefacts/:filename - Removes an artefact file from a task
 app.delete('/tasks/:id/artefacts/:filename', requiresLogin, requiresPermission("deleteTasks"), createDeleteTaskArtefactHandler(db));
 
 // Library Routes
 
-// GET /library - Retrieves the library of available scripts/templates (requires authentication)
+// GET /library - Retrieves the library of available scripts/templates
 app.get("/library", requiresLogin, createGetLibraryHandler());
 
 // Monitoring Routes
 
-// GET /tasktracker - Retrieves task execution statistics and metrics (requires authentication)
+// GET /tasktracker - Retrieves task execution statistics and metrics
 app.get("/tasktracker", requiresLogin, createGetTaskTrackerHandler(taskTracker));
 
-// GET /agenttracker - Retrieves agent activity statistics and metrics (requires authentication)
+// GET /agenttracker - Retrieves agent activity statistics and metrics
 app.get("/agenttracker", requiresLogin, createGetAgentTrackerHandler(agentTracker));
 
-// GET /transitiontracker - Retrieves task transition evaluation statistics (requires authentication)
+// GET /transitiontracker - Retrieves task transition evaluation statistics
 app.get("/transitiontracker", requiresLogin, createGetTransitionTrackerHandler(transitionTracker));
 
 // Script Routes
@@ -155,16 +155,16 @@ app.get("/scripts/:id\.?.*", ...createGetTaskScriptHandler(db));
 
 // Sheet Data Routes
 
-// POST /sheets/:id/data - Inserts or updates data in a sheet (requires authentication, putSheetData permission)
+// POST /sheets/:id/data - Inserts or updates data in a sheet
 app.post("/sheets/:id/data", requiresLogin, requiresPermission("putSheetData"), createUpsertSheetDataHandler());
 
-// DELETE /sheets/:id/data/:key - Deletes a row from a sheet by its primary key (requires authentication, putSheetData permission)
+// DELETE /sheets/:id/data/:key - Deletes a row from a sheet by its primary key
 app.delete("/sheets/:id/data/:key", requiresLogin, requiresPermission("putSheetData"), createDeleteSheetRowHandler());
 
-// GET /sheets/:id - Retrieves all data from a specific sheet (requires authentication)
+// GET /sheets/:id - Retrieves all data from a specific sheet
 app.get("/sheets/:id", requiresLogin, createGetSheetHandler());
 
-// GET /sheets - Lists all available sheets in the system (requires authentication)
+// GET /sheets - Lists all available sheets in the system
 app.get("/sheets", requiresLogin, createListSheetsHandler());
 
 // Artefact Routes
@@ -172,7 +172,7 @@ app.get("/sheets", requiresLogin, createListSheetsHandler());
 // Static file serving for artefacts directory - Serves uploaded artefact files
 app.use('/artefacts', express.static('artefacts'));
 
-// DELETE /artefacts/* - Deletes artefact files from the system (requires authentication, deleteTasks permission)
+// DELETE /artefacts/* - Deletes artefact files from the system
 app.delete('/artefacts/*', requiresLogin, requiresPermission("deleteTasks"), createDeleteArtefactHandler());
 
 app.set('trust proxy', (ip: string) => {
