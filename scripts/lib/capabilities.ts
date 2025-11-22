@@ -1,6 +1,7 @@
 /**
 Capabilities library
 To use this on an agent, simply download <sheetbot_baseurl>/scripts/lib/capabilities.ts and rename it to `.capabilities.dynamic.ts
+To test the output, run `deno run --allow-all capabilities.ts` which will log the detected capabilities as JSON and exit.
 Alternatively, if you don't mind dynamically loading it, create a file `.capabilities.dynamic.ts` with the following content:
 
 async function getCapabilities(staticCapabilities) {
@@ -190,3 +191,9 @@ async function getCapabilities(staticCapabilities) {
 }
 
 export { getCapabilities };
+
+if (import.meta.main) {
+    const caps = await getCapabilities({});
+    console.log(JSON.stringify(caps, null, 2));
+    Deno.exit(0);
+}
