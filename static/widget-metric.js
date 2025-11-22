@@ -149,7 +149,15 @@ export class MetricWidget extends LitElement {
     }
 
     formatValue(value) {
-      // Format large numbers with K/M/B suffixes
+      // Don't apply K/M/B formatting if we already have meaningful units
+      // Only format raw numbers without units
+      const data = this.parseData(this.data);
+      if (data.unit && this.hasMeaningfulUnit(data.unit)) {
+        // For meaningful units like MB, GB, %, just show the number
+        return Number.isInteger(value) ? value.toString() : value.toFixed(1);
+      }
+
+      // For raw numbers, apply K/M/B formatting
       if (value >= 1000000000) {
         return (value / 1000000000).toFixed(1) + 'B';
       }
@@ -162,6 +170,12 @@ export class MetricWidget extends LitElement {
 
       // Format as integer if it's a whole number, otherwise show decimals
       return Number.isInteger(value) ? value.toString() : value.toFixed(2);
+    }
+
+    hasMeaningfulUnit(unit) {
+      const meaningfulUnits = ['B', 'KB', 'MB', 'GB', 'TB', '%', 'ms', 's', 'm', 'h', 'd'];
+      const upperUnit = unit.toUpperCase();
+      return meaningfulUnits.some(u => upperUnit.includes(u));
     }
 
     getCopyText() {
