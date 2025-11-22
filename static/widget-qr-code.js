@@ -15,13 +15,12 @@ export class QrCodeWidget extends LitElement {
         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
       }
 
-      .qr-image {
+      .qr-canvas {
         max-width: 100%;
         max-height: 100%;
         border-radius: 4px;
         background: white;
         padding: 5px;
-        display: none;
       }
 
       .qr-placeholder {
@@ -81,26 +80,88 @@ export class QrCodeWidget extends LitElement {
       }
     }
 
-    generateQR() {
-      const img = this.shadowRoot.querySelector('img');
-      if (!img) return;
-
-      if (!this.data || this.data.trim() === '') {
-        img.src = '';
-        img.style.display = 'none';
+    async generateQR() {
+      const canvas = this.shadowRoot.querySelector('canvas');
+      if (!canvas) {
+        console.error('Canvas not found');
         return;
       }
 
-      // Use qr-server.com service for QR code generation
-      const encodedData = encodeURIComponent(this.data.trim());
-      const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=${this.size}x${this.size}&data=${encodedData}&format=png`;
+      const ctx = canvas.getContext('2d');
+      const data = this.data.trim();
 
-      img.src = qrUrl;
-      img.style.display = 'block';
-      img.onerror = () => {
-        console.error('QR Code generation failed');
-        img.style.display = 'none';
-      };
+      console.log('Generating QR for:', data);
+      console.log('Canvas element:', canvas);
+      console.log('QRCode available:', typeof window.QRCode);
+
+      // Clear canvas first
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#f0f0f0';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      if (!data) {
+        console.log('No data provided');
+        return;
+      }
+
+      try {
+        // Check if qrcode-generator library is loaded
+        if (typeof window.qrcode === 'undefined') {
+          console.error('qrcode-generator library failed to load');
+          ctx.fillStyle = '#ff6b6b';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.fillStyle = '#ffffff';
+          ctx.font = '14px monospace';
+          ctx.textAlign = 'center';
+          ctx.fillText('QR Library', canvas.width / 2, canvas.height / 2 - 15);
+          ctx.fillText('Not Loaded', canvas.width / 2, canvas.height / 2);
+          ctx.font = '10px monospace';
+          ctx.fillText('Check console for details', canvas.width / 2, canvas.height / 2 + 15);
+          return;
+        }
+
+        console.log('Generating QR code with qrcode-generator...');
+
+        // Create QR code with qrcode-generator
+        const qr = window.qrcode(0, 'M'); // Type 0 (auto), Error correction 'M'
+        qr.addData(data);
+        qr.make();
+
+        // Get the QR code matrix
+        const size = qr.getModuleCount();
+        const moduleSize = this.size / size;
+
+        // Clear canvas and draw QR code
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(0, 0, this.size, this.size);
+
+        ctx.fillStyle = '#000000';
+        for (let row = 0; row < size; row++) {
+          for (let col = 0; col < size; col++) {
+            if (qr.isDark(row, col)) {
+              ctx.fillRect(
+                col * moduleSize,
+                row * moduleSize,
+                moduleSize,
+                moduleSize
+              );
+            }
+          }
+        }
+
+        console.log('QR code generated successfully with qrcode-generator');
+        console.log('QR Code generated successfully');
+      } catch (error) {
+        console.error('QR Code generation failed:', error);
+        // Show error message
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#ff6b6b';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '14px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText('QR Error', canvas.width / 2, canvas.height / 2);
+      }
     }
 
     render() {
@@ -118,7 +179,7 @@ export class QrCodeWidget extends LitElement {
 
       return html`
         <div class="qr-container">
-          <img class="qr-image" alt="QR Code" />
+          <canvas class="qr-canvas" width="${this.size}" height="${this.size}"></canvas>
           <div class="qr-text">${this.data.length > 50 ? this.data.substring(0, 47) + '...' : this.data}</div>
         </div>
       `;
@@ -129,8 +190,8 @@ export class QrCodeWidget extends LitElement {
     }
 
     getCopyHTML() {
-      const img = this.shadowRoot.querySelector('img');
-      return img && img.src ? `<img src="${img.src}" alt="QR Code">` : '';
+      const canvas = this.shadowRoot.querySelector('canvas');
+      return canvas ? `<img src="${canvas.toDataURL('image/png')}" alt="QR Code" width="${this.size}" height="${this.size}">` : '';
     }
 
     getContextMenuDefinition() {
@@ -142,11 +203,24 @@ export class QrCodeWidget extends LitElement {
           }
         },
         {
-          text: 'copy QR image URL',
-          action: () => {
-            const img = this.shadowRoot.querySelector('img');
-            if (img && img.src) {
-              navigator.clipboard.writeText(img.src);
+          text: 'copy QR image',
+          action: async () => {
+            try {
+              const canvas = this.shadowRoot.querySelector('canvas');
+              if (canvas) {
+                canvas.toBlob(async (blob) => {
+                  await navigator.clipboard.write([
+                    new ClipboardItem({ 'image/png': blob })
+                  ]);
+                });
+              }
+            } catch (error) {
+              console.error('Failed to copy QR image:', error);
+              // Fallback: copy data URL
+              const canvas = this.shadowRoot.querySelector('canvas');
+              if (canvas) {
+                navigator.clipboard.writeText(canvas.toDataURL('image/png'));
+              }
             }
           }
         }
