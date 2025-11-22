@@ -220,11 +220,11 @@ deno run --reload -A ${SHEETBOT_BASEURL}/scripts/agent.ts</code></pre>
                 columns: [
                     { name: "widget_sheetkey", widgettype: "sheetkey", minwidth: 200, minheight: 200, columnorder: 1, datatype: "TEXT" },
                     { name: "widget_schedule_task", widgettype: "schedule-task", minwidth: 200, minheight: 200, columnorder: 2, datatype: "TEXT" },
-                    { name: "widget_multi", widgettype: "multi", minwidth: 200, minheight: 200, columnorder: 3, datatype: "TEXT" },
+                    { name: "widget_multi", widgettype: ["multi", "text", "code"], minwidth: 200, minheight: 200, columnorder: 3, datatype: "TEXT" },
                     { name: "widget_transitions", widgettype: "transitions", minwidth: 200, minheight: 200, columnorder: 4, datatype: "TEXT" }
                 ],
                 rows: [
-                    ["sheet_001", "build.ts", "Multi content", '[{"statuses":["COMPLETED"],"condition":{"type":"object","properties":{"data":{"type":"object","properties":{"errorCount":{"type":"number","maximum":3}}}}},"timing":{"every":"1h","immediate":false},"transitionTo":"DELETED"}]']
+                    ["sheet_001", "build.ts", "function build() {\n    console.log('Building project...');\n    return 'success';\n}", '[{"statuses":["COMPLETED"],"condition":{"type":"object","properties":{"data":{"type":"object","properties":{"errorCount":{"type":"number","maximum":3}}}}},"timing":{"every":"1h","immediate":false},"transitionTo":"DELETED"}]']
                 ]
             }
         };
