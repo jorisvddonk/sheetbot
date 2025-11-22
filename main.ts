@@ -1,3 +1,9 @@
+// ██ ███    ███ ██████   ██████  ██████  ████████ ███████
+// ██ ████  ████ ██   ██ ██    ██ ██   ██    ██    ██
+// ██ ██ ████ ██ ██████  ██    ██ ██████     ██    ███████
+// ██ ██  ██  ██ ██      ██    ██ ██   ██    ██         ██
+// ██ ██      ██ ██       ██████  ██   ██    ██    ███████
+
 import https from "node:https";
 import { existsSync } from "https://deno.land/std@0.220.1/fs/mod.ts";
 import express from "npm:express@4.18.3";
@@ -20,7 +26,12 @@ import { createGetAgentTemplateHandler, createGetTaskScriptHandler } from "./lib
 import { createUpsertSheetDataHandler, createDeleteSheetRowHandler, createGetSheetHandler, createListSheetsHandler } from "./lib/handlers/sheets.ts";
 import { createDeleteArtefactHandler } from "./lib/handlers/artefacts.ts";
 
-// Init system
+// ██ ███    ██ ██ ████████     ███████ ██    ██ ███████ ████████ ███████ ███    ███
+// ██ ████   ██ ██    ██        ██       ██  ██  ██         ██    ██      ████  ████
+// ██ ██ ██  ██ ██    ██        ███████   ████   ███████    ██    █████   ██ ████ ██
+// ██ ██  ██ ██ ██    ██             ██    ██         ██    ██    ██      ██  ██  ██
+// ██ ██   ████ ██    ██        ███████    ██    ███████    ██    ███████ ██      ██
+
 const initDir = "./init/";
 try {
     await Deno.mkdir(initDir, { recursive: true });
@@ -37,6 +48,12 @@ for (const file of initFiles) {
     }
 }
 
+// ███    ███ ██ ██████  ██████  ██      ███████ ██     ██  █████  ██████  ███████     ███████ ███████ ████████ ██    ██ ██████
+// ████  ████ ██ ██   ██ ██   ██ ██      ██      ██     ██ ██   ██ ██   ██ ██          ██      ██         ██    ██    ██ ██   ██
+// ██ ████ ██ ██ ██   ██ ██   ██ ██      █████   ██  █  ██ ███████ ██████  █████       ███████ █████      ██    ██    ██ ██████
+// ██  ██  ██ ██ ██   ██ ██   ██ ██      ██      ██ ███ ██ ██   ██ ██   ██ ██               ██ ██         ██    ██    ██ ██
+// ██      ██ ██ ██████  ██████  ███████ ███████  ███ ███  ██   ██ ██   ██ ███████     ███████ ███████    ██     ██████  ██
+
 const db = initDatabase();
 const taskEventEmitter = new TaskEventEmitter();
 const taskTracker = new TaskTracker(taskEventEmitter);
@@ -51,9 +68,23 @@ startTransitionWorker(db, transitionTracker);
 
 const userdb = new UserDB();
 
+// ███████ ██   ██ ██████  ██████  ███████ ███████ ███████      █████  ██████  ██████      ███████ ███████ ████████ ██    ██ ██████
+// ██       ██ ██  ██   ██ ██   ██ ██      ██      ██          ██   ██ ██   ██ ██   ██     ██      ██         ██    ██    ██ ██   ██
+// █████     ███   ██████  ██████  █████   ███████ ███████     ███████ ██████  ██████      ███████ █████      ██    ██    ██ ██████
+// ██       ██ ██  ██      ██   ██ ██           ██      ██     ██   ██ ██      ██               ██ ██         ██    ██    ██ ██
+// ███████ ██   ██ ██      ██   ██ ███████ ███████ ███████     ██   ██ ██      ██          ███████ ███████    ██     ██████  ██
+
 const app = express();
 app.use(express.json());
 app.use(express.static('static'));
+
+app.set('trust proxy', (ip: string) => {
+    if (ip === '127.0.0.1') {
+        return true; // trusted IPs
+    } else {
+        return false;
+    }
+});
 
 // API validation middleware (only in development)
 if (Deno.env.get("NODE_ENV") !== "production") {
@@ -73,9 +104,11 @@ if (Deno.env.get("NODE_ENV") !== "production") {
 
 // Define routes directly
 
-// =============================================================================
-// =                              BASIC ROUTES                                 =
-// =============================================================================
+// ██████   █████  ███████ ██  ██████     ██████   ██████  ██    ██ ████████ ███████ ███████
+// ██   ██ ██   ██ ██      ██ ██          ██   ██ ██    ██ ██    ██    ██    ██      ██
+// ███████ ███████ ███████ ██ ██          ██████  ██    ██ ██    ██    ██    █████   ███████
+// ██   ██ ██   ██      ██ ██ ██          ██   ██ ██    ██ ██    ██    ██    ██           ██
+// ██████  ██   ██ ███████ ██  ██████     ██   ██  ██████   ██████     ██    ███████ ███████
 
 // GET / - Serves the main index page of the SheetBot web interface
 app.get("/", createIndexHandler());
@@ -86,9 +119,11 @@ app.get("/openapi.yaml", createOpenApiHandler());
 // POST /login - Authenticates a user and returns a JWT token
 app.post("/login", createLoginHandler(userdb));
 
-// =============================================================================
-// =                       TASK MANAGEMENT ROUTES                            =
-// =============================================================================
+// ████████  █████  ███████ ██   ██     ███    ███  █████  ███    ██  █████   ██████  ███████ ███    ███ ███████ ███    ██ ████████     ██████   ██████  ██    ██ ████████ ███████ ███████
+//    ██    ██   ██ ██      ██  ██      ████  ████ ██   ██ ████   ██ ██   ██ ██       ██      ████  ████ ██      ████   ██    ██        ██   ██ ██    ██ ██    ██    ██    ██      ██
+//    ██    ███████ ███████ █████       ██ ████ ██ ███████ ██ ██  ██ ███████ ██   ███ █████   ██ ████ ██ █████   ██ ██  ██    ██        ██████  ██    ██ ██    ██    ██    █████   ███████
+//    ██    ██   ██      ██ ██  ██      ██  ██  ██ ██   ██ ██  ██ ██ ██   ██ ██    ██ ██      ██  ██  ██ ██      ██  ██ ██    ██        ██   ██ ██    ██ ██    ██    ██    ██           ██
+//    ██    ██   ██ ███████ ██   ██     ██      ██ ██   ██ ██   ████ ██   ██  ██████  ███████ ██      ██ ███████ ██   ████    ██        ██   ██  ██████   ██████     ██    ███████ ███████
 
 // GET /tasks - Retrieves a list of all tasks in the system
 app.get("/tasks", requiresLogin, createGetTasksHandler(db));
@@ -132,16 +167,20 @@ app.get('/tasks/:id/artefacts/:filename', createGetArtefactHandler(db));
 // DELETE /tasks/:id/artefacts/:filename - Removes an artefact file from a task
 app.delete('/tasks/:id/artefacts/:filename', requiresLogin, requiresPermission("deleteTasks"), createDeleteTaskArtefactHandler(db));
 
-// =============================================================================
-// =                           LIBRARY ROUTES                                =
-// =============================================================================
+// ██      ██ ██████  ██████   █████  ██████  ██    ██     ██████   ██████  ██    ██ ████████ ███████ ███████
+// ██      ██ ██   ██ ██   ██ ██   ██ ██   ██  ██  ██      ██   ██ ██    ██ ██    ██    ██    ██      ██
+// ██      ██ ██████  ██████  ███████ ██████    ████       ██████  ██    ██ ██    ██    ██    █████   ███████
+// ██      ██ ██   ██ ██   ██ ██   ██ ██   ██    ██        ██   ██ ██    ██ ██    ██    ██    ██           ██
+// ███████ ██ ██████  ██   ██ ██   ██ ██   ██    ██        ██   ██  ██████   ██████     ██    ███████ ███████
 
 // GET /library - Retrieves the library of available scripts/templates
 app.get("/library", requiresLogin, createGetLibraryHandler());
 
-// =============================================================================
-// =                          MONITORING ROUTES                              =
-// =============================================================================
+// ███    ███  ██████  ███    ██ ██ ████████  ██████  ██████  ██ ███    ██  ██████      ██████   ██████  ██    ██ ████████ ███████ ███████
+// ████  ████ ██    ██ ████   ██ ██    ██    ██    ██ ██   ██ ██ ████   ██ ██           ██   ██ ██    ██ ██    ██    ██    ██      ██
+// ██ ████ ██ ██    ██ ██ ██  ██ ██    ██    ██    ██ ██████  ██ ██ ██  ██ ██   ███     ██████  ██    ██ ██    ██    ██    █████   ███████
+// ██  ██  ██ ██    ██ ██  ██ ██ ██    ██    ██    ██ ██   ██ ██ ██  ██ ██ ██    ██     ██   ██ ██    ██ ██    ██    ██    ██           ██
+// ██      ██  ██████  ██   ████ ██    ██     ██████  ██   ██ ██ ██   ████  ██████      ██   ██  ██████   ██████     ██    ███████ ███████
 
 // GET /tasktracker - Retrieves task execution statistics and metrics
 app.get("/tasktracker", requiresLogin, createGetTaskTrackerHandler(taskTracker));
@@ -152,9 +191,11 @@ app.get("/agenttracker", requiresLogin, createGetAgentTrackerHandler(agentTracke
 // GET /transitiontracker - Retrieves task transition evaluation statistics
 app.get("/transitiontracker", requiresLogin, createGetTransitionTrackerHandler(transitionTracker));
 
-// =============================================================================
-// =                           SCRIPT ROUTES                                 =
-// =============================================================================
+// ███████  ██████ ██████  ██ ██████  ████████     ██████   ██████  ██    ██ ████████ ███████ ███████
+// ██      ██      ██   ██ ██ ██   ██    ██        ██   ██ ██    ██ ██    ██    ██    ██      ██
+// ███████ ██      ██████  ██ ██████     ██        ██████  ██    ██ ██    ██    ██    █████   ███████
+//      ██ ██      ██   ██ ██ ██         ██        ██   ██ ██    ██ ██    ██    ██    ██           ██
+// ███████  ██████ ██   ██ ██ ██         ██        ██   ██  ██████   ██████     ██    ███████ ███████
 
 // Static file serving for scripts directory - Serves script files and templates
 app.use('/scripts', express.static('scripts'));
@@ -165,9 +206,11 @@ app.get("/scripts/agent(\.ts|\.py)?", createGetAgentTemplateHandler());
 // GET /scripts/:id.* - Serves the script for a specific task, with dependency injection
 app.get("/scripts/:id\.?.*", ...createGetTaskScriptHandler(db));
 
-// =============================================================================
-// =                          SHEET DATA ROUTES                              =
-// =============================================================================
+// ███████ ██   ██ ███████ ███████ ████████     ██████   █████  ████████  █████      ██████   ██████  ██    ██ ████████ ███████ ███████
+// ██      ██   ██ ██      ██         ██        ██   ██ ██   ██    ██    ██   ██     ██   ██ ██    ██ ██    ██    ██    ██      ██
+// ███████ ███████ █████   █████      ██        ██   ██ ███████    ██    ███████     ██████  ██    ██ ██    ██    ██    █████   ███████
+//      ██ ██   ██ ██      ██         ██        ██   ██ ██   ██    ██    ██   ██     ██   ██ ██    ██ ██    ██    ██    ██           ██
+// ███████ ██   ██ ███████ ███████    ██        ██████  ██   ██    ██    ██   ██     ██   ██  ██████   ██████     ██    ███████ ███████
 
 // POST /sheets/:id/data - Inserts or updates data in a sheet
 app.post("/sheets/:id/data", requiresLogin, requiresPermission("putSheetData"), createUpsertSheetDataHandler());
@@ -181,9 +224,11 @@ app.get("/sheets/:id", requiresLogin, createGetSheetHandler());
 // GET /sheets - Lists all available sheets in the system
 app.get("/sheets", requiresLogin, createListSheetsHandler());
 
-// =============================================================================
-// =                            ARTEFACT ROUTES                              =
-// =============================================================================
+// █████  ██████  ████████ ███████ ███████  █████   ██████ ████████     ██████   ██████  ██    ██ ████████ ███████ ███████
+// ██   ██ ██   ██    ██    ██      ██      ██   ██ ██         ██        ██   ██ ██    ██ ██    ██    ██    ██      ██
+// ███████ ██████     ██    █████   █████   ███████ ██         ██        ██████  ██    ██ ██    ██    ██    █████   ███████
+// ██   ██ ██   ██    ██    ██      ██      ██   ██ ██         ██        ██   ██ ██    ██ ██    ██    ██    ██           ██
+// ██   ██ ██   ██    ██    ███████ ██      ██   ██  ██████    ██        ██   ██  ██████   ██████     ██    ███████ ███████
 
 // Static file serving for artefacts directory - Serves uploaded artefact files
 app.use('/artefacts', express.static('artefacts'));
@@ -191,13 +236,11 @@ app.use('/artefacts', express.static('artefacts'));
 // DELETE /artefacts/* - Deletes artefact files from the system
 app.delete('/artefacts/*', requiresLogin, requiresPermission("deleteTasks"), createDeleteArtefactHandler());
 
-app.set('trust proxy', (ip: string) => {
-    if (ip === '127.0.0.1') {
-        return true; // trusted IPs
-    } else {
-        return false;
-    }
-});
+// ███████ ███████ ██████  ██    ██ ███████ ██████      ███████ ████████  █████  ██████  ████████ ██    ██ ██████
+// ██      ██      ██   ██ ██    ██ ██      ██   ██     ██         ██    ██   ██ ██   ██    ██    ██    ██ ██   ██
+// ███████ █████   ██████  ██    ██ █████   ██████      ███████    ██    ███████ ██████     ██    ██    ██ ██████
+//      ██ ██      ██   ██  ██  ██  ██      ██   ██          ██    ██    ██   ██ ██   ██    ██    ██    ██ ██
+// ███████ ███████ ██   ██   ████   ███████ ██   ██     ███████    ██    ██   ██ ██   ██    ██     ██████  ██
 
 app.listen(3000);
 console.log("listening on http://localhost:3000/");
