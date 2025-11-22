@@ -36,15 +36,23 @@ export class JsonViewerWidget extends LitElement {
         font-style: italic;
       }
 
-      .json-toggle {
-        cursor: pointer;
-        user-select: none;
-        margin-right: 4px;
-      }
+       .json-toggle {
+         cursor: pointer;
+         user-select: none;
+         margin-right: 4px;
+         color: #007bff;
+         font-weight: bold;
+         font-size: 10px;
+         padding: 2px 4px;
+         border-radius: 2px;
+         transition: all 0.2s ease;
+       }
 
-      .json-toggle:hover {
-        background: #e9ecef;
-      }
+       .json-toggle:hover {
+         background: #e9ecef;
+         color: #0056b3;
+         transform: scale(1.1);
+       }
 
       .json-collapsed {
         display: none;
