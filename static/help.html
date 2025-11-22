@@ -69,44 +69,76 @@ deno run --reload -A ${SHEETBOT_BASEURL}/scripts/agent.ts</code></pre>
         <h4>Text Widgets</h4>
         <p>Basic text display and formatting widgets</p>
         <element-grid id="text-widgets"></element-grid>
+        <details style="margin-top: 10px;">
+            <summary>Source Data</summary>
+            <pre><code id="text-data" class="language-json"></code></pre>
+        </details>
 
         <!-- Code & Data Widgets -->
         <h4>Code & Data Widgets</h4>
         <p>Widgets for displaying code, JSON data, and structured information</p>
         <element-grid id="code-widgets"></element-grid>
+        <details style="margin-top: 10px;">
+            <summary>Source Data</summary>
+            <pre><code id="code-data" class="language-json"></code></pre>
+        </details>
 
         <!-- Media & File Widgets -->
         <h4>Media & File Widgets</h4>
         <p>Widgets for images, downloads, and file-related content</p>
         <element-grid id="media-widgets"></element-grid>
+        <details style="margin-top: 10px;">
+            <summary>Source Data</summary>
+            <pre><code id="media-data" class="language-json"></code></pre>
+        </details>
 
         <!-- Task & Status Widgets -->
         <h4>Task & Status Widgets</h4>
         <p>Widgets for displaying task information and status indicators</p>
         <element-grid id="task-widgets"></element-grid>
+        <details style="margin-top: 10px;">
+            <summary>Source Data</summary>
+            <pre><code id="task-data" class="language-json"></code></pre>
+        </details>
 
-        <!-- Time & Progress Widgets -->
-        <h4>Time & Progress Widgets</h4>
+        <!-- Time & Progress Widgets</h4>
         <p>Widgets for time display, progress tracking, and duration formatting</p>
         <element-grid id="time-widgets"></element-grid>
+        <details style="margin-top: 10px;">
+            <summary>Source Data</summary>
+            <pre><code id="time-data" class="language-json"></code></pre>
+        </details>
 
         <!-- Rating & Quality Widgets -->
         <h4>Rating & Quality Widgets</h4>
         <p>Widgets for ratings, test results, and quality indicators</p>
         <element-grid id="rating-widgets"></element-grid>
+        <details style="margin-top: 10px;">
+            <summary>Source Data</summary>
+            <pre><code id="rating-data" class="language-json"></code></pre>
+        </details>
 
         <!-- Schema & Validation Widgets -->
         <h4>Schema & Validation Widgets</h4>
         <p>Widgets for JSON Schema display, validation, and explanation</p>
         <element-grid id="schema-widgets"></element-grid>
+        <details style="margin-top: 10px;">
+            <summary>Source Data</summary>
+            <pre><code id="schema-data" class="language-json"></code></pre>
+        </details>
 
         <!-- Interactive & Utility Widgets -->
         <h4>Interactive & Utility Widgets</h4>
         <p>Interactive buttons, multi-widgets, and utility components</p>
         <element-grid id="interactive-widgets"></element-grid>
+        <details style="margin-top: 10px;">
+            <summary>Source Data</summary>
+            <pre><code id="interactive-data" class="language-json"></code></pre>
+        </details>
     </div>
+</body>
 
-    <script>
+<script>
         const baseUrl = window.location.origin;
         document.getElementById('example-script').textContent = document.getElementById('example-script').textContent.replace('{{BASE_URL}}', baseUrl);
         document.getElementById('deno-prod').textContent = document.getElementById('deno-prod').textContent.replace('${SHEETBOT_BASEURL}', baseUrl);
@@ -197,47 +229,68 @@ deno run --reload -A ${SHEETBOT_BASEURL}/scripts/agent.ts</code></pre>
             }
         };
 
+
+
         // Set up each grid with its data
-        document.getElementById('text-widgets').setAttribute('data', JSON.stringify({
-            data: widgetData.text.rows,
-            columns: widgetData.text.columns
-        }));
+        const grids = [
+            'text-widgets', 'code-widgets', 'media-widgets', 'task-widgets',
+            'time-widgets', 'rating-widgets', 'schema-widgets', 'interactive-widgets'
+        ];
 
-        document.getElementById('code-widgets').setAttribute('data', JSON.stringify({
-            data: widgetData.code.rows,
-            columns: widgetData.code.columns
-        }));
+        grids.forEach(gridId => {
+            const element = document.getElementById(gridId);
+            if (element) {
+                const dataKey = gridId.replace('-widgets', '');
+                element.setAttribute('data', JSON.stringify({
+                    data: widgetData[dataKey].rows,
+                    columns: widgetData[dataKey].columns
+                }));
+            } else {
+                console.error(`Grid element ${gridId} not found`);
+            }
+        });
 
-        document.getElementById('media-widgets').setAttribute('data', JSON.stringify({
-            data: widgetData.media.rows,
-            columns: widgetData.media.columns
-        }));
+        // Populate source data displays immediately
+        const dataMapping = {
+            'text-data': 'text',
+            'code-data': 'code',
+            'media-data': 'media',
+            'task-data': 'task',
+            'time-data': 'time',
+            'rating-data': 'rating',
+            'schema-data': 'schema',
+            'interactive-data': 'interactive'
+        };
 
-        document.getElementById('task-widgets').setAttribute('data', JSON.stringify({
-            data: widgetData.task.rows,
-            columns: widgetData.task.columns
-        }));
+        // Test if JavaScript is running
+        console.log('JavaScript is running!');
+        console.log('widgetData exists:', typeof widgetData);
+        console.log('widgetData keys:', widgetData ? Object.keys(widgetData) : 'N/A');
 
-        document.getElementById('time-widgets').setAttribute('data', JSON.stringify({
-            data: widgetData.time.rows,
-            columns: widgetData.time.columns
-        }));
+        // Simple test - put some text in the first element
+        const testElement = document.getElementById('text-data');
+        if (testElement) {
+            testElement.innerText = 'TEST: JavaScript is working!';
+            console.log('Test element found and populated');
+        } else {
+            console.error('Test element NOT found');
+        }
 
-        document.getElementById('rating-widgets').setAttribute('data', JSON.stringify({
-            data: widgetData.rating.rows,
-            columns: widgetData.rating.columns
-        }));
+        // Populate data immediately since we're at the end of body
+        Object.keys(dataMapping).forEach(dataId => {
+            const element = document.getElementById(dataId);
+            const dataKey = dataMapping[dataId];
 
-        document.getElementById('schema-widgets').setAttribute('data', JSON.stringify({
-            data: widgetData.schema.rows,
-            columns: widgetData.schema.columns
-        }));
+            if (element && widgetData[dataKey]) {
+                element.textContent = JSON.stringify(widgetData[dataKey], null, 2);
+                console.log(`Successfully populated ${dataId}`);
+            } else {
+                console.error(`Failed to populate ${dataId} - element: ${!!element}, data: ${!!widgetData[dataKey]}`);
+            }
+        });
 
-        document.getElementById('interactive-widgets').setAttribute('data', JSON.stringify({
-            data: widgetData.interactive.rows,
-            columns: widgetData.interactive.columns
-        }));
-    </script>
-</body>
+        // Apply syntax highlighting to the code blocks
+        hljs.highlightAll();
+</script>
 
 </html>
