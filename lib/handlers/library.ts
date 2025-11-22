@@ -1,8 +1,5 @@
-import express from "npm:express@4.18.3";
-import { requiresLogin } from "../lib/auth.ts";
-
-export function setupLibraryRoutes(app: express.Application) {
-    app.get("/library", requiresLogin, (req, res) => {
+export function createGetLibraryHandler() {
+    return (req: any, res: any) => {
         const scriptFiles = Array.from(Deno.readDirSync("./scripts/").filter(x => (x.name.endsWith(".ts") || x.name.endsWith(".js") || x.name.endsWith(".py")) && !x.name.includes(".template.")));
         const library = scriptFiles.map(file => {
             const scriptText = new TextDecoder().decode(Deno.readFileSync(`./scripts/${file.name}`));
@@ -51,5 +48,5 @@ export function setupLibraryRoutes(app: express.Application) {
             };
         });
         res.json(library);
-    });
+    };
 }

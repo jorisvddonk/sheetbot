@@ -1,11 +1,5 @@
-import express from "npm:express@4.18.3";
-import { requiresLogin, requiresPermission } from "../lib/auth.ts";
-
-const PERMISSION_DELETE_TASKS = "deleteTasks";
-
-export function setupArtefactRoutes(app: express.Application) {
-    app.use('/artefacts', express.static('artefacts'));
-    app.delete('/artefacts/*', requiresLogin, requiresPermission(PERMISSION_DELETE_TASKS), async function (req, res) {
+export function createDeleteArtefactHandler() {
+    return async (req: any, res: any) => {
         if (req.params[0].indexOf("..") === -1) {
             const filepath = `./artefacts/${req.params[0]}`;
             try {
@@ -20,5 +14,5 @@ export function setupArtefactRoutes(app: express.Application) {
             res.status(404);
             res.send();
         }
-    });
+    };
 }

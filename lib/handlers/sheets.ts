@@ -1,12 +1,10 @@
-import express from "npm:express@4.18.3";
-import { validateSheetName } from "../lib/sheet_validator.ts";
-import { SheetDB } from "../lib/data_providers/sqlite/sheetdb.ts";
-import { requiresLogin, requiresPermission } from "../lib/auth.ts";
+import { validateSheetName } from "../sheet_validator.ts";
+import { SheetDB } from "../data_providers/sqlite/sheetdb.ts";
 
 const PERMISSION_PUT_SHEET_DATA = "putSheetData";
 
-export function setupSheetRoutes(app: express.Application) {
-    app.post("/sheets/:id/data", requiresLogin, requiresPermission(PERMISSION_PUT_SHEET_DATA), (req, res) => {
+export function createUpsertSheetDataHandler() {
+    return (req: any, res: any) => {
         if (!validateSheetName(req.params.id)) {
             res.status(500);
             res.send("Invalid sheet name");
@@ -18,7 +16,7 @@ export function setupSheetRoutes(app: express.Application) {
             res.send("Data needs to be JSON with a 'key' property");
             return;
         }
-        
+
         const sheetdb = new SheetDB(`./sheets/${req.params.id}.db`, false); // TODO: move to a map? what's the performance of this?
         const data = Object.entries(Object.assign({key: req.body.key}, req.body)); // Need to put the primary key first... This is terrible and I guess slow as well, but it works.
         // console.log('Upsert data:', data);
@@ -26,8 +24,11 @@ export function setupSheetRoutes(app: express.Application) {
         sheetdb.close();
         res.status(200);
         res.send();
-    });
-    app.delete("/sheets/:id/data/:key", requiresLogin, requiresPermission(PERMISSION_PUT_SHEET_DATA), (req, res) => {
+    };
+}
+
+export function createDeleteSheetRowHandler() {
+    return (req: any, res: any) => {
         if (!validateSheetName(req.params.id)) {
             res.status(500);
             res.send("Invalid sheet name");
@@ -39,9 +40,11 @@ export function setupSheetRoutes(app: express.Application) {
         sheetdb.close();
         res.status(204);
         res.send();
-    });
+    };
+}
 
-    app.get("/sheets/:id", requiresLogin, (req, res) => {
+export function createGetSheetHandler() {
+    return (req: any, res: any) => {
         if (!validateSheetName(req.params.id)) {
             res.status(500);
             res.send("Invalid sheet name");
@@ -65,9 +68,11 @@ export function setupSheetRoutes(app: express.Application) {
         sheetdb.close();
         res.json({columns: schema, rows});
         res.send();
-    });
+    };
+}
 
-    app.get("/sheets", requiresLogin, (req, res) => {
+export function createListSheetsHandler() {
+    return (req: any, res: any) => {
         const retval = [];
         for (const dirEntry of Deno.readDirSync("./sheets/")) {
             if (dirEntry.isFile && dirEntry.name.endsWith(".db")) {
@@ -76,5 +81,5 @@ export function setupSheetRoutes(app: express.Application) {
         }
 
         res.json(retval);
-    });
+    };
 }
