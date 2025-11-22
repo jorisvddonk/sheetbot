@@ -32,13 +32,211 @@ export SHEETBOT_AUTH_PASS=password
 export SHEETBOT_BASEURL={{BASE_URL}}
 
 deno run --reload -A ${SHEETBOT_BASEURL}/scripts/agent.ts</code></pre>
+
+        <h3>Widget Gallery</h3>
+        <p>Below is a comprehensive gallery of all available widgets in SheetBot:</p>
+
+        <!-- Widget Scripts -->
+        <script src="element-table.js" type="module"></script>
+        <script src="element-grid.js" type="module"></script>
+        <script src="element-contextmenu.js" type="module"></script>
+        <script src="widget-text.js" type="module"></script>
+        <script src="widget-text-centered.js" type="module"></script>
+        <script src="widget-code.js" type="module"></script>
+        <script src="widget-image.js" type="module"></script>
+        <script src="widget-download.js" type="module"></script>
+        <script src="widget-hashimg.js" type="module"></script>
+        <script src="widget-sheetkey.js" type="module"></script>
+        <script src="widget-taskid.js" type="module"></script>
+        <script src="widget-taskname.js" type="module"></script>
+        <script src="widget-taskstatus.js" type="module"></script>
+        <script src="widget-tasktype.js" type="module"></script>
+        <script src="widget-timestamp.js" type="module"></script>
+        <script src="widget-relative-timestamp.js" type="module"></script>
+        <script src="widget-jsonschema.js" type="module"></script>
+        <script src="widget-jsonschema-validation.js" type="module"></script>
+        <script src="widget-jsonschema-explanation.js" type="module"></script>
+        <script src="widget-multi.js" type="module"></script>
+        <script src="widget-testresult.js" type="module"></script>
+        <script src="widget-transitions.js" type="module"></script>
+        <script src="widget-schedule-task.js" type="module"></script>
+        <script src="widget-json-viewer.js" type="module"></script>
+        <script src="widget-progress.js" type="module"></script>
+        <script src="widget-duration.js" type="module"></script>
+        <script src="widget-rating.js" type="module"></script>
+
+        <!-- Text Widgets -->
+        <h4>Text Widgets</h4>
+        <p>Basic text display and formatting widgets</p>
+        <element-grid id="text-widgets"></element-grid>
+
+        <!-- Code & Data Widgets -->
+        <h4>Code & Data Widgets</h4>
+        <p>Widgets for displaying code, JSON data, and structured information</p>
+        <element-grid id="code-widgets"></element-grid>
+
+        <!-- Media & File Widgets -->
+        <h4>Media & File Widgets</h4>
+        <p>Widgets for images, downloads, and file-related content</p>
+        <element-grid id="media-widgets"></element-grid>
+
+        <!-- Task & Status Widgets -->
+        <h4>Task & Status Widgets</h4>
+        <p>Widgets for displaying task information and status indicators</p>
+        <element-grid id="task-widgets"></element-grid>
+
+        <!-- Time & Progress Widgets -->
+        <h4>Time & Progress Widgets</h4>
+        <p>Widgets for time display, progress tracking, and duration formatting</p>
+        <element-grid id="time-widgets"></element-grid>
+
+        <!-- Rating & Quality Widgets -->
+        <h4>Rating & Quality Widgets</h4>
+        <p>Widgets for ratings, test results, and quality indicators</p>
+        <element-grid id="rating-widgets"></element-grid>
+
+        <!-- Schema & Validation Widgets -->
+        <h4>Schema & Validation Widgets</h4>
+        <p>Widgets for JSON Schema display, validation, and explanation</p>
+        <element-grid id="schema-widgets"></element-grid>
+
+        <!-- Interactive & Utility Widgets -->
+        <h4>Interactive & Utility Widgets</h4>
+        <p>Interactive buttons, multi-widgets, and utility components</p>
+        <element-grid id="interactive-widgets"></element-grid>
     </div>
+
     <script>
         const baseUrl = window.location.origin;
         document.getElementById('example-script').textContent = document.getElementById('example-script').textContent.replace('{{BASE_URL}}', baseUrl);
         document.getElementById('deno-prod').textContent = document.getElementById('deno-prod').textContent.replace('${SHEETBOT_BASEURL}', baseUrl);
         document.getElementById('python-prod').textContent = document.getElementById('python-prod').textContent.replace('${SHEETBOT_BASEURL}', baseUrl);
         hljs.highlightAll();
+
+        // Sample data for each widget section
+        const widgetData = {
+            text: {
+                columns: [
+                    { name: "widget_text", widgettype: "text", minwidth: 200, minheight: 200, columnorder: 1, datatype: "TEXT" },
+                    { name: "widget_text_centered", widgettype: "text-centered", minwidth: 200, minheight: 200, columnorder: 2, datatype: "TEXT" }
+                ],
+                rows: [
+                    ["Hello World", "Centered Text"]
+                ]
+            },
+            code: {
+                columns: [
+                    { name: "widget_code", widgettype: "code", minwidth: 200, minheight: 200, columnorder: 1, datatype: "TEXT" },
+                    { name: "widget_json_viewer", widgettype: "json-viewer", minwidth: 200, minheight: 200, columnorder: 2, datatype: "TEXT" }
+                ],
+                rows: [
+                    ["console.log('Hello!')\nconst x = 42;", '{"name":"John","age":30,"nested":{"value":123,"array":[1,2,3]}}']
+                ]
+            },
+            media: {
+                columns: [
+                    { name: "widget_image", widgettype: "image", minwidth: 200, minheight: 200, maxwidth: 400, maxheight: 400, columnorder: 1, datatype: "TEXT" },
+                    { name: "widget_download", widgettype: "download", minwidth: 200, minheight: 200, maxwidth: 400, maxheight: 400, columnorder: 2, datatype: "TEXT" },
+                    { name: "widget_hashimg", widgettype: "hashimg", minwidth: 200, minheight: 200, maxwidth: 400, maxheight: 400, columnorder: 3, datatype: "TEXT" }
+                ],
+                rows: [
+                    ["logo.png", "example.txt", "abc123"]
+                ]
+            },
+            task: {
+                columns: [
+                    { name: "widget_taskstatus", widgettype: "taskstatus", minwidth: 200, minheight: 200, columnorder: 1, datatype: "INTEGER" },
+                    { name: "widget_taskid", widgettype: "taskid", minwidth: 200, minheight: 200, columnorder: 2, datatype: "TEXT" },
+                    { name: "widget_taskname", widgettype: "taskname", minwidth: 200, minheight: 200, columnorder: 3, datatype: "TEXT" },
+                    { name: "widget_tasktype", widgettype: "tasktype", minwidth: 200, minheight: 200, columnorder: 4, datatype: "TEXT" }
+                ],
+                rows: [
+                    [2, "abc-123-def-456", "Build Project", "deno"]
+                ]
+            },
+            time: {
+                columns: [
+                    { name: "widget_timestamp", widgettype: "timestamp", minwidth: 200, minheight: 200, columnorder: 1, datatype: "INTEGER" },
+                    { name: "widget_relative_timestamp", widgettype: "relative-timestamp", minwidth: 200, minheight: 200, columnorder: 2, datatype: "INTEGER" },
+                    { name: "widget_progress", widgettype: "progress", minwidth: 200, minheight: 200, columnorder: 3, datatype: "INTEGER" },
+                    { name: "widget_duration", widgettype: "duration", minwidth: 200, minheight: 200, columnorder: 4, datatype: "INTEGER" }
+                ],
+                rows: [
+                    [1640995200, Math.floor(Date.now()/1000) - 3600, 75, 3661]
+                ]
+            },
+            rating: {
+                columns: [
+                    { name: "widget_rating", widgettype: "rating", minwidth: 200, minheight: 200, columnorder: 1, datatype: "REAL" },
+                    { name: "widget_testresult", widgettype: "testresult", minwidth: 200, minheight: 200, columnorder: 2, datatype: "TEXT" }
+                ],
+                rows: [
+                    [4.5, "PASS"]
+                ]
+            },
+            schema: {
+                columns: [
+                    { name: "widget_jsonschema", widgettype: "jsonschema", minwidth: 200, minheight: 200, columnorder: 1, datatype: "TEXT" },
+                    { name: "widget_jsonschema_validation", widgettype: "jsonschema-validation", minwidth: 200, minheight: 200, columnorder: 2, datatype: "TEXT" },
+                    { name: "widget_jsonschema_explanation", widgettype: "jsonschema-explanation", minwidth: 200, minheight: 200, columnorder: 3, datatype: "TEXT" }
+                ],
+                rows: [
+                    ['{"type":"string","maxLength":100}', "valid", '{"type":"object","required":["name"],"properties":{"name":{"type":"string"}}}']
+                ]
+            },
+            interactive: {
+                columns: [
+                    { name: "widget_sheetkey", widgettype: "sheetkey", minwidth: 200, minheight: 200, columnorder: 1, datatype: "TEXT" },
+                    { name: "widget_schedule_task", widgettype: "schedule-task", minwidth: 200, minheight: 200, columnorder: 2, datatype: "TEXT" },
+                    { name: "widget_multi", widgettype: "multi", minwidth: 200, minheight: 200, columnorder: 3, datatype: "TEXT" },
+                    { name: "widget_transitions", widgettype: "transitions", minwidth: 200, minheight: 200, columnorder: 4, datatype: "TEXT" }
+                ],
+                rows: [
+                    ["sheet_001", "build.ts", "Multi content", "[]"]
+                ]
+            }
+        };
+
+        // Set up each grid with its data
+        document.getElementById('text-widgets').setAttribute('data', JSON.stringify({
+            data: widgetData.text.rows,
+            columns: widgetData.text.columns
+        }));
+
+        document.getElementById('code-widgets').setAttribute('data', JSON.stringify({
+            data: widgetData.code.rows,
+            columns: widgetData.code.columns
+        }));
+
+        document.getElementById('media-widgets').setAttribute('data', JSON.stringify({
+            data: widgetData.media.rows,
+            columns: widgetData.media.columns
+        }));
+
+        document.getElementById('task-widgets').setAttribute('data', JSON.stringify({
+            data: widgetData.task.rows,
+            columns: widgetData.task.columns
+        }));
+
+        document.getElementById('time-widgets').setAttribute('data', JSON.stringify({
+            data: widgetData.time.rows,
+            columns: widgetData.time.columns
+        }));
+
+        document.getElementById('rating-widgets').setAttribute('data', JSON.stringify({
+            data: widgetData.rating.rows,
+            columns: widgetData.rating.columns
+        }));
+
+        document.getElementById('schema-widgets').setAttribute('data', JSON.stringify({
+            data: widgetData.schema.rows,
+            columns: widgetData.schema.columns
+        }));
+
+        document.getElementById('interactive-widgets').setAttribute('data', JSON.stringify({
+            data: widgetData.interactive.rows,
+            columns: widgetData.interactive.columns
+        }));
     </script>
 </body>
 
