@@ -10,6 +10,21 @@ export function defaultDetermineAgentId(req: any): string {
     return req.ip || req.connection.remoteAddress || req.socket.remoteAddress || 'unknown';
 }
 
+/**
+ * Determines the agent ID using hostname from capabilities JSON, falling back to IP address.
+ * This is useful for agents that provide consistent hostnames in their capabilities.
+ * @param req The HTTP request object
+ * @returns The agent ID string
+ */
+export function hostnameBasedDetermineAgentId(req: any): string {
+    const capabilities = req.body?.capabilities;
+    if (capabilities?.hostname) {
+        return capabilities.hostname;
+    }
+    // Fallback to IP if hostname is not available
+    return req.ip || req.connection.remoteAddress || req.socket.remoteAddress || 'unknown';
+}
+
 export function createAgentTrackingMiddleware(eventEmitter: AgentEventEmitter, determineAgentId: (req: any) => string = defaultDetermineAgentId) {
     return {
        onAgentConnected: (req, res, next) => {
