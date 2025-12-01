@@ -62,24 +62,31 @@
 
             const columns = [
                 {
-                    "name": "ip",
+                    "name": "id",
                     "widgettype": "text-centered",
                     "minwidth": 200,
                     "columnorder": 0,
                     "datatype": "STRING"
                 },
                 {
+                    "name": "ip",
+                    "widgettype": "text-centered",
+                    "minwidth": 150,
+                    "columnorder": 1,
+                    "datatype": "STRING"
+                },
+                {
                     "name": "type",
                     "widgettype": "tasktype",
                     "minwidth": 100,
-                    "columnorder": 1,
+                    "columnorder": 2,
                     "datatype": "STRING"
                 },
                 {
                     "name": "lastSeen",
                     "widgettype": "relative-timestamp",
                     "minwidth": 150,
-                    "columnorder": 2,
+                    "columnorder": 3,
                     "datatype": "NUMERIC"
                 },
                 {
@@ -87,14 +94,14 @@
                     "widgettype": "code",
                     "maxwidth": 400,
                     "maxheight": 150,
-                    "columnorder": 3,
+                    "columnorder": 4,
                     "datatype": "TEXT"
                 },
                 {
                     "name": "lastSeenTimestamp",
                     "widgettype": "timestamp",
                     "minwidth": 120,
-                    "columnorder": 4,
+                    "columnorder": 5,
                     "datatype": "NUMERIC"
                 }
             ];
@@ -102,6 +109,7 @@
             const d = [];
             stats.agents.forEach(agent => {
                 d.push([
+                    agent.id,
                     agent.ip,
                     agent.type,
                     agent.lastSeen,

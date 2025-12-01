@@ -315,6 +315,9 @@ components:
           items:
             type: object
             properties:
+              id:
+                type: string
+                description: Agent ID
               ip:
                 type: string
                 description: Agent IP address

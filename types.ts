@@ -1918,6 +1918,8 @@ export interface components {
             /** @description Number of agents active in the time window */
             activeAgents?: number;
             agents?: {
+                /** @description Agent ID */
+                id?: string;
                 /** @description Agent IP address */
                 ip?: string;
                 /**

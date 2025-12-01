@@ -1,12 +1,12 @@
 import { AgentEventEmitter, AgentEvent, AgentEventData } from './agent-events.ts';
 
 export class AgentTracker {
-    private agents: Map<string, { ip: string, type: string, timestamp: number, capabilities?: Record<string, any> }> = new Map();
+    private agents: Map<string, { id: string, ip: string, type: string, timestamp: number, capabilities?: Record<string, any> }> = new Map();
 
     constructor(eventEmitter: AgentEventEmitter) {
         eventEmitter.on(AgentEvent.CONNECTED, (data: AgentEventData) => {
-            const key = `${data.ip}:${data.type}`;
-            this.agents.set(key, { ip: data.ip, type: data.type, timestamp: data.timestamp, capabilities: data.capabilities });
+            const key = `${data.id}:${data.type}`;
+            this.agents.set(key, { id: data.id, ip: data.ip, type: data.type, timestamp: data.timestamp, capabilities: data.capabilities });
         });
 
         // Clean up old agents every hour to keep data up to 1 day
@@ -20,7 +20,7 @@ export class AgentTracker {
 
         const activeAgents = Array.from(this.agents.entries())
             .filter(([key, data]) => data.timestamp > cutoff)
-            .map(([key, data]) => ({ ip: data.ip, type: data.type, lastSeen: data.timestamp, capabilities: data.capabilities }));
+            .map(([key, data]) => ({ id: data.id, ip: data.ip, type: data.type, lastSeen: data.timestamp, capabilities: data.capabilities }));
 
         return {
             totalUniqueAgents: this.agents.size,

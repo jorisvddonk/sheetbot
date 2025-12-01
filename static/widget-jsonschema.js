@@ -584,6 +584,7 @@ export class JsonSchemaWidget extends LitElement {
             validCount++;
           } else {
             invalidAgents.push({
+              id: agent.id,
               ip: agent.ip,
               errors: validate.errors
             });
@@ -598,7 +599,7 @@ export class JsonSchemaWidget extends LitElement {
           if (invalidAgents.length > 0) {
             message += `\n✗ Invalid for ${invalidAgents.length} agents:\n`;
             invalidAgents.forEach(agent => {
-              message += `\n${agent.ip}:\n${JSON.stringify(agent.errors, null, 2)}\n`;
+              message += `\n${agent.id} (${agent.ip}):\n${JSON.stringify(agent.errors, null, 2)}\n`;
             });
           }
           alert(message);

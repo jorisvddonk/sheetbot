@@ -299,7 +299,7 @@ export class JsonSchemaValidationWidget extends LitElement {
 
     renderAgentItem(agent, isValid, errors = null) {
       const capabilities = agent.capabilities || {};
-      const hostname = capabilities.hostname || agent.ip;
+      const hostname = capabilities.hostname || `${agent.id} (${agent.ip})`;
       const arch = capabilities.arch || 'unknown';
       const os = capabilities.os?.os || 'unknown';
       const majorVersion = capabilities.os?.release?.major_version || 'unknown';
