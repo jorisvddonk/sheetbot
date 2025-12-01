@@ -1,31 +1,57 @@
 import { AgentEventEmitter } from './agent-events.ts';
 
 /**
- * Default function to determine the agent ID for identification purposes.
- * Returns the IP address by default. Users can override this function to implement custom ID generation logic.
+ * Determines the agent ID using IP address.
  * @param req The HTTP request object
- * @returns The agent ID string
+ * @returns The agent ID string or null if not available
  */
-export function defaultDetermineAgentId(req: any): string {
-    return req.ip || req.connection.remoteAddress || req.socket.remoteAddress || 'unknown';
+export function ipBasedDetermineAgentId(req: any): string | null {
+    return req.ip || req.connection.remoteAddress || req.socket.remoteAddress || null;
 }
 
 /**
- * Determines the agent ID using hostname from capabilities JSON, falling back to IP address.
- * This is useful for agents that provide consistent hostnames in their capabilities.
+ * Determines the agent ID using hostname from capabilities JSON.
  * @param req The HTTP request object
- * @returns The agent ID string
+ * @returns The agent ID string or null if not available
  */
-export function hostnameBasedDetermineAgentId(req: any): string {
+export function hostnameBasedDetermineAgentId(req: any): string | null {
     const capabilities = req.body?.capabilities;
-    if (capabilities?.hostname) {
-        return capabilities.hostname;
-    }
-    // Fallback to IP if hostname is not available
-    return req.ip || req.connection.remoteAddress || req.socket.remoteAddress || 'unknown';
+    return capabilities?.hostname || null;
 }
 
-export function createAgentTrackingMiddleware(eventEmitter: AgentEventEmitter, determineAgentId: (req: any) => string = defaultDetermineAgentId) {
+/**
+ * Determines the agent ID using 'sheetbot_agent.id' from capabilities JSON.
+ * @param req The HTTP request object
+ * @returns The agent ID string or null if not available
+ */
+export function sheetbotAgentIdDetermineAgentId(req: any): string | null {
+    const capabilities = req.body?.capabilities;
+    return capabilities?.sheetbot_agent?.id || null;
+}
+
+/**
+ * Creates a composite ID determination function that tries multiple strategies in order.
+ * @param strategies Array of ID determination functions to try
+ * @param fallback A fallback function to use if all strategies fail (should return string | null)
+ * @returns A composite ID determination function
+ */
+export function chainDetermineAgentId(
+    strategies: ((req: any) => string | null)[],
+    fallback: (req: any) => string | null = ipBasedDetermineAgentId
+): (req: any) => string {
+    return (req: any): string => {
+        for (const strategy of strategies) {
+            const id = strategy(req);
+            if (id !== null) {
+                return id;
+            }
+        }
+        // If all strategies fail, use fallback
+        return fallback(req) || 'unknown';
+    };
+}
+
+export function createAgentTrackingMiddleware(eventEmitter: AgentEventEmitter, determineAgentId: (req: any) => string = chainDetermineAgentId([sheetbotAgentIdDetermineAgentId, hostnameBasedDetermineAgentId])) {
     return {
        onAgentConnected: (req, res, next) => {
           // Middleware to emit agent connection events

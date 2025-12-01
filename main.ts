@@ -14,7 +14,7 @@ import { TaskEventEmitter } from "./lib/task-events.ts";
 import { createTaskTrackingMiddleware } from "./lib/task-tracking-middleware.ts";
 import { AgentTracker } from "./lib/agenttracker.ts";
 import { AgentEventEmitter } from "./lib/agent-events.ts";
-import { createAgentTrackingMiddleware, hostnameBasedDetermineAgentId } from "./lib/agent-tracking-middleware.ts";
+import { createAgentTrackingMiddleware, chainDetermineAgentId, sheetbotAgentIdDetermineAgentId, hostnameBasedDetermineAgentId, ipBasedDetermineAgentId } from "./lib/agent-tracking-middleware.ts";
 import { TransitionTracker } from "./lib/transitiontracker.ts";
 import { requiresLogin, requiresPermission } from "./lib/auth.ts";
 import { UserDB } from "./lib/data_providers/sqlite/userdb.ts";
@@ -60,7 +60,7 @@ const taskTracker = new TaskTracker(taskEventEmitter);
 const taskTrackingMiddleware = createTaskTrackingMiddleware(taskEventEmitter);
 const agentEventEmitter = new AgentEventEmitter();
 const agentTracker = new AgentTracker(agentEventEmitter);
-const agentTrackingMiddleware = createAgentTrackingMiddleware(agentEventEmitter, hostnameBasedDetermineAgentId);
+const agentTrackingMiddleware = createAgentTrackingMiddleware(agentEventEmitter, chainDetermineAgentId([sheetbotAgentIdDetermineAgentId, hostnameBasedDetermineAgentId], ipBasedDetermineAgentId));
 const transitionTracker = new TransitionTracker();
 transitionTracker.startCleanup();
 
