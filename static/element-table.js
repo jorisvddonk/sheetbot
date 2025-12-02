@@ -326,7 +326,7 @@ export class TableElement extends LitElement {
     
     render() {
         if (this.data !== null && this.data !== undefined) {
-            return html`<span>${this.tableGenerator(JSON.parse(this.data))}<span><element-contextmenu ${ref(this.contextMenuRef)}/></span></span>`;
+            return html`${this.tableGenerator(JSON.parse(this.data))}<element-contextmenu ${ref(this.contextMenuRef)}/>`;
         }
         return html`<div></div>`;
     }
