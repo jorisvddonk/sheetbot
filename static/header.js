@@ -6,6 +6,7 @@ function loadHeader() {
         initializeTheme();
         showWelcomeMessage();
         setupThemeToggle();
+        setupMobileMenu();
         setupLogout();
     });
 }
@@ -128,6 +129,51 @@ function setupThemeToggle() {
             toggleDarkMode();
         });
     }
+}
+
+function setupMobileMenu() {
+    const menuBtn = document.getElementById('mobile-menu-btn');
+    const nav = document.querySelector('.header-nav');
+
+    if (menuBtn && nav) {
+        const toggleMenu = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            nav.classList.toggle('mobile-visible');
+        };
+
+        menuBtn.addEventListener('click', toggleMenu);
+        menuBtn.addEventListener('touchstart', toggleMenu, { passive: false });
+
+        // Close menu when clicking/touching outside or on a link
+        const closeMenu = (e) => {
+            if (!menuBtn.contains(e.target) && !nav.contains(e.target)) {
+                nav.classList.remove('mobile-visible');
+            }
+        };
+
+        document.addEventListener('click', closeMenu);
+        document.addEventListener('touchstart', closeMenu, { passive: true });
+
+        nav.addEventListener('click', (e) => {
+            if (e.target.tagName === 'A') {
+                nav.classList.remove('mobile-visible');
+            }
+        });
+    }
+
+    // Show/hide mobile menu button based on screen size
+    function checkScreenSize() {
+        if (window.innerWidth <= 480) {
+            if (menuBtn) menuBtn.style.display = 'block';
+        } else {
+            if (menuBtn) menuBtn.style.display = 'none';
+            if (nav) nav.classList.remove('mobile-visible');
+        }
+    }
+
+    window.addEventListener('resize', checkScreenSize);
+    checkScreenSize(); // Initial check
 }
 
 function toggleDarkMode() {

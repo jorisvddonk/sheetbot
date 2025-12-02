@@ -111,6 +111,10 @@ export class LoginElement extends LitElement {
                 response.json().then(data => {
                     localStorage["jwt_token"] = data.token;
                     this.status = "login successful";
+                    // Redirect to main app after successful login
+                    setTimeout(() => {
+                        globalThis.location.href = 'task.html';
+                    }, 1000);
                 })
             } else {
                 this.status = "error";

@@ -1,25 +1,28 @@
-<div style="display: flex; align-items: center; justify-content: flex-start; padding: 10px;">
-  <img src="logo.png" alt="SheetBot Logo" style="height: 50px;">
-  <span id="welcome-message" style="margin-left: 10px;"></span>
-  <nav style="margin-left: 20px;">
-    <a href="index.html" style="margin-right: 15px; text-decoration: none; color: #333;">Home</a>
-    <a href="task.html" style="margin-right: 15px; text-decoration: none; color: #333;">Tasks</a>
-    <a href="sheet.html" style="margin-right: 15px; text-decoration: none; color: #333;">Sheets</a>
-    <a href="agents.html" style="margin-right: 15px; text-decoration: none; color: #333;">Agents</a>
-    <a href="library.html" style="margin-right: 15px; text-decoration: none; color: #333;">Library</a>
-    <a href="addtask.html" style="margin-right: 15px; text-decoration: none; color: #333;">Add Task</a>
-     <a href="schema-playground.html" style="margin-right: 15px; text-decoration: none; color: #333;">Schema
-       Playground</a>
-     <a href="help.html" style="margin-right: 15px; text-decoration: none; color: #333;">Help</a>
-   </nav>
-  <div style="margin-left: auto; display: flex; gap: 20px; align-items: baseline;">
-    <div id="user-profile" style="font-size: 14px; color: #666;">
+<div class="header-container">
+  <img src="logo.png" alt="SheetBot Logo" class="header-logo">
+  <span id="welcome-message" class="welcome-message"></span>
+  <button id="mobile-menu-btn" style="display: none; margin-left: auto; background: none; border: none; font-size: 24px; cursor: pointer;">☰</button>
+  <nav class="header-nav">
+    <a href="index.html">Home</a>
+    <a href="task.html">Tasks</a>
+    <a href="sheet.html">Sheets</a>
+    <a href="agents.html">Agents</a>
+    <a href="library.html">Library</a>
+    <a href="addtask.html">Add Task</a>
+    <a href="schema-playground.html">Schema Playground</a>
+    <a href="help.html">Help</a>
+  </nav>
+  <div class="header-right">
+    <div id="user-profile" class="user-profile">
       <span id="user-name"></span>
-      <button id="theme-toggle-btn"
-        style="margin-left: 10px; padding: 5px 10px; background: #f0f0f0; border: 1px solid #ccc; cursor: pointer;">🌙</button>
-      <button id="logout-btn"
-        style="margin-left: 10px; padding: 5px 10px; background: #f0f0f0; border: 1px solid #ccc; cursor: pointer;">Logout</button>
+      <button id="theme-toggle-btn">🌙</button>
+      <button id="logout-btn">Logout</button>
     </div>
+    <div id="agent-stats" class="stats-section"></div>
+    <div id="task-stats" class="stats-section"></div>
+    <div id="transition-stats" class="stats-section"></div>
+  </div>
+</div>
     <div id="agent-stats" style="font-size: 14px; color: #666; white-space: nowrap; line-height: 1.2;"></div>
     <div id="task-stats" style="font-size: 14px; color: #666; white-space: nowrap; line-height: 1.2;"></div>
     <div id="transition-stats" style="font-size: 14px; color: #666; white-space: nowrap; line-height: 1.2;"></div>
