@@ -24,11 +24,11 @@ function decodeJWT(token) {
 
 function showWelcomeMessage() {
     const token = localStorage.getItem('jwt_token');
+    document.getElementById('welcome-message').textContent = "Sheetbot";
     if (token) {
         console.log('JWT token found');
         const payload = decodeJWT(token);
         if (payload && payload.userId) {
-            document.getElementById('welcome-message').textContent = `Welcome, ${payload.userId}`;
             document.getElementById('user-name').textContent = payload.userId;
         } else {
             console.log('No payload or userId:', payload);
