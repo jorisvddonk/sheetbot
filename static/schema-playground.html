@@ -4,31 +4,12 @@
     <link rel="stylesheet" href="style.css">
     <link rel="icon" href="logo.png" type="image/png">
     <script src="https://cdn.jsdelivr.net/npm/ajv@6/dist/ajv.min.js"></script>
+    <script src="header.js"></script>
     <title>JSON Schema Playground</title>
 </head>
 
 <body>
-    <div style="display: flex; align-items: center; justify-content: flex-start; padding: 10px;">
-      <img src="logo.png" alt="SheetBot Logo" style="height: 50px;">
-      <span id="welcome-message" style="margin-left: 10px;"></span>
-       <nav style="margin-left: 20px;">
-         <a href="index.html" style="margin-right: 15px; text-decoration: none; color: #333;">Home</a>
-         <a href="agents.html" style="margin-right: 15px; text-decoration: none; color: #333;">Agents</a>
-         <a href="task.html" style="margin-right: 15px; text-decoration: none; color: #333;">Tasks</a>
-          <a href="library.html" style="margin-right: 15px; text-decoration: none; color: #333;">Library</a>
-          <a href="schema-playground.html" style="margin-right: 15px; text-decoration: none; color: #333;">Schema Playground</a>
-          <a href="addtask.html" style="margin-right: 15px; text-decoration: none; color: #333;">Add Task</a>
-         <a href="sheet.html" style="text-decoration: none; color: #333;">Sheets</a>
-       </nav>
-      <div style="margin-left: auto; display: flex; gap: 20px; align-items: baseline;">
-        <div id="user-profile" style="font-size: 14px; color: #666;">
-          <span id="user-name"></span>
-          <button id="logout-btn" style="margin-left: 10px; padding: 5px 10px; background: #f0f0f0; border: 1px solid #ccc; cursor: pointer;">Logout</button>
-        </div>
-        <div id="agent-stats" style="font-size: 14px; color: #666; white-space: nowrap; line-height: 1.2;"></div>
-        <div id="task-stats" style="font-size: 14px; color: #666; white-space: nowrap; line-height: 1.2;"></div>
-      </div>
-    </div>
+    <div id="header-placeholder"></div>
     <div class="container">
         <h1>JSON Schema Playground</h1>
         <p>Test capability JSONs against schemas.</p>
@@ -62,98 +43,6 @@
     </div>
 
     <script>
-        function decodeJWT(token) {
-            try {
-                const payload = token.split('.')[1];
-                const decoded = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')));
-                return decoded;
-            } catch (e) {
-                console.log('JWT decode failed:', e);
-                return null;
-            }
-        }
-
-        function showWelcomeMessage() {
-            const token = localStorage.getItem('jwt_token');
-            if (token) {
-                console.log('JWT token found');
-                const payload = decodeJWT(token);
-                if (payload && payload.userId) {
-                    document.getElementById('welcome-message').textContent = `Welcome, ${payload.userId}`;
-                    document.getElementById('user-name').textContent = payload.userId;
-                } else {
-                    console.log('No payload or userId:', payload);
-                }
-                loadTaskStats(token);
-                loadAgentStats(token);
-            } else {
-                console.log('No JWT token in localStorage');
-            }
-        }
-
-        function loadTaskStats(token) {
-            fetch('/tasktracker', {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            })
-            .then(response => {
-                if (response.ok) {
-                    return response.json();
-                } else {
-                    throw new Error('Failed to fetch stats');
-                }
-            })
-            .then(stats => {
-                const statsDiv = document.getElementById('task-stats');
-                const timeDisplay = stats.windowMinutes >= 120
-                    ? `${Math.round(stats.windowMinutes / 60)}h`
-                    : `${stats.windowMinutes}m`;
-                statsDiv.textContent = `Tasks: +${stats.added} ✓${stats.completed} ✗${stats.failed} (${timeDisplay})`;
-            })
-            .catch(error => {
-                console.log('Error loading task stats:', error);
-                const statsDiv = document.getElementById('task-stats');
-                statsDiv.textContent = 'Stats unavailable';
-            });
-        }
-
-        function loadAgentStats(token) {
-            fetch('/agenttracker', {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            })
-            .then(response => {
-                if (response.ok) {
-                    return response.json();
-                } else {
-                    throw new Error('Failed to fetch agent stats');
-                }
-            })
-            .then(stats => {
-                const statsDiv = document.getElementById('agent-stats');
-                const timeDisplay = stats.windowMinutes >= 120
-                    ? `${Math.round(stats.windowMinutes / 60)}h`
-                    : `${stats.windowMinutes}m`;
-                statsDiv.textContent = `Agents: ${stats.activeAgents}/${stats.totalUniqueAgents} (${timeDisplay})`;
-            })
-            .catch(error => {
-                console.log('Error loading agent stats:', error);
-                const statsDiv = document.getElementById('agent-stats');
-                statsDiv.textContent = 'Agent stats unavailable';
-            });
-        }
-
-        function setupLogout() {
-            const logoutBtn = document.getElementById('logout-btn');
-            if (logoutBtn) {
-                logoutBtn.addEventListener('click', () => {
-                    localStorage.removeItem('jwt_token');
-                    globalThis.location.href = 'index.html';
-                });
-            }
-        }
 
         const ajv = new Ajv();
 
@@ -233,18 +122,7 @@
             });
         }
 
-        // Initialize header
-        showWelcomeMessage();
-        setupLogout();
 
-        // Update stats every 30 seconds
-        setInterval(() => {
-            const token = localStorage.getItem('jwt_token');
-            if (token) {
-                loadTaskStats(token);
-                loadAgentStats(token);
-            }
-        }, 30000);
     </script>
 
     <style>
