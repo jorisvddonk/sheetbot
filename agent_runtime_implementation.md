@@ -11,7 +11,7 @@ Sheetbot provides a templating system to serve pre-built agent runtime implement
 The templates contain boilerplate code that implements the full agent lifecycle:
 - Authentication with the Sheetbot server
 - Capability detection and declaration
-- Task polling and execution
+- Task polling and execution (per invocation, agents typically poll ONCE, leaving polling frequency to the operating system)
 - Result reporting
 
 When serving a template, Sheetbot replaces placeholders in the template code:
@@ -207,6 +207,43 @@ Removes an artefact file from a task.
 
 **Response (Success - 204):**
 - No content
+
+## Sheet Data API
+
+Agents can update sheet data during task execution to store results or share state.
+
+### POST /sheets/:id/data
+
+Updates or inserts data into a sheet.
+
+**Request:**
+- Method: `POST`
+- Content-Type: `application/json`
+- Authorization: `Bearer <token>` (if authenticated)
+- Body:
+```json
+{
+  "key": "unique_key",
+  // additional arbitrary JSON properties
+}
+```
+
+**Response (Success - 200):**
+```json
+{
+  "id": "sheet_id",
+  "key": "unique_key"
+}
+```
+
+**Response (Error - 400/404/500):**
+```json
+{
+  "error": "error_message"
+}
+```
+
+Sheets provide persistent key-value storage using SQLite databases. Agents can use this to store execution results, metrics, or intermediate data that persists across tasks.
 
 ### Script Execution Environment
 

@@ -93,7 +93,7 @@ components:
           description: Array of timed status transitions for the task
         type:
           type: string
-          enum: ["deno", "python"]
+          enum: ["deno", "python", "bash"]
           description: Execution environment type
         capabilitiesSchema:
           type: object
@@ -136,7 +136,7 @@ components:
               description: Capability schema object
         type:
           type: string
-          enum: ["deno", "python"]
+          enum: ["deno", "python", "bash"]
           description: Execution environment type
         transitions:
           type: array
@@ -203,7 +203,7 @@ components:
       properties:
         type:
           type: string
-          enum: ["deno", "python"]
+          enum: ["deno", "python", "bash"]
           description: Agent type
         capabilities:
           type: object
@@ -470,7 +470,7 @@ paths:
                   description: JSON string of capability schema
                 type:
                   type: string
-                  enum: ["deno", "python"]
+                  enum: ["deno", "python", "bash"]
                 transitions:
                   type: string
                   description: JSON string of transitions array
@@ -651,7 +651,7 @@ paths:
                     description: Task ID
                   type:
                     type: string
-                    enum: ["deno", "python"]
+                    enum: ["deno", "python", "bash"]
                     description: Task type
         '401':
           description: Unauthorized

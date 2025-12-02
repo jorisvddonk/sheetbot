@@ -17,6 +17,14 @@ export function createGetAgentTemplateHandler() {
             .replaceAll("${req.protocol}", req.protocol)
             .replaceAll("${req.get('host')}", req.get('host')
             ));
+        } else if (req.path.endsWith(".sh")) {
+            res.contentType("text/x-shellscript");
+            res.send(new TextDecoder().decode(
+                Deno.readFileSync("./scripts/agent.template.sh")
+            )
+            .replaceAll("${req.protocol}", req.protocol)
+            .replaceAll("${req.get('host')}", req.get('host')
+            ));
         } else {
             if (req.path.endsWith(".ts")) {
                 res.contentType("application/typescript");

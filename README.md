@@ -273,7 +273,7 @@ sequenceDiagram
     participant Server
     participant SheetDB
 
-    Agent->>Server: POST /sheets/:id/data (key, data)
+    Agent->>Server: POST /sheets/:id/data (key and fields)
     Server->>SheetDB: Upsert data
     SheetDB->>Server: Confirm update
     Server->>Agent: 200 OK
@@ -341,6 +341,9 @@ Agents poll for tasks based on their type and capabilities. SheetBot provides te
 - **Python Runner**: For Python tasks (`type: "python"`)
   - Template: `/scripts/agent.py`
   - Executes scripts in Python environment
+- **Bash Runner**: For shell script tasks (`type: "bash"`)
+  - Template: `/scripts/agent.sh`
+  - Executes scripts in Bash shell. Requires `curl` and `jq` to be installed.
 
 Workflow:
 1. Poll `/tasks/get` with agent type and capabilities

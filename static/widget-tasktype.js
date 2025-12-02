@@ -34,6 +34,16 @@ export class TaskTypeWidget extends LitElement {
        .python span {
          display: none;
        }
+
+      .bash {
+        background-image: url('Bash_full_colored_dark.svg');
+        background-repeat: no-repeat;
+        background-size: 50%;
+        background-position: center;
+      }
+      .bash span {
+        display: none;
+      }
     `;
   
     static properties = {

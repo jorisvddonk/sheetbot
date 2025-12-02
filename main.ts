@@ -206,8 +206,8 @@ app.get("/transitiontracker", requiresLogin, createGetTransitionTrackerHandler(t
 // Static file serving for scripts directory - Serves script files and templates
 app.use('/scripts', express.static('scripts'));
 
-// GET /scripts/agent(.ts|.py)? - Serves agent template scripts for different languages
-app.get("/scripts/agent(\.ts|\.py)?", createGetAgentTemplateHandler());
+// GET /scripts/agent(.ts|.py|.sh)? - Serves agent template scripts for different languages
+app.get("/scripts/agent(\.ts|\.py|\.sh)?", createGetAgentTemplateHandler());
 
 // GET /scripts/:id.* - Serves the script for a specific task, with dependency injection
 app.get("/scripts/:id\.?.*", ...createGetTaskScriptHandler(db));

@@ -6,7 +6,7 @@ import { Select, Input } from "https://deno.land/x/cliffy@v1.0.0-rc.4/prompt/mod
 const script: string = await Select.prompt({
     message: "Pick a script",
     search: true,
-    options: Array.from(Deno.readDirSync("./scripts/").map(x => x.name).filter(x => x.endsWith(".ts") || x.endsWith(".js") || x.endsWith(".py")))
+    options: Array.from(Deno.readDirSync("./scripts/").map(x => x.name).filter(x => x.endsWith(".ts") || x.endsWith(".js") || x.endsWith(".py") || x.endsWith(".sh")))
 });
 
 console.log("Adding task, please login first");
@@ -48,7 +48,7 @@ if (localOrRemote === 1) {
 } else {
     const scriptText = new TextDecoder().decode(Deno.readFileSync(`./scripts/${script}`));
     let capabilitiesText = scriptText.substr(scriptText.indexOf("<capabilitiesSchema>") + 20, scriptText.indexOf("</capabilitiesSchema>") - scriptText.indexOf("<capabilitiesSchema>") - 21);
-    capabilitiesText = capabilitiesText.split('\n').filter(line => !line.trim().startsWith('#')).join('\n');
+    capabilitiesText = capabilitiesText.split('\n').map(line => line.trim().startsWith('#') ? line.trim().slice(1).trim() : line.trim()).join('\n');
     try {
         const capabilitiesSchema = JSON.parse(capabilitiesText);
         scriptStuff = {
@@ -73,7 +73,7 @@ try {
 let suggestedData = {};
 try {
     let dataText = scriptStuff.script.substr(scriptStuff.script.indexOf("<data>") + 6, scriptStuff.script.indexOf("</data>") - scriptStuff.script.indexOf("<data>") - 6);
-    dataText = dataText.split('\n').filter(line => !line.trim().startsWith('#')).join('\n');
+    dataText = dataText.split('\n').map(line => line.trim().startsWith('#') ? line.trim().slice(1).trim() : line.trim()).join('\n');
     suggestedData = JSON.parse(dataText);
 } catch (e) {
     console.warn("Could not parse suggested data - using default {}")
@@ -140,7 +140,7 @@ if (name == "") {
 
 
 await addTask({
-    type: script.endsWith(".py") ? "python" : "deno",
+    type: script.endsWith(".py") ? "python" : script.endsWith(".sh") ? "bash" : "deno",
     ...scriptStuff,
     transitions,
     status,
