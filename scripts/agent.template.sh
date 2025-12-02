@@ -47,9 +47,7 @@ if [ -n "${SHEETBOT_AUTH_USER:-}" ] && [ -n "${SHEETBOT_AUTH_PASS:-}" ]; then
         -d "{\"username\":\"$SHEETBOT_AUTH_USER\",\"password\":\"$SHEETBOT_AUTH_PASS\"}")
     auth_status="${auth_output: -3}"
     auth_body="${auth_output%???}"
-    echo "Auth output: $auth_output" >&2
     echo "Auth status: $auth_status" >&2
-    echo "Auth body: $auth_body" >&2
     check_for_errors "$auth_status"
     token=$(echo "$auth_body" | jq -r '.token')
     echo "Token obtained: ${token:0:10}..." >&2
@@ -93,7 +91,6 @@ capabilities=$(jq -n \
     '{os: $os, arch: $arch, hostname: $hostname} + $local')
 
 echo "Final capabilities: $capabilities" >&2
-echo "Headers: ${headers[*]}" >&2
 
 # Poll for tasks
 echo "Polling for tasks at: $SHEETBOT_BASEURL/tasks/get" >&2
@@ -102,9 +99,7 @@ task_output=$(curl -s -w "%{http_code}" "${headers[@]}" -X POST "$SHEETBOT_BASEU
     -d "{\"type\":\"bash\",\"capabilities\":$capabilities}")
 task_status="${task_output: -3}"
 task_body="${task_output%???}"
-echo "Task output: $task_output" >&2
 echo "Task status: $task_status" >&2
-echo "Task body: $task_body" >&2
 check_for_errors "$task_status"
 
 # Check if task available
