@@ -16,8 +16,26 @@
      --code-text: rgb(0, 0, 0);
  }
 
+ .dark-mode {
+     --bg-color: rgb(10, 10, 10);
+     --text-color: rgb(255, 255, 255);
+     --grid-bg: rgb(10, 10, 10);
+     --grid-border: rgb(10, 10, 10);
+     --cell-odd: rgb(30, 30, 60);
+     --cell-even: rgb(20, 20, 40);
+     --header-bg: rgba(70, 70, 150, 1);
+     --header-text: white;
+     --table-bg: rgba(100, 100, 255, .1);
+     --table-border: rgb(150, 200, 255);
+     --selected-border: rgb(100, 100, 100);
+     --selected-shadow: rgb(50, 50, 50);
+     --thead-bg: rgba(200, 200, 255, 0.5);
+     --code-bg: rgb(30, 30, 30);
+     --code-text: rgb(255, 255, 255);
+ }
+
  @media (prefers-color-scheme: dark) {
-     :root {
+     :root:not(.light-mode) {
          --bg-color: rgb(10, 10, 10);
          --text-color: rgb(255, 255, 255);
          --grid-bg: rgb(10, 10, 10);
@@ -158,6 +176,17 @@ code.hljs {
      z-index: 1000;
  }
 
- widget-code {
-     background: transparent;
- }
+  widget-code {
+      background: transparent;
+  }
+
+  #theme-toggle-btn, #logout-btn {
+      background: var(--bg-color);
+      border: 1px solid var(--text-color);
+      color: var(--text-color);
+  }
+
+  #theme-toggle-btn:hover, #logout-btn:hover {
+      background: var(--text-color);
+      color: var(--bg-color);
+  }

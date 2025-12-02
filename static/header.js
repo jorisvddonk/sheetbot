@@ -3,7 +3,9 @@ function loadHeader() {
     .then(response => response.text())
     .then(html => {
         document.getElementById('header-placeholder').innerHTML = html;
+        initializeTheme();
         showWelcomeMessage();
+        setupThemeToggle();
         setupLogout();
     });
 }
@@ -117,6 +119,53 @@ function loadTransitionStats(token) {
         const statsDiv = document.getElementById('transition-stats');
         statsDiv.textContent = 'Transition stats unavailable';
     });
+}
+
+function setupThemeToggle() {
+    const themeBtn = document.getElementById('theme-toggle-btn');
+    if (themeBtn) {
+        themeBtn.addEventListener('click', () => {
+            toggleDarkMode();
+        });
+    }
+}
+
+function toggleDarkMode() {
+    const html = document.documentElement;
+    const isDark = html.classList.contains('dark-mode');
+    if (isDark) {
+        html.classList.remove('dark-mode');
+        html.classList.add('light-mode');
+        localStorage.setItem('theme', 'light');
+        document.getElementById('theme-toggle-btn').textContent = '🌙';
+    } else {
+        html.classList.add('dark-mode');
+        html.classList.remove('light-mode');
+        localStorage.setItem('theme', 'dark');
+        document.getElementById('theme-toggle-btn').textContent = '☀️';
+    }
+}
+
+function initializeTheme() {
+    const savedTheme = localStorage.getItem('theme');
+    const html = document.documentElement;
+    const themeBtn = document.getElementById('theme-toggle-btn');
+
+    if (savedTheme === 'dark') {
+        html.classList.add('dark-mode');
+        if (themeBtn) themeBtn.textContent = '☀️';
+    } else if (savedTheme === 'light') {
+        html.classList.add('light-mode');
+        if (themeBtn) themeBtn.textContent = '🌙';
+    } else {
+        // No saved preference, check system preference
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            html.classList.add('dark-mode');
+            if (themeBtn) themeBtn.textContent = '☀️';
+        } else {
+            if (themeBtn) themeBtn.textContent = '🌙';
+        }
+    }
 }
 
 function setupLogout() {
