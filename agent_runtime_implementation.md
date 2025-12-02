@@ -4,6 +4,32 @@ This document specifies the API contract for implementing agent runtimes that in
 
 ## Core Concepts
 
+### Agent Templating System
+
+Sheetbot provides a templating system to serve pre-built agent runtime implementations for different programming languages. These templates are stored as `agent.template.<extension>` files (e.g., `agent.template.py` for Python, `agent.template.ts` for TypeScript/Deno) and are served dynamically via the `/scripts/agent.template.<extension>` endpoint.
+
+The templates contain boilerplate code that implements the full agent lifecycle:
+- Authentication with the Sheetbot server
+- Capability detection and declaration
+- Task polling and execution
+- Result reporting
+
+When serving a template, Sheetbot replaces placeholders in the template code:
+- `${req.protocol}` is replaced with the request protocol (e.g., "https")
+- `${req.get('host')}` is replaced with the request host (e.g., "example.com")
+
+This allows agents to be downloaded and run immediately, automatically connecting back to the originating Sheetbot server without manual configuration.
+
+**Supported Extensions:**
+- `.py`: Python agent template (uses `uv` for dependency management and script execution)
+- `.ts`: TypeScript/Deno agent template
+- `.js`: JavaScript agent template (served from the same `.ts` template with appropriate content-type)
+
+Agents can load additional capabilities from local files:
+- `.capabilities.json`: Static JSON capabilities
+- `.capabilities.dynamic.<extension>`: Dynamic capability detection script
+- `.capabilities.override.json`: Override capabilities
+
 ### Agent Lifecycle
 
 Agents follow a polling-based execution model:
