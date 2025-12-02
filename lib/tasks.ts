@@ -133,7 +133,7 @@ export function checkTransitions(db: DatabaseSync, transitionTracker: Transition
     const transition = evaluateTransitions(transitionTracker, task);
     if (transition && transition.timing.immediate) {
         console.log(`[DEBUG] Executing immediate transition: ${JSON.stringify(transition)}`);
-        executeTransition(db, task, transition);
+        executeTransition(db, transitionTracker, task, transition);
     }
 
     // Schedule all transitions with every that match the current status
@@ -259,7 +259,7 @@ export function evaluateTransitions(transitionTracker: TransitionTracker, task: 
     return null;
 }
 
-export function executeTransition(db: DatabaseSync, task: Task, transition: Transition) {
+export function executeTransition(db: DatabaseSync, transitionTracker: TransitionTracker, task: Task, transition: Transition) {
     // Apply data mutations if any
     if (transition.dataMutations) {
         const mergedData = { ...task.data, ...transition.dataMutations };
@@ -273,7 +273,7 @@ export function executeTransition(db: DatabaseSync, task: Task, transition: Tran
         deleteTask(db, task.id);
     } else {
         // Update status
-        updateTaskStatus(db, {} as TransitionTracker, task.id, stringToStatus(transition.transitionTo));
+        updateTaskStatus(db, transitionTracker, task.id, stringToStatus(transition.transitionTo));
     }
 }
 
@@ -334,7 +334,7 @@ export function processScheduledTransitions(db: DatabaseSync, transitionTracker:
             if (currentTransition === transition) {
                 console.log(`[DEBUG] Executing transition to ${transition.transitionTo}`);
                 // Execute transition
-                executeTransition(db, task, transition);
+                executeTransition(db, transitionTracker, task, transition);
 
                 // Remove from schedule
                 const deleteStmt = db.prepare(`
