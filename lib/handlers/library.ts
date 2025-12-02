@@ -5,7 +5,7 @@
  */
 export function createGetLibraryHandler() {
     return (req: any, res: any) => {
-        const scriptFiles = Array.from(Deno.readDirSync("./scripts/").filter(x => (x.name.endsWith(".ts") || x.name.endsWith(".js") || x.name.endsWith(".py")) && !x.name.includes(".template.")));
+        const scriptFiles = Array.from(Deno.readDirSync("./scripts/").filter(x => (x.name.endsWith(".ts") || x.name.endsWith(".js") || x.name.endsWith(".py") || x.name.endsWith(".sh")) && !x.name.includes(".template.")));
         const library = scriptFiles.map(file => {
             const scriptText = new TextDecoder().decode(Deno.readFileSync(`./scripts/${file.name}`));
             let capabilitiesSchema = {};

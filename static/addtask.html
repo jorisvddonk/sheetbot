@@ -109,7 +109,7 @@
                         data: JSON.parse(document.getElementById('taskData').value || '{}'),
                         transitions: JSON.parse(document.getElementById('transitions').value || '[]'),
                         status: parseInt(document.getElementById('status').value),
-                        type: selectedScript.endsWith('.py') ? 'python' : 'deno',
+                        type: selectedScript.endsWith('.py') ? 'python' : selectedScript.endsWith('.sh') ? 'bash' : 'deno',
                         capabilitiesSchema: scriptItem.capabilitiesSchema
                     };
 
