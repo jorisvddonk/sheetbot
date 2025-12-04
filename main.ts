@@ -24,7 +24,7 @@ import { createGetLibraryHandler } from "./lib/handlers/library.ts";
 import { createGetTaskTrackerHandler, createGetAgentTrackerHandler, createGetTransitionTrackerHandler } from "./lib/handlers/tracker.ts";
 import { createGetAgentTemplateHandler, createGetTaskScriptHandler } from "./lib/handlers/scripts.ts";
 import { createUpsertSheetDataHandler, createDeleteSheetRowHandler, createGetSheetHandler, createListSheetsHandler } from "./lib/handlers/sheets.ts";
-import { createDeleteArtefactHandler } from "./lib/handlers/artefacts.ts";
+import { createDeleteArtefactHandler, createListArtefactsHandler, createPutArtefactHandler, createPostArtefactHandler } from "./lib/handlers/artefacts.ts";
 
 // ██ ███    ██ ██ ████████     ███████ ██    ██ ███████ ████████ ███████ ███    ███
 // ██ ████   ██ ██    ██        ██       ██  ██  ██         ██    ██      ████  ████
@@ -75,6 +75,21 @@ const userdb = new UserDB();
 // ███████ ██   ██ ██      ██   ██ ███████ ███████ ███████     ██   ██ ██      ██          ███████ ███████    ██     ██████  ██
 
 const app = express();
+
+// Request logging middleware
+app.use((req: any, res: any, next: any) => {
+    const timestamp = new Date().toISOString();
+    const ip = req.ip || req.connection.remoteAddress || 'unknown';
+    const start = Date.now();
+
+    res.on('finish', () => {
+        const duration = Date.now() - start;
+        console.log(`[${timestamp}] ${req.method} ${req.url} - ${res.statusCode} - ${duration}ms - IP: ${ip}`);
+    });
+
+    next();
+});
+
 app.use(express.json());
 app.use(express.static('static'));
 
@@ -236,11 +251,23 @@ app.get("/sheets", requiresLogin, createListSheetsHandler());
 // ██   ██ ██   ██    ██    ██      ██      ██   ██ ██         ██        ██   ██ ██    ██ ██    ██    ██    ██           ██
 // ██   ██ ██   ██    ██    ███████ ██      ██   ██  ██████    ██        ██   ██  ██████   ██████     ██    ███████ ███████
 
+// POST /artefacts/{bucket}/* - Handles multipart upload operations, S3-style
+app.post('/artefacts/:bucket/*', createPostArtefactHandler());
+
+// PUT /artefacts/{bucket}/* - Uploads artefact files or parts, S3-style
+app.put('/artefacts/:bucket/*', express.raw({ type: () => true, limit: '10mb' }), createPutArtefactHandler());
+
 // Static file serving for artefacts directory - Serves uploaded artefact files
-app.use('/artefacts', express.static('artefacts'));
+//app.use('/artefacts', express.static('artefacts'));
+
+// GET /artefacts/:bucket - Lists artefacts in a bucket, S3-style
+app.get('/artefacts/:bucket', createListArtefactsHandler());
+
+// GET /artefacts/:bucket/* - Lists artefacts in a bucket/prefix, S3-style
+app.get('/artefacts/:bucket/*', createListArtefactsHandler());
 
 // DELETE /artefacts/* - Deletes artefact files from the system
-app.delete('/artefacts/*', requiresLogin, requiresPermission("deleteTasks"), createDeleteArtefactHandler());
+app.delete('/artefacts/*', createDeleteArtefactHandler());
 
 // ███████ ███████ ██████  ██    ██ ███████ ██████      ███████ ████████  █████  ██████  ████████ ██    ██ ██████
 // ██      ██      ██   ██ ██    ██ ██      ██   ██     ██         ██    ██   ██ ██   ██    ██    ██    ██ ██   ██
