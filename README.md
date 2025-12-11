@@ -45,7 +45,8 @@ This is useful for setting up databases, loading configurations, or performing o
 
 ## Scripts
 
-Various scripts are available in the `scripts/` directory for specific tasks like compilation, system operations, and examples.
+- **`scripts/` directory**: Contains agent template files (`agent.template.ts`, `agent.template.py`, `agent.template.sh`)
+- **`library/` directory**: Contains automation scripts for various use cases (game development, web deployment, system automation, etc.)
 
 ## Protocol
 
@@ -369,6 +370,7 @@ The codebase is structured for straightforward modifications. For authentication
 ## Project Structure
 
 - `lib/`: Core libraries and data providers
-- `scripts/`: Automation scripts
+- `scripts/`: Agent template files
+- `library/`: Automation scripts
 - `sheets/`: Generated sheet files
 - `static/`: Web assets and HTML files

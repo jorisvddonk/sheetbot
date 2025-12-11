@@ -5,9 +5,15 @@
  */
 export function createGetLibraryHandler() {
     return (req: any, res: any) => {
-        const scriptFiles = Array.from(Deno.readDirSync("./scripts/").filter(x => (x.name.endsWith(".ts") || x.name.endsWith(".js") || x.name.endsWith(".py") || x.name.endsWith(".sh")) && !x.name.includes(".template.")));
+        // Get scripts from both scripts/ (templates) and library/ (automation) directories
+        const scriptFiles = [
+            ...Array.from(Deno.readDirSync("./scripts/").filter(x => (x.name.endsWith(".ts") || x.name.endsWith(".js") || x.name.endsWith(".py") || x.name.endsWith(".sh")) && !x.name.includes(".template."))),
+            ...Array.from(Deno.readDirSync("./library/").filter(x => (x.name.endsWith(".ts") || x.name.endsWith(".js") || x.name.endsWith(".py") || x.name.endsWith(".sh"))))
+        ];
         const library = scriptFiles.map(file => {
-            const scriptText = new TextDecoder().decode(Deno.readFileSync(`./scripts/${file.name}`));
+            // Determine which directory the file is in
+            const dirPath = file.name.includes(".template.") ? "./scripts/" : "./library/";
+            const scriptText = new TextDecoder().decode(Deno.readFileSync(`${dirPath}${file.name}`));
             let capabilitiesSchema = {};
             if (scriptText.includes("<capabilitiesSchema>")) {
                 try {

@@ -103,7 +103,9 @@
             const scriptItem = library.find(item => item.filename === selectedScript);
             if (!scriptItem) return;
 
-            fetch(`/scripts/${selectedScript}`)
+            // Determine which directory the script is in
+            const dir = selectedScript.includes('.template.') ? 'scripts' : 'library';
+            fetch(`/${dir}/${selectedScript}`)
                 .then(res => res.text())
                 .then(scriptContent => {
                     const body = {
