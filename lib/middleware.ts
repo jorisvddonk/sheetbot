@@ -56,3 +56,26 @@ export function createInjectDependenciesMiddleware(getTaskFn: (id: string) => an
         next();
     };
 }
+
+/**
+ * Middleware to extract AWS credentials if present and convert to Authorization header.
+ * If AWS session token exists, sets req.headers.authorization for subsequent JWT auth.
+ *
+ * @returns {Function} Express middleware function
+ */
+export function extractAWSCredentialsIfPresent() {
+  return async (req: any, res: any, next: any) => {
+    // Check for AWS session token
+    const sessionToken = req.headers['x-amz-security-token'];
+
+    if (!sessionToken) {
+      // No AWS credentials, proceed to next middleware
+      return next();
+    }
+
+    // Set Authorization header for subsequent requiresLogin middleware
+    req.headers.authorization = `Bearer ${sessionToken}`;
+
+    next();
+  };
+}

@@ -1,7 +1,14 @@
 import jsonwebtoken from "npm:jsonwebtoken@9.0.2";
 import { UserDB } from "../data_providers/sqlite/userdb.ts";
 
-const SECRET_KEY = new TextDecoder().decode(Deno.readFileSync("./secret.txt"));
+let secretKey: string | null = null;
+
+function getSecretKey(): string {
+    if (secretKey === null) {
+        secretKey = new TextDecoder().decode(Deno.readFileSync("./secret.txt"));
+    }
+    return secretKey;
+}
 
 /**
  * Creates a login handler that authenticates users and returns JWT tokens.
@@ -17,7 +24,7 @@ export function createLoginHandler(userdb: UserDB) {
             if (!loginvalid) {
               return res.status(401).json({ error: 'Authentication failed' });
             }
-            const token = jsonwebtoken.sign({ userId: username, permissions: String(user.permissions).split(",") }, SECRET_KEY, { expiresIn: '1h' });
+            const token = jsonwebtoken.sign({ userId: username, permissions: String(user.permissions).split(",") }, getSecretKey(), { expiresIn: '1h' });
             res.json({ token });
           } catch (e) {
             console.log(e);

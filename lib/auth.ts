@@ -1,6 +1,13 @@
 import jsonwebtoken from "npm:jsonwebtoken@9.0.2";
 
-const SECRET_KEY = new TextDecoder().decode(Deno.readFileSync("./secret.txt"));
+let secretKey: string | null = null;
+
+function getSecretKey(): string {
+    if (secretKey === null) {
+        secretKey = new TextDecoder().decode(Deno.readFileSync("./secret.txt"));
+    }
+    return secretKey;
+}
 
 export const requiresLogin = (req: any, res: any, next: any) => {
     const hdr = req.header('Authorization');
@@ -16,7 +23,7 @@ export const requiresLogin = (req: any, res: any, next: any) => {
         return res.status(401).json({ error: 'Authentication failed' });
     }
 
-    jsonwebtoken.verify(token, SECRET_KEY, (err: any, user: any) => {
+    jsonwebtoken.verify(token, getSecretKey(), (err: any, user: any) => {
         if (err) {
             console.error(err);
             return res.status(403).json({ error: 'Authentication failed' });

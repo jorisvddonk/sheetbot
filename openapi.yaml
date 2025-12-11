@@ -440,6 +440,53 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  /artefacts-credentials:
+    post:
+      summary: Get AWS-compatible credentials
+      description: Issue temporary AWS credentials for S3 API access
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: AWS credentials issued
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  accessKeyId:
+                    type: string
+                    description: AWS access key ID
+                  secretAccessKey:
+                    type: string
+                    description: AWS secret access key
+                  sessionToken:
+                    type: string
+                    description: JWT session token
+                  expiration:
+                    type: integer
+                    description: Unix timestamp when credentials expire
+                  region:
+                    type: string
+                    description: AWS region
+                  permissions:
+                    type: array
+                    items:
+                      type: string
+                    description: User permissions for artefacts
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
   /:
     get:
       summary: Health check
@@ -1374,6 +1421,8 @@ paths:
      get:
        summary: List artefacts in bucket/prefix
        description: List artefacts in a bucket with optional prefix, S3-compatible
+       security:
+         - bearerAuth: []
        parameters:
          - name: list-type
            in: query
@@ -1410,6 +1459,18 @@ paths:
              application/json:
                schema:
                  $ref: '#/components/schemas/ArtefactListResponse'
+         '401':
+           description: Unauthorized
+           content:
+             application/json:
+               schema:
+                 $ref: '#/components/schemas/Error'
+         '403':
+           description: Forbidden
+           content:
+             application/json:
+               schema:
+                 $ref: '#/components/schemas/Error'
          '404':
            description: Bucket or prefix not found
            content:
@@ -1420,6 +1481,8 @@ paths:
      put:
        summary: Upload artefact to bucket/key
        description: Upload an artefact file to a specific bucket and key, S3-compatible
+       security:
+         - bearerAuth: []
        requestBody:
          required: true
          content:
@@ -1441,6 +1504,18 @@ paths:
                    size:
                      type: integer
                      description: Size of the uploaded file
+         '401':
+           description: Unauthorized
+           content:
+             application/json:
+               schema:
+                 $ref: '#/components/schemas/Error'
+         '403':
+           description: Forbidden
+           content:
+             application/json:
+               schema:
+                 $ref: '#/components/schemas/Error'
          '400':
            description: Invalid path
            content:
@@ -1453,6 +1528,54 @@ paths:
              application/json:
                schema:
                  $ref: '#/components/schemas/Error'
+
+  /artefacts/{bucket}:
+    parameters:
+      - name: bucket
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Artefact bucket name
+    
+    post:
+      summary: Initiate multipart upload
+      description: Initiate a multipart upload for S3-compatible artefact storage
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uploads
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Indicates this is a multipart upload initiation
+      responses:
+        '200':
+          description: Multipart upload initiated
+          content:
+            application/xml:
+              schema:
+                type: object
+                properties:
+                  bucket:
+                    type: string
+                  key:
+                    type: string
+                  uploadId:
+                    type: string
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
   /artefacts/{path}:
     parameters:

@@ -25,6 +25,8 @@ import { createGetTaskTrackerHandler, createGetAgentTrackerHandler, createGetTra
 import { createGetAgentTemplateHandler, createGetTaskScriptHandler } from "./lib/handlers/scripts.ts";
 import { createUpsertSheetDataHandler, createDeleteSheetRowHandler, createGetSheetHandler, createListSheetsHandler } from "./lib/handlers/sheets.ts";
 import { createDeleteArtefactHandler, createListArtefactsHandler, createPutArtefactHandler, createPostArtefactHandler } from "./lib/handlers/artefacts.ts";
+import { createAwsCredentialsHandler } from "./lib/handlers/aws-credentials.ts";
+import { extractAWSCredentialsIfPresent } from "./lib/middleware.ts";
 
 // ██ ███    ██ ██ ████████     ███████ ██    ██ ███████ ████████ ███████ ███    ███
 // ██ ████   ██ ██    ██        ██       ██  ██  ██         ██    ██      ████  ████
@@ -139,6 +141,9 @@ app.get("/openapi.yaml", createOpenApiHandler());
 
 // POST /login - Authenticates a user and returns a JWT token
 app.post("/login", createLoginHandler(userdb));
+
+// POST /artefacts-credentials - Issues temporary AWS-compatible credentials for S3 API access
+app.post("/artefacts-credentials", requiresLogin, createAwsCredentialsHandler());
 
 // ████████  █████  ███████ ██   ██     ███    ███  █████  ███    ██  █████   ██████  ███████ ███    ███ ███████ ███    ██ ████████     ██████   ██████  ██    ██ ████████ ███████ ███████
 //    ██    ██   ██ ██      ██  ██      ████  ████ ██   ██ ████   ██ ██   ██ ██       ██      ████  ████ ██      ████   ██    ██        ██   ██ ██    ██ ██    ██    ██    ██      ██
@@ -255,22 +260,22 @@ app.get("/sheets", requiresLogin, createListSheetsHandler());
 // ██   ██ ██   ██    ██    ███████ ██      ██   ██  ██████    ██        ██   ██  ██████   ██████     ██    ███████ ███████
 
 // POST /artefacts/{bucket}/* - Handles multipart upload operations, S3-style
-app.post('/artefacts/:bucket/*', createPostArtefactHandler());
+app.post('/artefacts/:bucket/*', extractAWSCredentialsIfPresent(), requiresLogin, requiresPermission("createArtefacts"), createPostArtefactHandler());
 
 // PUT /artefacts/{bucket}/* - Uploads artefact files or parts, S3-style
-app.put('/artefacts/:bucket/*', express.raw({ type: () => true, limit: '10mb' }), createPutArtefactHandler());
+app.put('/artefacts/:bucket/*', extractAWSCredentialsIfPresent(), requiresLogin, requiresPermission("createArtefacts"), express.raw({ type: () => true, limit: '10mb' }), createPutArtefactHandler());
 
 // Static file serving for artefacts directory - Serves uploaded artefact files
 //app.use('/artefacts', express.static('artefacts'));
 
 // GET /artefacts/:bucket - Lists artefacts in a bucket, S3-style
-app.get('/artefacts/:bucket', createListArtefactsHandler());
+app.get('/artefacts/:bucket', extractAWSCredentialsIfPresent(), requiresLogin, requiresPermission("viewArtefacts"), createListArtefactsHandler());
 
 // GET /artefacts/:bucket/* - Lists artefacts in a bucket/prefix, S3-style
-app.get('/artefacts/:bucket/*', createListArtefactsHandler());
+app.get('/artefacts/:bucket/*', extractAWSCredentialsIfPresent(), requiresLogin, requiresPermission("viewArtefacts"), createListArtefactsHandler());
 
 // DELETE /artefacts/* - Deletes artefact files from the system
-app.delete('/artefacts/*', createDeleteArtefactHandler());
+app.delete('/artefacts/*', extractAWSCredentialsIfPresent(), requiresLogin, requiresPermission("deleteArtefacts"), createDeleteArtefactHandler());
 
 // ███████ ███████ ██████  ██    ██ ███████ ██████      ███████ ████████  █████  ██████  ████████ ██    ██ ██████
 // ██      ██      ██   ██ ██    ██ ██      ██   ██     ██         ██    ██   ██ ██   ██    ██    ██    ██ ██   ██
