@@ -16,8 +16,10 @@ if ! command -v jq >/dev/null 2>&1; then
     exit 1
 fi
 
-# Set base URL from template placeholders
-SHEETBOT_BASEURL="${req.protocol}://${req.get('host')}"
+# Set base URL from environment or template placeholders
+if [ -z "${SHEETBOT_BASEURL:-}" ]; then
+    SHEETBOT_BASEURL="${req.protocol}://${req.get('host')}"
+fi
 export SHEETBOT_BASEURL
 
 # Function to check for HTTP errors
