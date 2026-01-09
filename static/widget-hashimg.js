@@ -13,6 +13,23 @@ export class HashImgWidget extends LitElement {
         this.data = '';
     }
 
+    getCopyText() {
+        if (this.data !== null && this.data !== undefined) {
+            if (typeof this.data === "object") {
+                try {
+                    return JSON.stringify(this.data, null, 2);
+                } catch (e) {
+                    console.warn("widget-hashimg: Can't JSON stringify object.. reverting back to original representation!", e);
+                    return this.data;
+                }
+            } else {
+                return this.data;
+            }
+        } else {
+            return '';
+        }
+    }
+
     _hashTask = new Task(this, {
         task: async ([data]) => {
             if (data !== null && data !== undefined) {

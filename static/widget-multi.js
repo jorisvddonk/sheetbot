@@ -35,6 +35,10 @@ export class MultiWidget extends LitElement {
         return retval;
     }
 
+    getCopyText() {
+        return this.data;
+    }
+
     render() {
         const elements = [];
         for (let i = 0; i < this.numSlots; i++) {
