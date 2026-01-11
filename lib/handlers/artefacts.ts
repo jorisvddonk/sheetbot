@@ -1,3 +1,18 @@
+const mimeTypes: Record<string, string> = {
+  'html': 'text/html',
+  'htm': 'text/html',
+  'css': 'text/css',
+  'js': 'application/javascript',
+  'json': 'application/json',
+  'png': 'image/png',
+  'jpg': 'image/jpeg',
+  'jpeg': 'image/jpeg',
+  'gif': 'image/gif',
+  'svg': 'image/svg+xml',
+  'txt': 'text/plain',
+  'md': 'text/markdown',
+};
+
 /**
  * Creates a handler that lists artefact files in a bucket/prefix, S3-style.
  * @returns {Function} Express route handler function
@@ -46,7 +61,9 @@ export function createListArtefactsHandler(defaultBucket?: string) {
                     console.log('Serving file:', filepath, 'size:', stat.size);
                     const content = await Deno.readFile(filepath);
                     console.log('Read content length:', content.length);
-                    res.set('Content-Type', 'application/octet-stream'); // Or detect MIME type
+                    const ext = pathPrefix.split('.').pop()?.toLowerCase();
+                    const mimeType = mimeTypes[ext || ''] || 'application/octet-stream';
+                    res.set('Content-Type', mimeType);
                     res.set('Content-Length', stat.size.toString());
                     res.set('Last-Modified', stat.mtime.toISOString());
                     res.set('ETag', `"${Date.now()}"`);
