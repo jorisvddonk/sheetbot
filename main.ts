@@ -36,7 +36,9 @@ import { extractAWSCredentialsIfPresent } from "./lib/middleware.ts";
 
 const initDir = "./init/";
 try {
-    await Deno.mkdir(initDir, { recursive: true });
+    if (!Deno.existsSync(initDir)) {
+        await Deno.mkdir(initDir, { recursive: true });
+    }
 } catch {
     // ignore
 }
