@@ -112,6 +112,7 @@ export class JsonSchemaValidationWidget extends LitElement {
         .agent-details {
           color: rgba(255, 255, 255, 0.6);
         }
+
       }
 
       /* Scrollbar styling */
@@ -160,6 +161,33 @@ export class JsonSchemaValidationWidget extends LitElement {
       this.data = '{}';
       this.rowkey = "";
       this.validationResults = null;
+      this._gridDataAvailable = false;
+    }
+
+    connectedCallback() {
+      super.connectedCallback();
+      // Check for grid data availability periodically
+      this._checkGridData();
+    }
+
+    disconnectedCallback() {
+      super.disconnectedCallback();
+      if (this._checkTimer) {
+        clearInterval(this._checkTimer);
+      }
+    }
+
+    _checkGridData() {
+      const gridElement = this.closest('element-grid');
+      if (gridElement && gridElement.data && !this._gridDataAvailable) {
+        this._gridDataAvailable = true;
+        this.requestUpdate();
+      }
+
+      // Keep checking for a short time in case data loads asynchronously
+      if (!this._gridDataAvailable) {
+        this._checkTimer = setTimeout(() => this._checkGridData(), 500);
+      }
     }
 
     async updated(changedProperties) {
@@ -199,14 +227,55 @@ export class JsonSchemaValidationWidget extends LitElement {
           return;
         }
 
-        // Validate schema against each agent
+        // Try to get task type from row data automatically
+        let targetAgentTypes = null;
+        try {
+          const gridElement = this.closest('element-grid');
+          if (gridElement && gridElement.data) {
+            const columns = gridElement.getColumnDefinitions();
+            const rowData = gridElement.getRowData(this.rowkey);
+
+            if (columns && rowData) {
+              // Find column with widgettype "tasktype"
+              const taskTypeColumnIndex = columns.findIndex(col => col.widgettype === 'tasktype');
+              if (taskTypeColumnIndex !== -1) {
+                const taskTypeValue = rowData[taskTypeColumnIndex];
+                if (taskTypeValue && typeof taskTypeValue === 'string') {
+                  targetAgentTypes = [taskTypeValue];
+                }
+              }
+            }
+          }
+        } catch (e) {
+          // Silently ignore errors - fall back to validating all agents
+          console.warn('Could not determine task type from row data:', e);
+        }
+
+        // Fallback: check if schema specifies agent types
+        if (!targetAgentTypes) {
+          targetAgentTypes = schema.agentTypes || null;
+        }
+
+        // Filter agents by determined types if available
+        let agentsToValidate = agents;
+        if (targetAgentTypes && Array.isArray(targetAgentTypes)) {
+          agentsToValidate = agents.filter(agent => targetAgentTypes.includes(agent.type));
+        }
+
+        if (agentsToValidate.length === 0) {
+          const typeInfo = targetAgentTypes ? ` for types: ${targetAgentTypes.join(', ')}` : '';
+          this.validationResults = { error: `No agents found${typeInfo} to validate against` };
+          return;
+        }
+
+        // Validate schema against filtered agents
         const ajv = new Ajv();
         const validate = ajv.compile(schema);
 
         let validAgents = [];
         let invalidAgents = [];
 
-        for (const agent of agents) {
+        for (const agent of agentsToValidate) {
           const valid = validate(agent.capabilities || {});
           if (valid) {
             validAgents.push(agent);
@@ -219,11 +288,12 @@ export class JsonSchemaValidationWidget extends LitElement {
         }
 
         this.validationResults = {
-          totalAgents: agents.length,
+          totalAgents: agentsToValidate.length,
           validCount: validAgents.length,
           invalidCount: invalidAgents.length,
           validAgents,
-          invalidAgents
+          invalidAgents,
+          filteredByTypes: targetAgentTypes ? targetAgentTypes : null
         };
 
       } catch (e) {
@@ -266,9 +336,12 @@ export class JsonSchemaValidationWidget extends LitElement {
         return html`<div>Schema data is not a valid object</div>`;
       }
 
-      const headerText = this.validationResults && !this.validationResults.error
-        ? `Schema Validation Results ✓${this.validationResults.validCount} ✗${this.validationResults.invalidCount} (of ${this.validationResults.totalAgents})`
-        : 'Schema Validation Results';
+      let headerText = 'Schema Validation Results';
+      if (this.validationResults && !this.validationResults.error) {
+        const { validCount, invalidCount, totalAgents, filteredByTypes } = this.validationResults;
+        const agentTypeText = filteredByTypes && filteredByTypes.length === 1 ? ` ${filteredByTypes[0]}` : '';
+        headerText = `Schema Validation Results ✓${validCount} ✗${invalidCount} (of ${totalAgents}${agentTypeText} agents)`;
+      }
 
       return html`<div>
         <div class="validation-container">
@@ -287,7 +360,7 @@ export class JsonSchemaValidationWidget extends LitElement {
         return html`<div class="validation-results error">${this.validationResults.error}</div>`;
       }
 
-      const { totalAgents, validCount, invalidCount, validAgents, invalidAgents } = this.validationResults;
+      const { validAgents, invalidAgents } = this.validationResults;
 
       return html`
         <div class="validation-results">

@@ -323,7 +323,43 @@ export class GridElement extends LitElement {
             </div>
         `;
     }
-    
+
+    /**
+     * Get the full row data for a given rowkey.
+     * Widgets can call this.parentElement.getRowData(this.rowkey) to access other cells in their row.
+     * @param {string} rowkey - The primary key of the row
+     * @returns {Array|null} The full row data array, or null if not found
+     */
+    getRowData(rowkey) {
+        if (!this.data) return null;
+
+        try {
+            const tabledef = JSON.parse(this.data);
+            // Find the row where the first column (key) matches rowkey
+            return tabledef.data.find(row => row[0] === rowkey) || null;
+        } catch (e) {
+            console.error('Error parsing table data in getRowData:', e);
+            return null;
+        }
+    }
+
+    /**
+     * Get the column definitions for the current sheet.
+     * Widgets can call this.parentElement.getColumnDefinitions() to access column metadata.
+     * @returns {Array|null} Array of column definition objects, or null if not available
+     */
+    getColumnDefinitions() {
+        if (!this.data) return null;
+
+        try {
+            const tabledef = JSON.parse(this.data);
+            return tabledef.columns || null;
+        } catch (e) {
+            console.error('Error parsing table data in getColumnDefinitions:', e);
+            return null;
+        }
+    }
+
     render() {
         if (this.data !== null && this.data !== undefined) {
             return html`<span>${this.tableGenerator(JSON.parse(this.data))}<span><element-contextmenu ${ref(this.contextMenuRef)}/></span></span>`;
