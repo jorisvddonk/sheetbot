@@ -197,7 +197,7 @@ SheetBot provides an S3-compatible API for artefact management, enabling integra
 
 This allows using standard S3-compatible tools and workflows for artefact handling.
 
-Authentication for the S3-compatible API can be done via standard SheetBot login (with appropriate permissions) or AWS-compatible credentials extracted from requests. Ensure users have the "createArtefacts", "viewArtefacts", or "deleteArtefacts" permissions as needed.
+Authentication for the S3-compatible API can be done via standard SheetBot login (with appropriate permissions) or AWS-compatible credentials extracted from requests (`extractAWSCredentialsIfPresent` in `lib/middleware.ts`). Ensure users have the "createArtefacts", "viewArtefacts", or "deleteArtefacts" permissions as needed.
 
 To obtain temporary AWS-compatible credentials for S3 API access, use POST `/artefacts-credentials` after logging in. This returns fake AWS credentials that can be used with S3-compatible tools.
 
@@ -261,9 +261,9 @@ Tasks store arbitrary JSON data that can be updated during execution:
 
 - **Update during execution**: Agents can POST to `/tasks/:id/data` to add/update data
 - **Completion data**: Agents include result data in `/tasks/:id/complete` request
-- **Dependency injection**: Completed task data is injected into dependent scripts using `__DEP_RESULT_<taskId>__` placeholders
+- **Dependency injection**: Completed task data is injected into dependent scripts using `__DEP_RESULT_<taskId>__` placeholders (`createInjectDependenciesMiddleware` in `lib/middleware.ts`)
 
-Example: A compilation task might store build artifacts or error logs in its data.
+Example: A compilation task might store execution time, success status, or warning counts in its data.
 
 #### Dependency Injection
 
@@ -279,9 +279,11 @@ const depResult = __DEP_RESULT_abc123__; // Becomes actual data
 console.log(depResult);
 ```
 
+Note: Dependency injection is an advanced feature primarily used by the [distributed runtime](docs/Distributed_Runtime.md). For most use cases, it's recommended to fetch task data dynamically at runtime using the API (e.g., GET `/tasks/{id}`), or have tasks communicate via shared sheets for better flexibility and decoupling.
+
 #### Sheet Data
 
-Sheets provide persistent key-value storage using SQLite databases:
+Sheets provide persistent key-value storage using SQLite databases. See [Sheet Database Table Structure](docs/sheet_db_tablestructure.md) for details on the underlying schema.
 
 - **Upsert data**: POST to `/sheets/:id/data` with JSON containing `key` and other fields
 - **Delete row**: DELETE `/sheets/:id/data/:key`
@@ -315,17 +317,7 @@ Sheets support customizable views through column metadata:
 - **Layout**: The web interface uses a CSS grid layout where each cell contains the appropriate widget based on column type
 - **Multi-widgets**: Columns can specify an array of widget types for complex displays
 
-Available widgets include:
-- `text`: Plain text display
-- `image`: Image rendering
-- `code`: Syntax-highlighted code
-- `download`: Downloadable files
-- `sheetkey`: Key display
-- `hashimg`: Hashed image
-- `multi`: Multiple widgets in one cell
-- `testresult`: Test result display
-
-To customize a sheet's view, modify the `columnstructure` table via API or direct database access.
+To customize a sheet's view, modify the `columnstructure` table via API or direct database access. See [Widgets](docs/widgets.md) for available widget types and configuration.
 
 #### Adding New Widgets
 
