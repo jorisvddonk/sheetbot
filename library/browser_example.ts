@@ -3,6 +3,12 @@ import { addSheetData } from "./lib/sheetutil.ts";
 import { launch } from "https://deno.land/x/astral/mod.ts";
 
 /*
+AddTaskComments: <addTaskComments>
+This example demonstrates taking a screenshot of a webpage using a headless browser and uploading the screenshot as an artefact to the task's sheet.
+</addTaskComments>
+*/
+
+/*
 Suggested capabilitiesSchema for this task: <capabilitiesSchema>
 
 {

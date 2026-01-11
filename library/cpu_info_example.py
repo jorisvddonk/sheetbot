@@ -20,39 +20,55 @@ else:
 
 # <name>cpu-info-report</name>
 
+# AddTaskComments: <addTaskComments>
+# This script collects CPU information including count, usage percentage, and frequency details, then submits the data to a sheet.
+# </addTaskComments>
+
 # <capabilitiesSchema>
 {
-  "$schema": "http://json-schema.org/draft-07/schema#",
-  "type": "object",
-  "properties": {
-    "os": {
-      "type": "string"
-    },
-    "arch": {
-      "type": "string"
-    }
-  }
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {"os": {"type": "string"}, "arch": {"type": "string"}},
 }
 # </capabilitiesSchema>
 
 # <data>
-{
-  "sheet": "cpu-info"
-}
+{"sheet": "cpu-info"}
 # </data>
 
+
 def getData():
-    response = requests.get(os.environ["SHEETBOT_TASK_BASEURL"], headers={"Authorization": os.environ.get("SHEETBOT_AUTHORIZATION_HEADER", "")})
+    response = requests.get(
+        os.environ["SHEETBOT_TASK_BASEURL"],
+        headers={"Authorization": os.environ.get("SHEETBOT_AUTHORIZATION_HEADER", "")},
+    )
     response.raise_for_status()
     return response.json()["data"]
 
+
 def submitData(data):
-    response = requests.post(os.environ["SHEETBOT_TASK_DATAURL"], json={"data": data}, headers={"Authorization": os.environ.get("SHEETBOT_AUTHORIZATION_HEADER", ""), "Content-Type": "application/json"})
+    response = requests.post(
+        os.environ["SHEETBOT_TASK_DATAURL"],
+        json={"data": data},
+        headers={
+            "Authorization": os.environ.get("SHEETBOT_AUTHORIZATION_HEADER", ""),
+            "Content-Type": "application/json",
+        },
+    )
     response.raise_for_status()
 
+
 def addSheetData(sheet, data):
-    response = requests.post(f"{SHEETBOT_BASEURL}/sheets/{sheet}/data", json=data, headers={"Authorization": os.environ.get("SHEETBOT_AUTHORIZATION_HEADER", ""), "Content-Type": "application/json"})
+    response = requests.post(
+        f"{SHEETBOT_BASEURL}/sheets/{sheet}/data",
+        json=data,
+        headers={
+            "Authorization": os.environ.get("SHEETBOT_AUTHORIZATION_HEADER", ""),
+            "Content-Type": "application/json",
+        },
+    )
     response.raise_for_status()
+
 
 taskData = getData()
 sheet = taskData.get("sheet", "cpu-info")
@@ -68,7 +84,7 @@ result = {
     "cpu_freq_current": cpu_freq.current if cpu_freq else None,
     "cpu_freq_min": cpu_freq.min if cpu_freq else None,
     "cpu_freq_max": cpu_freq.max if cpu_freq else None,
-    "timestamp": datetime.datetime.now().isoformat()
+    "timestamp": datetime.datetime.now().isoformat(),
 }
 
 # Submit data

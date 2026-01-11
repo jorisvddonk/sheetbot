@@ -3,6 +3,12 @@ import { submitData, getData } from "./lib/taskutil.ts";
 import { addSheetData } from "./lib/sheetutil.ts";
 
 /*
+AddTaskComments: <addTaskComments>
+This example demonstrates basic git operations by collecting the git version and submitting it along with a timestamp to the task data.
+</addTaskComments>
+*/
+
+/*
 Suggested capabilitiesSchema for this task: <capabilitiesSchema>
 
 {

@@ -2,6 +2,10 @@
 
 # <name>system-info-report</name>
 
+# AddTaskComments: <addTaskComments>
+# This script collects system information including load averages, free disk space, and memory usage, then submits the data to a sheet.
+# </addTaskComments>
+
 # <capabilitiesSchema>
 # {
 #   "$schema": "http://json-schema.org/draft-07/schema#",
