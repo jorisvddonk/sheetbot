@@ -102,9 +102,6 @@ stateDiagram-v2
     AWAITING --> RUNNING : Agent accepts task
     RUNNING --> COMPLETED : Task succeeds
     RUNNING --> FAILED : Task fails
-    COMPLETED --> DELETED : Transition (auto-delete)
-    FAILED --> DELETED : Transition (auto-delete)
-    COMPLETED --> AWAITING : Transition (periodic reset)
     note right of PAUSED
         Tasks can start paused for
         dependency setup before execution
@@ -117,9 +114,11 @@ stateDiagram-v2
         Task being executed by agent
     end note
     note right of COMPLETED
-        Transitions can auto-delete,
-        reset for periodic tasks,
-        or apply other status changes
+        Transitions allow automated
+        status changes to any other
+        status based on conditions
+        and timing rules configured
+        per task.
     end note
 ```
 
