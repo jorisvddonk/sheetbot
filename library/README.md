@@ -25,7 +25,9 @@ These scripts are **real-world examples** that show how SheetBot can be used for
 - **`system_info_example.sh`** - Shell script for system monitoring (load averages, disk, memory)
 
 ### 🎯 Basic Examples
-- **`basic_example.ts`** - Simple TypeScript task example demonstrating basic SheetBot patterns
+- **`basic_git_example.ts`** - Basic example showing git version detection and data submission
+- **`hello_world.ts`** - Minimal example that stores a timestamped "hello world" message
+- **`deno_counter_example.ts`** - Incrementing counter with automatic reset via task transitions
 
 ## How to Use These Examples
 
@@ -36,6 +38,7 @@ These scripts demonstrate SheetBot usage patterns:
 - Sheet data submission and management
 - Browser automation and screenshot capture
 - System monitoring and reporting
+- Automatic task state transitions and self-resetting tasks
 
 ### 2. As Templates
 Copy and modify these scripts for your own use cases:
@@ -82,7 +85,7 @@ To run an example script:
 
 ```bash
 # 1. Create a task using the script
-deno run --allow-all addtask.ts --script library/basic_example.ts
+deno run --allow-all addtask.ts --script library/hello_world.ts
 
 # 2. Or use the web interface
 # - Go to the "Library" page
@@ -132,5 +135,5 @@ For questions about these examples:
 
 ---
 
-💡 **Tip**: Start with `basic_example.ts` to understand the core patterns, then explore the system monitoring and browser automation examples!
+💡 **Tip**: Start with `hello_world.ts` for the simplest example, then try `deno_counter_example.ts` to see automatic task transitions in action!
 🚀 **Pro Tip**: Use these examples as building blocks for your own automation workflows!
