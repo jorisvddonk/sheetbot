@@ -48,6 +48,10 @@ This is useful for setting up databases, loading configurations, or performing o
 - **`scripts/` directory**: Contains agent template files (`agent.template.ts`, `agent.template.py`, `agent.template.sh`)
 - **`library/` directory**: Contains automation scripts for various use cases (game development, web deployment, system automation, etc.)
 
+### Library Script Annotations
+
+Library scripts use special XML-like annotations in comments to define task metadata. See [Library Script Annotations](docs/library_script_annotations.md) for details on how to use `<name>`, `<capabilitiesSchema>`, `<data>`, and `<addTaskComments>` annotations.
+
 ## Protocol
 
 The SheetBot protocol enables distributed task execution with dependency management and capability-based matching.

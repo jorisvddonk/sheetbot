@@ -265,9 +265,6 @@ app.post('/artefacts/:bucket/*', extractAWSCredentialsIfPresent(), requiresLogin
 // PUT /artefacts/{bucket}/* - Uploads artefact files or parts, S3-style
 app.put('/artefacts/:bucket/*', extractAWSCredentialsIfPresent(), requiresLogin, requiresPermission("createArtefacts"), express.raw({ type: () => true, limit: '10mb' }), createPutArtefactHandler());
 
-// Static file serving for artefacts directory - Serves uploaded artefact files
-//app.use('/artefacts', express.static('artefacts'));
-
 // GET /artefacts/:bucket - Lists artefacts in a bucket, S3-style
 app.get('/artefacts/:bucket', extractAWSCredentialsIfPresent(), requiresLogin, requiresPermission("viewArtefacts"), createListArtefactsHandler());
 

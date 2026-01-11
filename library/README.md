@@ -12,46 +12,30 @@ These scripts are **real-world examples** that show how SheetBot can be used for
 - **System integration** - Interacting with various systems and APIs
 - **Game development** - Compiling game engines and assets
 
-## Categories of Examples
+## Available Examples
 
 ### 🎮 Game Development
-- **`godot-compile.ts`** - Compiles Godot game engine from source
-- **`feltyrion-godot_compile.ts`** - Compiles Feltyrion-Godot game
-- **`feltyrion-godot_merge.ts`** - Merges Feltyrion-Godot builds
-- **`meta_feltyrion-godot_multios_compilation.ts`** - Multi-OS compilation orchestration
+- **`godot-compile.ts`** - Compiles Godot game engine from source with configurable branches and build flags
 
-### 🌐 Web Development
-- **`mooses_nl_build_deploy.ts`** - Builds and deploys mooses.nl website
+### 🌐 Web Automation
+- **`browser_example.ts`** - Browser-based automation with screenshot capture
 
-### 🔧 System Automation
-- **`noctis.ts`** - Noctis system reset functionality
-- **`system-reset_screenshot.ts`** - System reset screenshot automation
-- **`scancodes.ts`** - VirtualBox scancodes handling
-
-### 📦 Build Systems
-- **`tzo-c_compile.ts`** - TZO-C compilation
+### 📊 System Monitoring
+- **`cpu_info_example.py`** - Python script for collecting CPU information and frequency data
+- **`system_info_example.sh`** - Shell script for system monitoring (load averages, disk, memory)
 
 ### 🎯 Basic Examples
-- **`basic_example.ts`** - Simple task example
-- **`browser_example.ts`** - Browser-based task example
-- **`cpu_info_example.py`** - Python example for CPU info
-- **`system_info_example.sh`** - Shell script for system info
-
-### 🔗 Distributed Computing
-- **`distributed_example.ts`** - Distributed task example
-- **`distributed_example_2.ts`** - Advanced distributed example
-- **`metatask.ts`** - Meta-task orchestration
-- **`meta_noctis_systemreset_comparison.ts`** - Multi-system comparison
+- **`basic_example.ts`** - Simple TypeScript task example demonstrating basic SheetBot patterns
 
 ## How to Use These Examples
 
 ### 1. As Learning Resources
-These scripts demonstrate advanced SheetBot usage patterns:
-- Complex task orchestration
-- Multi-step workflows
-- Error handling
-- Data submission
-- Artefact management
+These scripts demonstrate SheetBot usage patterns:
+- Basic task execution and data handling
+- Different language runtimes (TypeScript, Python, Shell)
+- Sheet data submission and management
+- Browser automation and screenshot capture
+- System monitoring and reporting
 
 ### 2. As Templates
 Copy and modify these scripts for your own use cases:
@@ -62,10 +46,10 @@ cp library/godot-compile.ts scripts/my-game-compile.ts
 
 ### 3. As Inspiration
 See how different automation challenges are solved:
-- Build system integration
-- Deployment automation
-- Cross-platform compilation
-- System monitoring
+- Game engine compilation
+- Browser automation
+- System monitoring and reporting
+- Cross-language scripting (TypeScript, Python, Shell)
 
 ## Script Structure
 
@@ -73,33 +57,24 @@ Each script follows a similar pattern:
 
 ```typescript
 // 1. Import dependencies
-import { getData, submitData, uploadArtefactFromFilepath } from "./lib/taskutil.ts";
+import { getData, submitData } from "./lib/taskutil.ts";
+import { addSheetData } from "./lib/sheetutil.ts";
 
-// 2. Define capabilities (optional)
-/*
-Suggested capabilitiesSchema for this task: <capabilitiesSchema>
-{
-  "packages": ["git", "cmake", "clang"]
-}
-</capabilitiesSchema>
-*/
+// 2. Define metadata (optional)
+// See docs/library_script_annotations.md for annotation details
 
-// 3. Helper functions
-async function subtask_statusupdate(subtaskname, completed) {
-  // Update task status
-}
-
-// 4. Main execution
+// 3. Main execution
 const taskdata = await getData();
 
-// 5. Task logic with status updates
-await subtask_statusupdate("build", false);
-// ... perform task ...
-await subtask_statusupdate("build", true);
+// 4. Task logic
+// ... perform work ...
 
-// 6. Submit results
+// 5. Submit results
 await submitData({ result: "success" });
+await addSheetData("sheet_name", { key: "entry_key", data: result });
 ```
+
+Scripts can include optional XML-like annotations for task metadata. See [Library Script Annotations](docs/library_script_annotations.md) for complete details on `<name>`, `<capabilitiesSchema>`, `<data>`, and `<addTaskComments>` annotations.
 
 ## Running Examples
 
@@ -122,7 +97,7 @@ We welcome contributions of new example scripts! Please follow these guidelines:
 
 ### Requirements
 - Scripts should be **self-contained** and **well-documented**
-- Include **capabilitiesSchema** for agent matching
+- Include **capabilitiesSchema** for agent matching (see [Capabilities System](docs/capabilities.md))
 - Use **subtask status updates** for progress tracking
 - Handle **errors gracefully**
 - Submit **meaningful data** and **artefacts**
@@ -157,5 +132,5 @@ For questions about these examples:
 
 ---
 
-💡 **Tip**: Start with the basic examples and work your way up to the more complex ones!
-🚀 **Pro Tip**: Combine multiple examples to create powerful automation workflows!
+💡 **Tip**: Start with `basic_example.ts` to understand the core patterns, then explore the system monitoring and browser automation examples!
+🚀 **Pro Tip**: Use these examples as building blocks for your own automation workflows!
