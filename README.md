@@ -36,6 +36,10 @@ SheetBot is unlikely to be as easy to learn and use compared to existing CI tool
 
 See [Distributed Runtime](docs/Distributed_Runtime.md) for info on an experimental distributed runtime system that's also included.
 
+## Known Issues
+
+See [Known Issues](docs/known_issues.md) for current limitations and workarounds.
+
 ## Getting Started
 
 1. Ensure Deno is [installed](https://docs.deno.com/runtime/getting_started/installation/), then clone this repository
@@ -353,3 +357,10 @@ The codebase is structured for straightforward modifications. For authentication
 - `library/`: Automation scripts
 - `sheets/`: Generated sheet files
 - `static/`: Web assets and HTML files
+- `docs/`: Documentation files
+- `init/`: Initialization scripts that run on server startup
+- `artefacts/`: File artefacts uploaded by tasks
+- `adduser.ts`: Script to add users to the database
+- `addtask.ts`: Script to add tasks programmatically
+- `openapi.yaml`: OpenAPI specification for the API
+- Database files: `users.db`, `tasks.db`, `secret.txt` (created on first run)
