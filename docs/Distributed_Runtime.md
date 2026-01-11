@@ -69,21 +69,22 @@ class Runtime {
 ```typescript
 // Define distributed functions
 const compile = distributed(
-  async (os: string) => runRemoteCompile(os),
-  { properties: { os: { const: os } } }
+  async (src: string) => runCompileJob(src),
+  { properties: { os: { const: "linux" } } } // capabilities JSON Schema
 );
+const zip = distributed(async (...files) => zipFiles(files));
+const upload = distributed(async (file) => uploadFile(file));
 
-const zip = distributed(async (...files) => runRemoteZip(files));
-const upload = distributed(async (file) => runRemoteUpload(file));
+// Write natural async code
+(async () => {
+  const [libfoo, libbar] = await Promise.all([
+    compile("libfoo.cpp"),
+    compile("libbar.cpp")
+  ]);
+  const result = await upload(await zip(libfoo, libbar));
 
-// Natural async code
-const exe = compile("windows");
-const bin = compile("linux");
-const archive = await zip(exe, bin);
-await upload(archive);
-
-// Execute DAG
-await Runtime.execute(upload);
+  console.log("Final result:", result);
+})();
 ```
 
 ## Integration
