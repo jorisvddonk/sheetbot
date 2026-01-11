@@ -104,7 +104,7 @@ app.set('trust proxy', (ip: string) => {
 });
 
 // API validation middleware (only in development)
-if (Deno.env.get("NODE_ENV") !== "production") {
+if (Deno.env.get("NODE_ENV") === "development") {
     app.use(OpenApiValidator.middleware({
         apiSpec: './openapi.yaml',
         validateRequests: true,
