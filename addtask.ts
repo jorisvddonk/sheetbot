@@ -9,10 +9,10 @@ const script: string = await Select.prompt({
     options: Array.from(Deno.readDirSync("./library/").map(x => x.name).filter(x => x.endsWith(".ts") || x.endsWith(".js") || x.endsWith(".py") || x.endsWith(".sh")))
 });
 
-console.log("Adding task, please login first");
-const username = prompt("username");
-const password = promptSecret("password");
-const baseurl = prompt("base URL", "http://127.0.0.1:3000");
+console.log("Adding task, please login first (using SHEETBOT_AUTH_* env variables if present)");
+const username = Deno.env.get("SHEETBOT_AUTH_USER") || prompt("username");
+const password = Deno.env.get("SHEETBOT_AUTH_PASS") || promptSecret("password");
+const baseurl = Deno.env.get("SHEETBOT_BASEURL") || prompt("base URL", "http://127.0.0.1:3000");
 
 const token = await fetch(`${baseurl}/login`, {
     method: "POST",
