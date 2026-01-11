@@ -1,8 +1,14 @@
 /*
 Suggested name for this task: <name>Clock Example</name>
 
+Suggested data for this task: <data>
+{
+  "bucket": "public"
+}
+</data>
+
 AddTaskComments: <addTaskComments>
-This example task generates an HTML page featuring an SVG analog clock that displays the current local time with hour, minute, and second hands, hour marks, and numbers. Below the clock, it includes a textual description with the exact ISO 8601 timestamp and ISO week number when the clock was generated. The resulting clock.html is uploaded to the task's artefacts bucket using fake AWS credentials via the S3-compatible API.
+This example task generates an HTML page featuring an SVG analog clock that displays the current local time with hour, minute, and second hands, hour marks, and numbers. Below the clock, it includes a textual description with the exact ISO 8601 timestamp and ISO week number when the clock was generated. It checks for a custom bucket in task data (data.bucket), falling back to the task bucket if not specified. The resulting clock.html is uploaded to the specified artefacts bucket using fake AWS credentials via the S3-compatible API.
 </addTaskComments>
 */
 
@@ -84,6 +90,23 @@ const htmlContent = `<html>
 // Get the task ID from the task base URL
 const taskId = Deno.env.get("SHEETBOT_TASK_BASEURL").split('/').pop();
 
+// Fetch task to check for custom bucket in data
+const taskRes = await fetch(Deno.env.get("SHEETBOT_TASK_BASEURL"), {
+    headers: {
+        "Authorization": Deno.env.get("SHEETBOT_AUTHORIZATION_HEADER")
+    }
+});
+let bucket = taskId;
+console.log("Task response status:", taskRes.status);
+if (taskRes.ok) {
+    const task = await taskRes.json();
+    console.log("Fetched task:", task);
+    if (task.data && task.data.bucket) {
+        bucket = task.data.bucket;
+    }
+}
+console.log("Using bucket:", bucket);
+
 // Fetch fake AWS credentials for S3-compatible API
 const credsRes = await fetch(`${Deno.env.get("SHEETBOT_BASEURL")}/artefacts-credentials`, {
     method: "POST",
@@ -97,8 +120,8 @@ if (!credsRes.ok) {
 const creds = await credsRes.json();
 console.log("Fetched AWS credentials:", creds);
 
-// Upload to the task's artefacts bucket using the S3-compatible API with creds in headers
-const response = await fetch(`${Deno.env.get("SHEETBOT_BASEURL")}/artefacts/${taskId}/clock.html`, {
+// Upload to the specified artefacts bucket using the S3-compatible API with creds in headers
+const response = await fetch(`${Deno.env.get("SHEETBOT_BASEURL")}/artefacts/${bucket}/clock.html`, {
     method: "PUT",
     headers: {
         "Content-Type": "text/html",
@@ -113,15 +136,15 @@ if (!response.ok) {
     throw new Error(`Failed to upload artefact: ${response.statusText}`);
 }
 
-const directURL = `${Deno.env.get("SHEETBOT_BASEURL")}/artefacts/${taskId}/clock.html`;
-console.log("Uploaded clock.html to task artefacts bucket:", directURL);
+const directURL = `${Deno.env.get("SHEETBOT_BASEURL")}/artefacts/${bucket}/clock.html`;
+console.log("Uploaded clock.html to artefacts bucket:", directURL);
 
-// Submit the artefact URL to task data
+// Submit the artefact URL and bucket to task data
 await fetch(`${Deno.env.get("SHEETBOT_BASEURL")}/tasks/${taskId}/data`, {
     method: "POST",
     headers: {
         "Content-Type": "application/json",
         "Authorization": Deno.env.get("SHEETBOT_AUTHORIZATION_HEADER")
     },
-    body: JSON.stringify({ data: { artefactURL: directURL } })
+    body: JSON.stringify({ data: { artefactURL: directURL, bucket: bucket } })
 });
