@@ -10,7 +10,7 @@ export function setHttpDispatcher() {
     const loginResponse = await fetch("http://localhost:3000/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username: "admin", password: "admin" }),
+      body: JSON.stringify({ username: Deno.env.get("SHEETBOT_DISPATCH_AUTH_USER") || Deno.env.get("SHEETBOT_AUTH_USER"), password: Deno.env.get("SHEETBOT_DISPATCH_AUTH_PASS") || Deno.env.get("SHEETBOT_AUTH_PASS") }),
     });
     if (!loginResponse.ok) {
       throw new Error("Login failed");
