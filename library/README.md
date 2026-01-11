@@ -92,6 +92,15 @@ deno run --allow-all addtask.ts --script library/hello_world.ts
 # - Click "Add Task" on any example
 # - Configure task parameters
 # - Submit and monitor execution
+
+# 3. Run an agent to execute tasks
+# Set environment variables for authentication:
+export SHEETBOT_AUTH_USER=your_username
+export SHEETBOT_AUTH_PASS=your_password
+export SHEETBOT_BASEURL=http://localhost:3000
+
+# Then run a Deno agent:
+deno run --reload -A ${SHEETBOT_BASEURL}/scripts/agent.ts
 ```
 
 ## Contributing Examples

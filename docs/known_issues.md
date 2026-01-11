@@ -1,3 +1,4 @@
-# Known issues
+ # Known issues
 
-* If you submit an ephemeral task and then a task that depends on the ephemeral task, BUT the ephemeral task got completed before you submitted the second task, the second task will never complete, as it has a dependency on a task that isn't in the database anymore. This is because dependsOn is no longer getting checked when inserting a task.
+ * If you submit an ephemeral task and then a task that depends on the ephemeral task, BUT the ephemeral task got completed before you submitted the second task, the second task will never complete, as it has a dependency on a task that isn't in the database anymore. This is because dependsOn is no longer getting checked when inserting a task.
+ * UNIQUE constraint failed on transitions_schedule when scheduling periodic transitions: When a task status is updated multiple times (e.g., through repeated completion requests or middleware triggers), periodic transitions matching the current status are scheduled multiple times, causing a database constraint violation since (task_id, transition_index) must be unique. This results in 500 errors when completing tasks with recurring transitions.
