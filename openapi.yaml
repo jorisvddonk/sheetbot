@@ -278,32 +278,32 @@ components:
           format: uri
           description: Direct URL to the artefact file
 
-     ArtefactListResponse:
-       type: object
-       properties:
-         contents:
-           type: array
-           items:
-             type: object
-             properties:
-               key:
-                 type: string
-                 description: Artefact key (filename with prefix)
-               size:
-                 type: integer
-                 description: File size in bytes
-               lastModified:
-                 type: string
-                 format: date-time
-                 description: Last modification timestamp
-         commonPrefixes:
-           type: array
-           items:
-             type: string
-           description: Common prefixes (for delimiter-based grouping)
-         isTruncated:
-           type: boolean
-           description: Indicates if the list was truncated due to max-keys
+    ArtefactListResponse:
+      type: object
+      properties:
+        contents:
+          type: array
+          items:
+            type: object
+            properties:
+              key:
+                type: string
+                description: Artefact key (filename with prefix)
+              size:
+                type: integer
+                description: File size in bytes
+              lastModified:
+                type: string
+                format: date-time
+                description: Last modification timestamp
+        commonPrefixes:
+          type: array
+          items:
+            type: string
+          description: Common prefixes (for delimiter-based grouping)
+        isTruncated:
+          type: boolean
+          description: Indicates if the list was truncated due to max-keys
 
     Error:
       type: object
@@ -1418,116 +1418,116 @@ paths:
           type: string
         description: Artefact prefix/path (can contain slashes)
 
-     get:
-       summary: List artefacts in bucket/prefix
-       description: List artefacts in a bucket with optional prefix, S3-compatible
-       security:
-         - bearerAuth: []
-       parameters:
-         - name: list-type
-           in: query
-           schema:
-             type: string
-             enum: ["2"]
-           description: Specifies the ListObjects version (2 for V2)
-         - name: prefix
-           in: query
-           schema:
-             type: string
-           description: Limits the response to keys that begin with the specified prefix
-         - name: delimiter
-           in: query
-           schema:
-             type: string
-           description: A delimiter to group keys
-         - name: max-keys
-           in: query
-           schema:
-             type: integer
-             default: 1000
-           description: Sets the maximum number of keys returned
-         - name: encoding-type
-           in: query
-           schema:
-             type: string
-             enum: ["url"]
-           description: URL-encodes keys in the response
-       responses:
-         '200':
-           description: List of artefacts
-           content:
-             application/json:
-               schema:
-                 $ref: '#/components/schemas/ArtefactListResponse'
-         '401':
-           description: Unauthorized
-           content:
-             application/json:
-               schema:
-                 $ref: '#/components/schemas/Error'
-         '403':
-           description: Forbidden
-           content:
-             application/json:
-               schema:
-                 $ref: '#/components/schemas/Error'
-         '404':
-           description: Bucket or prefix not found
-           content:
-             application/json:
-               schema:
-                 $ref: '#/components/schemas/Error'
+    get:
+      summary: List artefacts in bucket/prefix
+      description: List artefacts in a bucket with optional prefix, S3-compatible
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: list-type
+          in: query
+          schema:
+            type: string
+            enum: ["2"]
+          description: Specifies the ListObjects version (2 for V2)
+        - name: prefix
+          in: query
+          schema:
+            type: string
+          description: Limits the response to keys that begin with the specified prefix
+        - name: delimiter
+          in: query
+          schema:
+            type: string
+          description: A delimiter to group keys
+        - name: max-keys
+          in: query
+          schema:
+            type: integer
+            default: 1000
+          description: Sets the maximum number of keys returned
+        - name: encoding-type
+          in: query
+          schema:
+            type: string
+            enum: ["url"]
+          description: URL-encodes keys in the response
+      responses:
+        '200':
+          description: List of artefacts
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ArtefactListResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Bucket or prefix not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
-     put:
-       summary: Upload artefact to bucket/key
-       description: Upload an artefact file to a specific bucket and key, S3-compatible
-       security:
-         - bearerAuth: []
-       requestBody:
-         required: true
-         content:
-           application/octet-stream:
-             schema:
-               type: string
-               format: binary
-       responses:
-         '200':
-           description: Artefact uploaded successfully
-           content:
-             application/json:
-               schema:
-                 type: object
-                 properties:
-                   key:
-                     type: string
-                     description: The key of the uploaded artefact
-                   size:
-                     type: integer
-                     description: Size of the uploaded file
-         '401':
-           description: Unauthorized
-           content:
-             application/json:
-               schema:
-                 $ref: '#/components/schemas/Error'
-         '403':
-           description: Forbidden
-           content:
-             application/json:
-               schema:
-                 $ref: '#/components/schemas/Error'
-         '400':
-           description: Invalid path
-           content:
-             application/json:
-               schema:
-                 $ref: '#/components/schemas/Error'
-         '500':
-           description: Upload failed
-           content:
-             application/json:
-               schema:
-                 $ref: '#/components/schemas/Error'
+    put:
+      summary: Upload artefact to bucket/key
+      description: Upload an artefact file to a specific bucket and key, S3-compatible
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+      responses:
+        '200':
+          description: Artefact uploaded successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  key:
+                    type: string
+                    description: The key of the uploaded artefact
+                  size:
+                    type: integer
+                    description: Size of the uploaded file
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '400':
+          description: Invalid path
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Upload failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
   /artefacts/{bucket}:
     parameters:
