@@ -66,13 +66,13 @@ The SheetBot protocol enables distributed task execution with dependency managem
 
 ```mermaid
 sequenceDiagram
-    participant Client
+    participant User
     participant Server
     participant Agent
 
-    Client->>Server: POST /tasks (create task)
-    Server->>Agent: POST /tasks/get (type, capabilities)
-    Agent->>Server: Task script URL
+    User->>Server: POST /tasks (create task)
+    Agent->>Server: POST /tasks/get (type, capabilities)
+    Server->>Agent: Task script URL
     Agent->>Server: POST /tasks/:id/accept
     Note over Agent: Run script (with dep results injected)
     Agent->>Server: POST /tasks/:id/complete (with result data)
