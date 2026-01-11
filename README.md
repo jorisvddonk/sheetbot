@@ -2,6 +2,7 @@
 
 - [Why I Built SheetBot](#why-i-built-sheetbot)
 - [Philosophy](#philosophy)
+- [AI Usage](#ai-usage)
 - [Conceptual Architecture](#conceptual-architecture)
 - [Features](#features)
 - [Getting Started](#getting-started)
@@ -30,7 +31,15 @@ SheetBot embraces "primitive emergent architecture": simple primitives (tasks, s
 
 Built with familiar tools: Express, JSON Schema, SQLite and Web Components. No complex dependencies, no complex build tooling, no opinions on build scripts, just flexible automation and the ability to get started with a simple `git clone` and `deno run` command.
 
+As much compute as possible is pushed out to the viewer side (the web UI) or build agents, and kept away from the server side so that the server is lightweight and doesn't need a lot of compute. For example, visualizations depicting which tasks can be ran by which agents is performed client-side in the UI.
+
 SheetBot is unlikely to be as easy to learn and use compared to existing CI tools, but once you understand how it works and how things fit together, it should be far easier to modify it to suit your needs. For me personally, that has saved time in the long run.
+
+## AI Usage
+
+Much of the SheetBot codebase since March 2025 has been developed with assistance from AI tools like Claude Code, Amazon Q Developer CLI, and OpenCode. The project's architecture lends itself well to AI-assisted development, particularly for creating custom widgets and integrations. This approach has accelerated feature development and demonstrated the potential of configuration as code with extensible scripting languages.
+
+If you prefer to work with code developed without AI influence, refer to [this commit](https://github.com/jorisvddonk/sheetbot/tree/981d46cef317bd1d1ba956c9fc7a1fabbbf54625) from before *any* AI tools were utilized. AI usage was minor (function-level only) after that commit until March 2025.
 
 ## Conceptual Architecture
 
