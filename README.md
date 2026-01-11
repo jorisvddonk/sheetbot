@@ -308,48 +308,6 @@ sequenceDiagram
     Server->>Agent: 200 OK
 ```
 
-#### Sheet Views
-
-Sheets support customizable views through column metadata:
-
-- **Column Structure**: Each sheet has a `columnstructure` table defining columns with properties like `widgettype`, `minwidth`, `maxwidth`, `minheight`, `maxheight`, and `columnorder`
-- **Widget Types**: Columns specify a widget type (e.g., `text`, `image`, `code`, `download`) that determines how data is rendered in cells
-- **Layout**: The web interface uses a CSS grid layout where each cell contains the appropriate widget based on column type
-- **Multi-widgets**: Columns can specify an array of widget types for complex displays
-
-To customize a sheet's view, modify the `columnstructure` table via API or direct database access. See [Widgets](docs/widgets.md) for available widget types and configuration.
-
-#### Adding New Widgets
-
-To create a custom widget for sheet columns:
-
-1. **Create Widget File**: Add `widget-<name>.js` in the `static/` directory
-2. **Define Custom Element**: Create a class extending `HTMLElement` (or use LitElement)
-3. **Implement Required Methods**:
-   - `getCopyText()`: Return plain text for clipboard
-   - `getCopyHTML()`: Return HTML for clipboard
-   - `getContextMenuDefinition()`: Return array of context menu items
-   - `delete()`: Handle deletion
-4. **Handle Attributes**: Widget receives `data`, `datatype`, `rowkey` attributes
-5. **Register Element**: Use `customElements.define('widget-<name>', WidgetClass)`
-6. **Load in HTML**: Add `<script src="widget-<name>.js" type="module"></script>` to `sheet.html`
-7. **Set in Column**: Update `columnstructure` table with `widgettype = '<name>'`
-
-Example widget structure:
-
-```javascript
-class MyWidget extends HTMLElement {
-    connectedCallback() {
-        this.innerHTML = `<div>${this.getAttribute('data')}</div>`;
-    }
-    getCopyText() { return this.getAttribute('data'); }
-    getCopyHTML() { return `<div>${this.getAttribute('data')}</div>`; }
-    getContextMenuDefinition() { return []; }
-    delete() { /* cleanup */ }
-}
-customElements.define('widget-my', MyWidget);
-```
-
 ### Agent Workflow
 
 Agents poll for tasks based on their type and capabilities. SheetBot provides templates for common runners:
