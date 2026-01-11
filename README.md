@@ -187,6 +187,21 @@ Artefacts are file outputs associated with tasks, stored in the filesystem for p
 - **Deletion**: Individual artefacts can be deleted via DELETE `/tasks/{id}/artefacts/{filename}`
 - **Cloning**: When tasks are cloned, artefacts are copied to the new task directory
 
+#### S3-Compatible API
+
+SheetBot provides an S3-compatible API for artefact management, enabling integration with S3 clients and tools:
+
+- **Multipart Uploads**: POST `/artefacts/{bucket}/*` for initiating multipart uploads
+- **Direct Uploads**: PUT `/artefacts/{bucket}/*` for uploading files or parts
+- **Listing**: GET `/artefacts/{bucket}` or GET `/artefacts/{bucket}/*` to list artefacts
+- **Deletion**: DELETE `/artefacts/*` to remove artefacts
+
+This allows using standard S3-compatible tools and workflows for artefact handling.
+
+Authentication for the S3-compatible API can be done via standard SheetBot login (with appropriate permissions) or AWS-compatible credentials extracted from requests. Ensure users have the "createArtefacts", "viewArtefacts", or "deleteArtefacts" permissions as needed.
+
+To obtain temporary AWS-compatible credentials for S3 API access, use POST `/artefacts-credentials` after logging in. This returns fake AWS credentials that can be used with S3-compatible tools.
+
 #### Capabilities
 
 See [Capabilities](docs/capabilities.md) for the full capabilities system documentation.
