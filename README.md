@@ -2,13 +2,21 @@
 
 <img src="static/logo.png" width="128px">
 
-A TypeScript-based automation and task management system using Deno.
+An open-source automation and CI tool built with Deno, Express.js, SQLite, Web Components (Lit), and JSON Schema. SheetBot provides flexible task orchestration and a widget-based UI for visualization, enabling cross-platform builds, remote installations, and bespoke automation without heavy dependencies.
 
-**Note: significant parts of this readme are machine-written. For a human-written account (until I get around to rewrite this), please go here: https://mooses.nl/blog/sheetbot_opensource_release/**
+**For a detailed human-written account of SheetBot's development and philosophy, see: https://mooses.nl/blog/sheetbot_opensource_release/**
+
+## Why I Built SheetBot
+
+I needed a quick build system for testing modifications to my projects across Linux, Windows, and MacOS. Existing open-source CI systems had too many dependencies, strong opinions on configuration, weak cross-platform support, and weren't designed for pet-like machines or extensibility through code. SheetBot solves these by using SQLite for storage, JSON Schema for task matching, and opaque scripts that can be written in any language.
 
 ## Philosophy
 
-SheetBot embraces the philosophy of "automation through composition": building complex workflows from simple, reusable tasks that can run anywhere. By leveraging JSON Schema for capability matching and condition evaluation, SheetBot enables precise, declarative automation without sacrificing flexibility. Extensibility is core—modify the code to fit your needs, as SheetBot is designed for easy customization and integration into diverse environments. SheetBot is built with what you, or your AI tool of choice, already know: express, JSON Schema, and sqlite. Tasks in SheetBot are opaque to SheetBot itself, which allows you to write tasks in any langage that you can write a runner for. The API is trivial and it should take you only a few hours, or a single prompt of your AI tool, to make a runner for a new language/runtime.
+SheetBot embraces "primitive emergent architecture": simple primitives (tasks, schemas, widgets) that combine into powerful systems. It's designed for configuration as code, easy extensibility, and integration with diverse environments. Tasks are opaque to SheetBot, allowing scripts in any language with custom runners. The API is simple; add a new runner with a few hours of work or an AI prompt.
+
+Built with familiar tools: Express, JSON Schema, SQLite and Web Components. No complex dependencies, no complex build tooling, no opinions on build scripts, just flexible automation and the ability to get started with a simple `git clone` and `deno run` command.
+
+SheetBot is unlikely to be as easy to learn and use compared to existing CI tools, but once you understand how it works and how things fit together, it should be far easier to modify it to suit your needs. For me personally, that has saved time in the long run.
 
 ## Conceptual architecture
 
@@ -16,16 +24,26 @@ SheetBot embraces the philosophy of "automation through composition": building c
 
 ## Features
 
-- [Distributed runtime](Distributed_Runtime.md) for executing tasks
-- SQLite data providers for sheets and users
-- Web interface for managing sheets and tasks
-- Various utility scripts for different operations
+- **Flexible Task Orchestration**: Tasks with arbitrary scripts matched to agents via JSON Schema capabilities
+- **Distributed Runtime**: Agents poll for tasks based on type and capabilities (e.g., OS, memory, installed software)
+- **Widget-Based UI**: HTML table interface with customizable widgets for data visualization (text, images, code, downloads)
+- **Opaque Scripts**: Run tasks in any language: Deno, Python, Bash, or custom runners
+- **Dependency Management**: Tasks can depend on others which blocks them until the others complete
+- **Artefacts & Data Storage**: File uploads and SQLite-backed sheets for persistent data
+- **Transitions**: Automatable task status changes (e.g., auto-delete, periodic resets)
+- **Cross-Platform**: Works on diverse hardware from Raspberry Pis to gaming handhelds
+- **Extensibility**: Modify code for custom auth, endpoints, widgets, or task types
+
+See [Distributed Runtime](docs/Distributed_Runtime.md) for info on an experimental distributed runtime system that's also included.
 
 ## Getting Started
 
-1. Ensure Deno is installed
-2. Run the main server: `deno run --allow-all main.ts`
-3. Access the web interface at the configured port
+1. Ensure Deno is [installed](https://docs.deno.com/runtime/getting_started/installation/), then clone this repository
+2. Add a user via `deno run adduser.ts` - this will prompt you first for read and write access to files like the user database file; read through them and accept if you agree, then type in the username and password to generate a new user. Use `*` for permissions to give access to all features, or see [docs/permissions.md](docs/permissions.md) for more info on the permissions system.
+3. Run the main server: `deno run --allow-read=./static --allow-read=./secret.txt --allow-read=./users.db --allow-write=./users.db --allow-read=./tasks.db --allow-write=./tasks.db --allow-read=./artefacts/ --allow-write=./artefacts/ --allow-read=./sheets/ --allow-write=./sheets/ --allow-read=./library/ --allow-read=./scripts/ --allow-read=./init/ main.ts` - this will again prompt for a few extra permissions; read through them and accept if you agree.
+4. Access the web interface at http://localhost:3000/
+
+By default, SheetBot listens on all interfaces (`0.0.0.0`) - change this in `main.ts` as needed.
 
 ## Initialization
 
@@ -182,6 +200,8 @@ Artefacts are file outputs associated with tasks, stored in the filesystem for p
 - **Cloning**: When tasks are cloned, artefacts are copied to the new task directory
 
 #### Capabilities
+
+See [Capabilities](docs/capabilities.md) for the full capabilities system documentation.
 
 Capabilities enable fine-grained agent selection using JSON Schema validation:
 

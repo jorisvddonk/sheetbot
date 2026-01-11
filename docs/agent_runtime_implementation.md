@@ -42,6 +42,8 @@ Agents follow a polling-based execution model:
 
 ### Capabilities Declaration
 
+See [Capabilities](capabilities.md) for more details on the capabilities system.
+
 Agents declare their execution capabilities to receive appropriate tasks. Capabilities are JSON objects with arbitrary structure, but should include basic system information.
 
 ### Environment Variables
