@@ -78,7 +78,7 @@ See [Initialization System](docs/init_system.md) for details on the startup init
 ## Scripts
 
 - **`scripts/` directory**: Contains agent template files (`agent.template.ts`, `agent.template.py`, `agent.template.sh`)
-- **`library/` directory**: Contains automation scripts for various use cases (game development, web deployment, system automation, etc.)
+- **`library/` directory**: Contains automation scripts for various use cases (game development, web deployment, system automation, etc.) - [See examples](library/README.md)
 
 ### Library Script Annotations
 

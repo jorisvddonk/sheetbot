@@ -104,6 +104,10 @@ export SHEETBOT_BASEURL=http://localhost:3000
 deno run --reload -A ${SHEETBOT_BASEURL}/scripts/agent.ts
 ```
 
+## Important note for Import Paths in Deno library scripts
+
+Library scripts for `.ts` files may contain import statements that appear incorrect from a filesystem perspective, such as `import { getData } from "./lib/taskutil.ts"`. These imports are valid because when scripts are served by the SheetBot server, they are accessed under the `/scripts/` URL path, making relative imports resolve correctly.
+
 ## Contributing Examples
 
 We welcome contributions of new example scripts! Please follow these guidelines:

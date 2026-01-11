@@ -10,14 +10,6 @@ Library scripts in the `library/` directory can optionally use comment-embedded 
 
 ### `<name>`
 
-### `<capabilitiesSchema>`
-
-### `<data>`
-
-### `<addTaskComments>`
-
-### `<transitions>`
-
 Provides a suggested name for tasks created from this script.
 
 **Example:**

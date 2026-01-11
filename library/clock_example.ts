@@ -1,3 +1,5 @@
+import { getData, submitData } from "./lib/taskutil.ts";
+
 /*
 Suggested name for this task: <name>Clock Example</name>
 
@@ -87,22 +89,8 @@ const htmlContent = `<html>
 </body>
 </html>`;
 
-// Get the task ID from the task base URL
-const taskId = Deno.env.get("SHEETBOT_TASK_BASEURL").split('/').pop();
-
-// Fetch task to check for custom bucket in data
-const taskRes = await fetch(Deno.env.get("SHEETBOT_TASK_BASEURL"), {
-    headers: {
-        "Authorization": Deno.env.get("SHEETBOT_AUTHORIZATION_HEADER")
-    }
-});
-let bucket = taskId;
-if (taskRes.ok) {
-    const task = await taskRes.json();
-    if (task.data && task.data.bucket) {
-        bucket = task.data.bucket;
-    }
-}
+const taskdata = await getData();
+let bucket = taskdata.bucket || Deno.env.get("SHEETBOT_TASK_ID");
 
 // Fetch fake AWS credentials for S3-compatible API
 const credsRes = await fetch(`${Deno.env.get("SHEETBOT_BASEURL")}/artefacts-credentials`, {
@@ -134,12 +122,4 @@ if (!response.ok) {
 
 const directURL = `${Deno.env.get("SHEETBOT_BASEURL")}/artefacts/${bucket}/clock.html`;
 
-// Submit the artefact URL and bucket to task data
-await fetch(`${Deno.env.get("SHEETBOT_BASEURL")}/tasks/${taskId}/data`, {
-    method: "POST",
-    headers: {
-        "Content-Type": "application/json",
-        "Authorization": Deno.env.get("SHEETBOT_AUTHORIZATION_HEADER")
-    },
-    body: JSON.stringify({ data: { artefactURL: directURL, bucket: bucket } })
-});
+await submitData({ artefactURL: directURL, bucket: bucket });
