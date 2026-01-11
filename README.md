@@ -213,6 +213,20 @@ Authentication for the S3-compatible API can be done via standard SheetBot login
 
 To obtain temporary AWS-compatible credentials for S3 API access, use POST `/artefacts-credentials` after logging in. This returns fake AWS credentials that can be used with S3-compatible tools.
 
+#### Public Artefacts Bucket
+
+SheetBot includes routes for a "public" artefacts bucket that allows serving artefacts without authentication. These routes are commented out by default in `main.ts`. To enable public artefact serving, uncomment the following lines in `main.ts`:
+
+```typescript
+// GET /artefacts/public - Lists artefacts in the public bucket without login
+//app.get('/artefacts/public', createListArtefactsHandler('public'));
+
+// GET /artefacts/public/* - Retrieves public artefact files without login
+//app.get('/artefacts/public/*', createListArtefactsHandler('public'));
+```
+
+Note that enabling this feature makes artefacts in the named "public" bucket publicly accessible, so use with caution and ensure only appropriate files are placed in the public bucket.
+
 #### Capabilities
 
 See [Capabilities](docs/capabilities.md) for the full capabilities system documentation.
