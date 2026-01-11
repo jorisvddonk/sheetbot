@@ -26,6 +26,7 @@ These scripts are **real-world examples** that show how SheetBot can be used for
 
 ### 🎯 Basic Examples
 - **`basic_git_example.ts`** - Basic example showing git version detection and data submission
+- **`clock_example.ts`** - Generates an SVG analog clock HTML page with current time and uploads as artefact
 - **`hello_world.ts`** - Minimal example that stores a timestamped "hello world" message
 - **`deno_counter_example.ts`** - Incrementing counter with automatic reset via task transitions
 

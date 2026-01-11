@@ -16,6 +16,15 @@ Widgets are configured in a sheet's `columnstructure` table. Each column specifi
 
 For multi-widgets, `widgettype` can be an array like `["multi", "text", "code"]`.
 
+## UI Interaction
+
+Widgets are displayed in an HTML table interface that supports advanced interaction:
+
+- **Navigation**: Use arrow keys to navigate between cells
+- **Selection**: Click and drag to select multiple cells, or hold Shift while clicking to select ranges
+- **Copying**: Press Ctrl+C to copy selected cells to clipboard. Copies the underlying data as plain text (tab-separated) or HTML table format, not the visual representation
+- **Multi-widgets**: Right-click on cells with multiple widgets to access a context menu for switching between widget views (e.g., switching a script column from hash image to text display)
+
 ## Text Widgets
 
 Basic text display and formatting widgets.
