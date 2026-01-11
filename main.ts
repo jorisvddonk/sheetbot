@@ -261,6 +261,12 @@ app.get("/sheets", requiresLogin, createListSheetsHandler());
 // ██   ██ ██   ██    ██    ██      ██      ██   ██ ██         ██        ██   ██ ██    ██ ██    ██    ██    ██           ██
 // ██   ██ ██   ██    ██    ███████ ██      ██   ██  ██████    ██        ██   ██  ██████   ██████     ██    ███████ ███████
 
+// GET /artefacts/public - Lists artefacts in the public bucket without login
+//app.get('/artefacts/public', createListArtefactsHandler('public'));
+
+// GET /artefacts/public/* - Retrieves public artefact files without login
+//app.get('/artefacts/public/*', createListArtefactsHandler('public'));
+
 // POST /artefacts/{bucket}/* - Handles multipart upload operations, S3-style
 app.post('/artefacts/:bucket/*', extractAWSCredentialsIfPresent(), requiresLogin, requiresPermission("createArtefacts"), createPostArtefactHandler());
 

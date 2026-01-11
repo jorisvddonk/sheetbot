@@ -14,10 +14,10 @@ async function* walkDir(dir: string, base: string = ''): AsyncGenerator<{path: s
     }
 }
 
-export function createListArtefactsHandler() {
+export function createListArtefactsHandler(defaultBucket?: string) {
     return async (req: any, res: any) => {
         console.log("<s3>: ...");
-        const bucket = req.params.bucket;
+        const bucket = req.params.bucket || defaultBucket;
         let pathPrefix = req.params[0] || '';
         pathPrefix = pathPrefix.replace(/^\/+|\/+$/g, ''); // remove leading/trailing slashes
         const dirpath = `./artefacts/${bucket}`;
