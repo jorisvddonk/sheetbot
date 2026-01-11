@@ -6,7 +6,7 @@ import { Select, Input } from "https://deno.land/x/cliffy@v1.0.0-rc.4/prompt/mod
 const script: string = await Select.prompt({
     message: "Pick a script",
     search: true,
-    options: Array.from(Deno.readDirSync("./scripts/").map(x => x.name).filter(x => x.endsWith(".ts") || x.endsWith(".js") || x.endsWith(".py") || x.endsWith(".sh")))
+    options: Array.from(Deno.readDirSync("./library/").map(x => x.name).filter(x => x.endsWith(".ts") || x.endsWith(".js") || x.endsWith(".py") || x.endsWith(".sh")))
 });
 
 console.log("Adding task, please login first");
@@ -44,22 +44,25 @@ const localOrRemote: number = await Select.prompt({
 });
 let scriptStuff;
 if (localOrRemote === 1) {
-    scriptStuff = await getScript(`/scripts/${script}`);
+    scriptStuff = await getScript(`/library/${script}`);
 } else {
-    const scriptText = new TextDecoder().decode(Deno.readFileSync(`./scripts/${script}`));
-    let capabilitiesText = scriptText.substr(scriptText.indexOf("<capabilitiesSchema>") + 20, scriptText.indexOf("</capabilitiesSchema>") - scriptText.indexOf("<capabilitiesSchema>") - 21);
-    capabilitiesText = capabilitiesText.split('\n').map(line => line.trim().startsWith('#') ? line.trim().slice(1).trim() : line.trim()).join('\n');
+    const scriptText = new TextDecoder().decode(Deno.readFileSync(`./library/${script}`));
+    let capabilitiesSchema = {};
     try {
-        const capabilitiesSchema = JSON.parse(capabilitiesText);
-        scriptStuff = {
-            script: scriptText,
-            capabilitiesSchema
-        };
+        const start = scriptText.indexOf("<capabilitiesSchema>");
+        const end = scriptText.indexOf("</capabilitiesSchema>");
+        if (start !== -1 && end !== -1 && end > start) {
+            let capabilitiesText = scriptText.substr(start + 20, end - start - 21);
+            capabilitiesText = capabilitiesText.split('\n').map(line => line.trim().startsWith('#') ? line.trim().slice(1).trim() : line.trim()).join('\n');
+            capabilitiesSchema = JSON.parse(capabilitiesText);
+        }
     } catch (e) {
-        console.error(e);
-        console.log(capabilitiesText);
-        throw e;
+        console.warn("Could not parse capabilitiesSchema - using default {}");
     }
+    scriptStuff = {
+        script: scriptText,
+        capabilitiesSchema
+    };
 }
 
 try {
@@ -152,8 +155,17 @@ const status: number = await Select.prompt({
     ],
 });
 
-const suggestedName = scriptStuff.script.substr(scriptStuff.script.indexOf("<name>") + 6, scriptStuff.script.indexOf("</name>") - scriptStuff.script.indexOf("<name>") - 6);
-let name: string | undefined = await Input.prompt({message: "Task name?", suggestions: [suggestedName]})
+let suggestedName = "";
+try {
+    const start = scriptStuff.script.indexOf("<name>");
+    const end = scriptStuff.script.indexOf("</name>");
+    if (start !== -1 && end !== -1 && end > start) {
+        suggestedName = scriptStuff.script.substr(start + 6, end - start - 6).trim();
+    }
+} catch (e) {
+    // ignore
+}
+let name: string | undefined = await Input.prompt({message: "Task name?", default: suggestedName || undefined})
 if (name == "") {
     name = undefined;
 }
