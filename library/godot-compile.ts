@@ -92,7 +92,18 @@ Suggested capabilitiesSchema for this task: <capabilitiesSchema>
   ]
 }
 
-</capabilitiesSchema>*/
+ </capabilitiesSchema>
+
+Suggested transitions for this task: <transitions>
+[
+  {
+    "statuses": ["COMPLETED"],
+    "condition": {},
+    "timing": { "immediate": true },
+    "transitionTo": "DELETED"
+  }
+]
+</transitions>*/
 
 const taskdata = await getData();
 let sheet = taskdata.sheet !== undefined ? taskdata.sheet : 'godot';

@@ -89,6 +89,7 @@
             if (selected) {
                 document.getElementById('taskName').value = selected.name || '';
                 document.getElementById('taskData').value = JSON.stringify(selected.suggestedData, null, 2);
+                document.getElementById('transitions').value = JSON.stringify(selected.transitions || [], null, 2);
                 // Could show comments somewhere, e.g., alert or div
                 if (selected.comments) {
                     alert(`Comments: ${selected.comments}`);

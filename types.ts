@@ -1961,6 +1961,8 @@ export interface components {
             suggestedData?: Record<string, never>;
             /** @description Comments about the task */
             comments?: string;
+            /** @description Suggested transitions for task lifecycle management */
+            transitions?: unknown[];
         };
     };
     responses: never;

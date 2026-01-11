@@ -50,12 +50,23 @@ export function createGetLibraryHandler() {
                     // ignore
                 }
             }
+            let transitions = [];
+            if (scriptText.includes("<transitions>")) {
+                try {
+                    let transitionsText = scriptText.substring(scriptText.indexOf("<transitions>") + 13, scriptText.indexOf("</transitions>"));
+                    transitionsText = transitionsText.split('\n').filter(line => !line.trim().startsWith('#')).join('\n');
+                    transitions = JSON.parse(transitionsText);
+                } catch (e) {
+                    // ignore
+                }
+            }
             return {
                 filename: file.name,
                 name,
                 capabilitiesSchema,
                 suggestedData,
-                comments
+                comments,
+                transitions
             };
         });
         res.json(library);

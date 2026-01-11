@@ -70,6 +70,15 @@ try {
     // ignore
 }
 
+let suggestedTransitions: any[] = [];
+try {
+    let transitionsText = scriptStuff.script.substr(scriptStuff.script.indexOf("<transitions>") + 13, scriptStuff.script.indexOf("</transitions>") - scriptStuff.script.indexOf("<transitions>") - 13);
+    transitionsText = transitionsText.split('\n').map(line => line.trim().startsWith('#') ? line.trim().slice(1).trim() : line.trim()).join('\n');
+    suggestedTransitions = JSON.parse(transitionsText);
+} catch (e) {
+    // ignore
+}
+
 let suggestedData = {};
 try {
     let dataText = scriptStuff.script.substr(scriptStuff.script.indexOf("<data>") + 6, scriptStuff.script.indexOf("</data>") - scriptStuff.script.indexOf("<data>") - 6);
@@ -81,27 +90,38 @@ try {
 let data = prompt("data (as JSON): ", JSON.stringify(suggestedData, null, 2));
 data = JSON.parse(data);
 
-const transitionsChoice: string = await Select.prompt({
+const transitionOptions: { name: string; value: string }[] = [
+    {
+        name: "none (persistent task)",
+        value: "none"
+    },
+    {
+        name: "auto-delete on success",
+        value: "auto_delete_on_success"
+    },
+    {
+        name: "auto-delete always",
+        value: "auto_delete_always"
+    }
+];
+
+if (suggestedTransitions.length > 0) {
+    transitionOptions.unshift({
+        name: "suggested (from script annotation)",
+        value: "suggested"
+    });
+}
+
+const transitionsChoice = await Select.prompt({
     message: "Transitions?",
     search: false,
-    options: [
-        {
-            name: "none (persistent task)",
-            value: "none"
-        },
-        {
-            name: "auto-delete on success",
-            value: "auto_delete_on_success"
-        },
-        {
-            name: "auto-delete always",
-            value: "auto_delete_always"
-        }
-    ],
-});
+    options: transitionOptions,
+}) as unknown as string;
 
 let transitions: any[] = [];
-if (transitionsChoice === "auto_delete_on_success") {
+if (transitionsChoice === "suggested") {
+    transitions = suggestedTransitions;
+} else if (transitionsChoice === "auto_delete_on_success") {
     transitions = [{
         statuses: ["COMPLETED"],
         condition: {},

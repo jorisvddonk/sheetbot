@@ -10,6 +10,14 @@ Library scripts in the `library/` directory can optionally use comment-embedded 
 
 ### `<name>`
 
+### `<capabilitiesSchema>`
+
+### `<data>`
+
+### `<addTaskComments>`
+
+### `<transitions>`
+
 Provides a suggested name for tasks created from this script.
 
 **Example:**
@@ -101,6 +109,26 @@ If you want to build a release template, use "additional_build_flags": "target=t
 */
 ```
 
+### `<transitions>`
+
+Provides suggested task transitions for automatic state management. Transitions define how tasks should move between states based on conditions.
+
+**Example:**
+```typescript
+/*
+Suggested transitions for this task: <transitions>
+[
+  {
+    "statuses": ["COMPLETED"],
+    "condition": {},
+    "timing": { "immediate": true },
+    "transitionTo": "DELETED"
+  }
+]
+</transitions>
+*/
+```
+
 ## How It Works
 
 ### Parsing
@@ -118,7 +146,8 @@ When using `addtask.ts`:
 2. `<name>` becomes the default task name
 3. `<data>` pre-fills the JSON data field
 4. `<addTaskComments>` displays helpful guidance
-5. `<capabilitiesSchema>` validates agent compatibility
+5. `<transitions>` pre-fills suggested transitions
+6. `<capabilitiesSchema>` validates agent compatibility
 
 ### Library API
 The `/library` endpoint returns parsed metadata:
@@ -129,7 +158,8 @@ The `/library` endpoint returns parsed metadata:
   "name": "Godot compile",
   "capabilitiesSchema": { /* parsed JSON */ },
   "suggestedData": { /* parsed JSON */ },
-  "comments": "If you want to build a release template..."
+  "comments": "If you want to build a release template...",
+  "transitions": [ /* parsed JSON array */ ]
 }
 ```
 
@@ -141,8 +171,9 @@ While all annotations are optional:
 2. **Define `<capabilitiesSchema>`** to ensure tasks run on suitable agents
 3. **Provide `<data>`** with sensible defaults
 4. **Use `<addTaskComments>`** for special requirements
-5. **Validate JSON** in `<capabilitiesSchema>` and `<data>`
-6. **Keep comments concise** for CLI display
+5. **Specify `<transitions>`** for automatic task lifecycle management
+6. **Validate JSON** in `<capabilitiesSchema>`, `<data>`, and `<transitions>`
+7. **Keep comments concise** for CLI display
 
 ## Optionality
 
