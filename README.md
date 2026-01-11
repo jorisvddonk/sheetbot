@@ -47,19 +47,7 @@ By default, SheetBot listens on all interfaces (`0.0.0.0`) - change this in `mai
 
 ## Initialization
 
-SheetBot includes an initialization system that runs TypeScript scripts on every startup. Place `.ts` files in the `./init/` directory; they will be executed in lexicographic order based on their filenames. Scripts can export a default async function for asynchronous initialization tasks.
-
-Example init script (`./init/01_setup_db.ts`):
-
-```typescript
-export default async function() {
-    // Initialize database or other setup
-    console.log("Initializing database...");
-    // async operations here
-}
-```
-
-This is useful for setting up databases, loading configurations, or performing other startup tasks.
+See [Initialization System](docs/init_system.md) for details on the startup initialization system that runs TypeScript scripts on every server startup.
 
 ## Scripts
 
