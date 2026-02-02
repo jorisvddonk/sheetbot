@@ -2,11 +2,12 @@ import { promptSecret } from "https://deno.land/std@0.220.1/cli/prompt_secret.ts
 import { checkError } from "./scripts/lib/commonutil.ts";
 import { getScript, addTask } from "./scripts/lib/taskutil.ts";
 import { Select, Input } from "https://deno.land/x/cliffy@v1.0.0-rc.4/prompt/mod.ts";
+import { getLibraryScripts } from "./lib/library-util.ts";
 
 const script: string = await Select.prompt({
     message: "Pick a script",
     search: true,
-    options: Array.from(Deno.readDirSync("./library/").map(x => x.name).filter(x => x.endsWith(".ts") || x.endsWith(".js") || x.endsWith(".py") || x.endsWith(".sh")))
+    options: Array.from(getLibraryScripts()).map(x => x.name)
 });
 
 console.log("Adding task, please login first (using SHEETBOT_AUTH_* env variables if present)");
@@ -46,7 +47,11 @@ let scriptStuff;
 if (localOrRemote === 1) {
     scriptStuff = await getScript(`/library/${script}`);
 } else {
-    const scriptText = new TextDecoder().decode(Deno.readFileSync(`./library/${script}`));
+    const scriptEntry = Array.from(getLibraryScripts()).find(x => x.name === script);
+    if (!scriptEntry) {
+        throw new Error(`Script ${script} not found`);
+    }
+    const scriptText = new TextDecoder().decode(Deno.readFileSync(`${scriptEntry.path}${script}`));
     let capabilitiesSchema = {};
     try {
         const start = scriptText.indexOf("<capabilitiesSchema>");

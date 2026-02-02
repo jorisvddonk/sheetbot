@@ -1,3 +1,5 @@
+import { getLibraryScripts } from "../library-util.ts";
+
 /**
  * Creates a handler that retrieves the library of available scripts/templates.
  * Parses script files to extract metadata like capabilities, suggested data, and comments.
@@ -7,13 +9,11 @@ export function createGetLibraryHandler() {
     return (req: any, res: any) => {
         // Get scripts from both scripts/ (templates) and library/ (automation) directories
         const scriptFiles = [
-            ...Array.from(Deno.readDirSync("./scripts/").filter(x => (x.name.endsWith(".ts") || x.name.endsWith(".js") || x.name.endsWith(".py") || x.name.endsWith(".sh")) && !x.name.includes(".template."))),
-            ...Array.from(Deno.readDirSync("./library/").filter(x => (x.name.endsWith(".ts") || x.name.endsWith(".js") || x.name.endsWith(".py") || x.name.endsWith(".sh"))))
+            ...Array.from(Deno.readDirSync("./scripts/").filter(x => (x.name.endsWith(".ts") || x.name.endsWith(".js") || x.name.endsWith(".py") || x.name.endsWith(".sh")) && !x.name.includes(".template."))).map(x => ({ name: x.name, path: "./scripts/" })),
+            ...Array.from(getLibraryScripts())
         ];
         const library = scriptFiles.map(file => {
-            // Determine which directory the file is in
-            const dirPath = file.name.includes(".template.") ? "./scripts/" : "./library/";
-            const scriptText = new TextDecoder().decode(Deno.readFileSync(`${dirPath}${file.name}`));
+            const scriptText = new TextDecoder().decode(Deno.readFileSync(`${file.path}${file.name}`));
             let capabilitiesSchema = {};
             if (scriptText.includes("<capabilitiesSchema>")) {
                 try {
