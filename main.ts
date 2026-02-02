@@ -72,6 +72,43 @@ startTransitionWorker(db, transitionTracker, taskEventEmitter);
 
 const userdb = new UserDB();
 
+// ███████ ██    ██ ███████ ███    ██ ████████     ██   ██  █████  ███    ██ ██████  ██      ███████ ██████  ███████
+// ██      ██    ██ ██      ████   ██    ██        ██   ██ ██   ██ ████   ██ ██   ██ ██      ██      ██   ██ ██
+// █████   ██    ██ █████   ██ ██  ██    ██        ███████ ███████ ██ ██  ██ ██   ██ ██      █████   ██████  ███████
+// ██       ██  ██  ██      ██  ██ ██    ██        ██   ██ ██   ██ ██  ██ ██ ██   ██ ██      ██      ██   ██      ██
+// ███████   ████   ███████ ██   ████    ██        ██   ██ ██   ██ ██   ████ ██████  ███████ ███████ ██   ██ ███████
+
+const eventHandlerPaths = Deno.env.get("SHEETBOT_EVENTHANDLER_SEARCH_PATHS");
+if (eventHandlerPaths) {
+    const paths = eventHandlerPaths.split(":").filter(p => p.trim());
+    for (const path of paths) {
+        try {
+            for (const entry of Deno.readDirSync(path)) {
+                if (entry.isFile && entry.name.endsWith(".ts")) {
+                    const modulePath = `${path}/${entry.name}`;
+                    try {
+                        const module = await import(modulePath);
+                        if (module.setupEventHandlers && typeof module.setupEventHandlers === "function") {
+                            console.log(`Loading event handler: ${modulePath}`);
+                            module.setupEventHandlers({
+                                taskEventEmitter,
+                                agentEventEmitter,
+                                taskTracker,
+                                agentTracker,
+                                transitionTracker
+                            });
+                        }
+                    } catch (e) {
+                        console.error(`Failed to load event handler ${modulePath}:`, e);
+                    }
+                }
+            }
+        } catch (e) {
+            console.error(`Failed to read event handler directory ${path}:`, e);
+        }
+    }
+}
+
 // ███████ ██   ██ ██████  ██████  ███████ ███████ ███████      █████  ██████  ██████      ███████ ███████ ████████ ██    ██ ██████
 // ██       ██ ██  ██   ██ ██   ██ ██      ██      ██          ██   ██ ██   ██ ██   ██     ██      ██         ██    ██    ██ ██   ██
 // █████     ███   ██████  ██████  █████   ███████ ███████     ███████ ██████  ██████      ███████ █████      ██    ██    ██ ██████
