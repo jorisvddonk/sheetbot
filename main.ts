@@ -34,21 +34,39 @@ import { extractAWSCredentialsIfPresent } from "./lib/middleware.ts";
 // ██ ██  ██ ██ ██    ██             ██    ██         ██    ██    ██      ██  ██  ██
 // ██ ██   ████ ██    ██        ███████    ██    ███████    ██    ███████ ██      ██
 
-const initDir = "./init/";
-try {
-    if (!Deno.existsSync(initDir)) {
-        await Deno.mkdir(initDir, { recursive: true });
-    }
-} catch {
-    // ignore
+const initDirs = ["./init/"];
+const initSearchPaths = Deno.env.get("SHEETBOT_INIT_SEARCH_PATHS");
+if (initSearchPaths) {
+    initDirs.push(...initSearchPaths.split(":").filter(p => p.trim()));
 }
-const initFiles = Array.from(Deno.readDirSync(initDir))
-    .filter(entry => entry.isFile && entry.name.endsWith('.ts'))
-    .sort((a, b) => a.name.localeCompare(b.name));
-for (const file of initFiles) {
-    const module = await import(`${initDir}${file.name}`);
-    if (module.default && typeof module.default === 'function') {
-        await module.default();
+
+for (const initDir of initDirs) {
+    try {
+        if (!Deno.existsSync(initDir)) {
+            if (initDir === "./init/") {
+                await Deno.mkdir(initDir, { recursive: true });
+            }
+            continue;
+        }
+    } catch {
+        continue;
+    }
+    
+    const initFiles = Array.from(Deno.readDirSync(initDir))
+        .filter(entry => entry.isFile && entry.name.endsWith('.ts'))
+        .sort((a, b) => a.name.localeCompare(b.name));
+    
+    for (const file of initFiles) {
+        const modulePath = `${initDir.endsWith("/") ? initDir : initDir + "/"}${file.name}`;
+        try {
+            const module = await import(modulePath);
+            if (module.default && typeof module.default === 'function') {
+                console.log(`Running init script: ${modulePath}`);
+                await module.default();
+            }
+        } catch (e) {
+            console.error(`Failed to run init script ${modulePath}:`, e);
+        }
     }
 }
 

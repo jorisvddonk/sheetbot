@@ -5,10 +5,25 @@ SheetBot includes an initialization system that runs TypeScript scripts on every
 ## How It Works
 
 - Place `.ts` files in the `./init/` directory
+- Additional directories can be specified via `SHEETBOT_INIT_SEARCH_PATHS` environment variable (colon-separated)
 - Files are executed in lexicographic order based on their filenames (e.g., `00_init.ts`, `01_setup.ts`)
 - Each script can export a default function (sync or async) which will be called during startup
 - If the default export is not a function, the script is skipped
 - Scripts run before the main server components are initialized
+
+## Additional Init Directories
+
+Set the `SHEETBOT_INIT_SEARCH_PATHS` environment variable to search additional directories:
+
+```bash
+export SHEETBOT_INIT_SEARCH_PATHS="/path/to/custom/init:/another/path/init"
+```
+
+Directories are processed in order:
+1. `./init/` (always searched first)
+2. Additional directories from `SHEETBOT_INIT_SEARCH_PATHS` in the order specified
+
+Within each directory, scripts are executed in alphabetical order.
 
 ## Creating Init Scripts
 
