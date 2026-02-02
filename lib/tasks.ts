@@ -2,6 +2,7 @@ import { DatabaseSync } from "node:sqlite";
 import Ajv from "npm:ajv@8.17.1";
 import { Task, Transition, TaskStatus, statusToString, stringToStatus } from "./models.ts";
 import { TransitionTracker } from "./transitiontracker.ts";
+import { TaskEventEmitter } from "./task-events.ts";
 
 const ajv = new (Ajv as any)();
 
@@ -19,7 +20,7 @@ export function taskify(script: string): Task {
     }
 }
 
-export function addTask(db: DatabaseSync, task: Task) {
+export function addTask(db: DatabaseSync, task: Task, eventEmitter?: TaskEventEmitter) {
     const stmt = db.prepare(`
         INSERT INTO tasks (id, name, script, status, data, artefacts, dependsOn, transitions, type, capabilitiesSchema)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -36,6 +37,7 @@ export function addTask(db: DatabaseSync, task: Task) {
         task.type,
         JSON.stringify(task.capabilitiesSchema)
     );
+    eventEmitter?.emitTaskAdded(task);
 }
 
 export function parseOneSQLTask(obj: any): Task | undefined {
@@ -125,7 +127,7 @@ export function getTask(db: DatabaseSync, taskId: string, filter_by_status?: Tas
     }
 }
 
-export function checkTransitions(db: DatabaseSync, transitionTracker: TransitionTracker, task: Task) {
+export function checkTransitions(db: DatabaseSync, transitionTracker: TransitionTracker, task: Task, eventEmitter?: TaskEventEmitter) {
     console.log(`[DEBUG] Checking transitions for task ${task.id}, status ${task.status}`);
     const currentStatusStr = statusToString(task.status);
 
@@ -133,7 +135,7 @@ export function checkTransitions(db: DatabaseSync, transitionTracker: Transition
     const transition = evaluateTransitions(transitionTracker, task);
     if (transition && transition.timing.immediate) {
         console.log(`[DEBUG] Executing immediate transition: ${JSON.stringify(transition)}`);
-        executeTransition(db, transitionTracker, task, transition);
+        executeTransition(db, transitionTracker, task, transition, eventEmitter);
     }
 
     // Schedule all transitions with every that match the current status
@@ -145,49 +147,62 @@ export function checkTransitions(db: DatabaseSync, transitionTracker: Transition
     }
 }
 
-export function updateTaskStatus(db: DatabaseSync, transitionTracker: TransitionTracker, taskId: string, status: TaskStatus) {
+export function updateTaskStatus(db: DatabaseSync, transitionTracker: TransitionTracker, taskId: string, status: TaskStatus, eventEmitter?: TaskEventEmitter) {
+    const task = getTask(db, taskId);
+    const oldStatus = task?.status;
+    
     const stmt = db.prepare("UPDATE tasks SET status = ? WHERE id = ?");
     stmt.run(status, taskId);
 
+    if (oldStatus !== undefined && oldStatus !== status) {
+        eventEmitter?.emitTaskStatusChanged(taskId, oldStatus, status);
+    }
+
     // Check for transitions
-    const task = getTask(db, taskId);
-    if (task) {
-        task.status = status; // Update the task object
-        checkTransitions(db, transitionTracker, task);
+    const updatedTask = getTask(db, taskId);
+    if (updatedTask) {
+        updatedTask.status = status; // Update the task object
+        eventEmitter?.emitTaskChanged(updatedTask, { status });
+        checkTransitions(db, transitionTracker, updatedTask, eventEmitter);
     }
 }
 
-export function deleteTask(db: DatabaseSync, taskId: string) {
+export function deleteTask(db: DatabaseSync, taskId: string, eventEmitter?: TaskEventEmitter) {
     const stmt = db.prepare("DELETE FROM tasks WHERE id = ?");
     stmt.run(taskId);
+    eventEmitter?.emitTaskDeleted(taskId);
 }
 
-export function updateTaskData(db: DatabaseSync, taskId: string, data: Record<string, unknown>) {
+export function updateTaskData(db: DatabaseSync, taskId: string, data: Record<string, unknown>, eventEmitter?: TaskEventEmitter) {
     const currentTask = getTask(db, taskId);
     if (currentTask) {
         const updatedData = { ...currentTask.data, ...data };
         const stmt = db.prepare("UPDATE tasks SET data = ? WHERE id = ?");
         stmt.run(JSON.stringify(updatedData), taskId);
+        currentTask.data = updatedData;
+        eventEmitter?.emitTaskChanged(currentTask, { data });
     }
 }
 
-export function updateTaskAddArtefact(db: DatabaseSync, taskId: string, newArtefact: string) {
+export function updateTaskAddArtefact(db: DatabaseSync, taskId: string, newArtefact: string, eventEmitter?: TaskEventEmitter) {
     const task = getTask(db, taskId);
     if (task !== undefined) {
         const artefacts = Array.from(new Set(task.artefacts.concat(newArtefact)));
         const stmt = db.prepare("UPDATE tasks SET artefacts = ? WHERE id = ?");
         stmt.run(JSON.stringify(artefacts), taskId);
-        // console.log(`Added artefact ${newArtefact} to task ${taskId}`);
+        task.artefacts = artefacts;
+        eventEmitter?.emitTaskChanged(task, { artefacts });
     }
 }
 
-export function updateTaskRemoveArtefact(db: DatabaseSync, taskId: string, artefact: string) {
+export function updateTaskRemoveArtefact(db: DatabaseSync, taskId: string, artefact: string, eventEmitter?: TaskEventEmitter) {
     const task = getTask(db, taskId);
     if (task !== undefined) {
         const artefacts = Array.from(task.artefacts.filter(x => x !== artefact));
         const stmt = db.prepare("UPDATE tasks SET artefacts = ? WHERE id = ?");
         stmt.run(JSON.stringify(artefacts), taskId);
-        // console.log(`Added artefact ${newArtefact} to task ${taskId}`);
+        task.artefacts = artefacts;
+        eventEmitter?.emitTaskChanged(task, { artefacts });
     }
 }
 
@@ -259,21 +274,21 @@ export function evaluateTransitions(transitionTracker: TransitionTracker, task: 
     return null;
 }
 
-export function executeTransition(db: DatabaseSync, transitionTracker: TransitionTracker, task: Task, transition: Transition) {
+export function executeTransition(db: DatabaseSync, transitionTracker: TransitionTracker, task: Task, transition: Transition, eventEmitter?: TaskEventEmitter) {
     // Apply data mutations if any
     if (transition.dataMutations) {
         const mergedData = { ...task.data, ...transition.dataMutations };
-        updateTaskData(db, task.id, mergedData);
+        updateTaskData(db, task.id, mergedData, eventEmitter);
         task.data = mergedData;
     }
 
     // Special handling for DELETED
     if (transition.transitionTo === "DELETED") {
         removeTaskFromAllDependsOn(db, task.id);
-        deleteTask(db, task.id);
+        deleteTask(db, task.id, eventEmitter);
     } else {
         // Update status
-        updateTaskStatus(db, transitionTracker, task.id, stringToStatus(transition.transitionTo));
+        updateTaskStatus(db, transitionTracker, task.id, stringToStatus(transition.transitionTo), eventEmitter);
     }
 }
 
@@ -306,7 +321,7 @@ export function parseDuration(duration: string): number {
     }
 }
 
-export function processScheduledTransitions(db: DatabaseSync, transitionTracker: TransitionTracker) {
+export function processScheduledTransitions(db: DatabaseSync, transitionTracker: TransitionTracker, eventEmitter?: TaskEventEmitter) {
     const now = Math.floor(Date.now() / 1000);
     //console.log(`[DEBUG] Checking scheduled transitions at ${now}`);
     const stmt = db.prepare(`
@@ -334,7 +349,7 @@ export function processScheduledTransitions(db: DatabaseSync, transitionTracker:
             if (currentTransition === transition) {
                 console.log(`[DEBUG] Executing transition to ${transition.transitionTo}`);
                 // Execute transition
-                executeTransition(db, transitionTracker, task, transition);
+                executeTransition(db, transitionTracker, task, transition, eventEmitter);
 
                 // Remove from schedule
                 const deleteStmt = db.prepare(`

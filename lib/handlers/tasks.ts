@@ -3,6 +3,7 @@ import { DatabaseSync } from "node:sqlite";
 import { TaskTracker } from "../tasktracker.ts";
 import { AgentTracker } from "../agenttracker.ts";
 import { TransitionTracker } from "../transitiontracker.ts";
+import { TaskEventEmitter } from "../task-events.ts";
 import { createTaskTrackingMiddleware } from "../task-tracking-middleware.ts";
 import { createAgentTrackingMiddleware } from "../agent-tracking-middleware.ts";
 import { taskify, addTask, getTasks, getTask, updateTaskStatus, deleteTask, updateTaskData, getTaskToComplete, checkTransitions, updateTaskAddArtefact, updateTaskRemoveArtefact } from "../tasks.ts";
@@ -30,9 +31,10 @@ export function createGetTasksHandler(db: DatabaseSync) {
  * @param {DatabaseSync} db - The SQLite database instance
  * @param {TransitionTracker} transitionTracker - Tracker for task transitions
  * @param {any} taskTrackingMiddleware - Middleware for task tracking
+ * @param {TaskEventEmitter} taskEventEmitter - Event emitter for task events
  * @returns {Array} Array of middleware and handler functions for Express
  */
-export function createCreateTaskHandler(db: DatabaseSync, transitionTracker: TransitionTracker, taskTrackingMiddleware: any) {
+export function createCreateTaskHandler(db: DatabaseSync, transitionTracker: TransitionTracker, taskTrackingMiddleware: any, taskEventEmitter?: TaskEventEmitter) {
     const upload = multer({ dest: './artefacts/' });
     return [
         taskTrackingMiddleware.onTaskCreated,
@@ -102,8 +104,8 @@ export function createCreateTaskHandler(db: DatabaseSync, transitionTracker: Tra
             }
             task.artefacts = artefacts;
             task.dependsOn = dependsOn || [];
-            addTask(db, task);
-            checkTransitions(db, transitionTracker, task); // Schedule transitions for initial status
+            addTask(db, task, taskEventEmitter);
+            checkTransitions(db, transitionTracker, task, taskEventEmitter); // Schedule transitions for initial status
             res.locals.taskId = task.id; // Set for middleware
             res.json(task);
             res.send();
@@ -131,13 +133,14 @@ export function createGetTaskHandler(db: DatabaseSync) {
 /**
  * Creates a handler that deletes a task from the database.
  * @param {DatabaseSync} db - The SQLite database instance
+ * @param {TaskEventEmitter} taskEventEmitter - Event emitter for task events
  * @returns {Function} Express route handler function
  */
-export function createDeleteTaskHandler(db: DatabaseSync) {
+export function createDeleteTaskHandler(db: DatabaseSync, taskEventEmitter?: TaskEventEmitter) {
     return (req: any, res: any) => {
         const task = getTask(db, req.params.id);
         if (task) {
-            deleteTask(db, task.id);
+            deleteTask(db, task.id, taskEventEmitter);
             res.status(204);
             res.send();
         } else {
@@ -151,16 +154,17 @@ export function createDeleteTaskHandler(db: DatabaseSync) {
  * Creates a handler that updates task properties like status.
  * @param {DatabaseSync} db - The SQLite database instance
  * @param {TransitionTracker} transitionTracker - Tracker for task transitions
+ * @param {TaskEventEmitter} taskEventEmitter - Event emitter for task events
  * @returns {Function} Express route handler function
  */
-export function createUpdateTaskHandler(db: DatabaseSync, transitionTracker: TransitionTracker) {
+export function createUpdateTaskHandler(db: DatabaseSync, transitionTracker: TransitionTracker, taskEventEmitter?: TaskEventEmitter) {
     return (req: any, res: any) => {
         const task = getTask(db, req.params.id);
         if (task) {
             try {
                 if (Object.hasOwn(req.body, "status")) {
                     // updating status
-                    updateTaskStatus(db, transitionTracker, task.id, req.body.status);
+                    updateTaskStatus(db, transitionTracker, task.id, req.body.status, taskEventEmitter);
                 }
             } catch (e) {
                 res.status(500);
@@ -180,13 +184,14 @@ export function createUpdateTaskHandler(db: DatabaseSync, transitionTracker: Tra
  * Creates a handler that marks a task as accepted and changes its status to RUNNING.
  * @param {DatabaseSync} db - The SQLite database instance
  * @param {TransitionTracker} transitionTracker - Tracker for task transitions
+ * @param {TaskEventEmitter} taskEventEmitter - Event emitter for task events
  * @returns {Function} Express route handler function
  */
-export function createAcceptTaskHandler(db: DatabaseSync, transitionTracker: TransitionTracker) {
+export function createAcceptTaskHandler(db: DatabaseSync, transitionTracker: TransitionTracker, taskEventEmitter?: TaskEventEmitter) {
     return (req: any, res: any) => {
         const task = getTask(db, req.params.id, TaskStatus.AWAITING);
         if (task) {
-            updateTaskStatus(db, transitionTracker, task.id, TaskStatus.RUNNING);
+            updateTaskStatus(db, transitionTracker, task.id, TaskStatus.RUNNING, taskEventEmitter);
             res.json({});
         } else {
             res.status(404);
@@ -200,16 +205,17 @@ export function createAcceptTaskHandler(db: DatabaseSync, transitionTracker: Tra
  * @param {DatabaseSync} db - The SQLite database instance
  * @param {TransitionTracker} transitionTracker - Tracker for task transitions
  * @param {any} taskTrackingMiddleware - Middleware for task tracking
+ * @param {TaskEventEmitter} taskEventEmitter - Event emitter for task events
  * @returns {Array} Array of middleware and handler functions for Express
  */
-export function createCompleteTaskHandler(db: DatabaseSync, transitionTracker: TransitionTracker, taskTrackingMiddleware: any) {
+export function createCompleteTaskHandler(db: DatabaseSync, transitionTracker: TransitionTracker, taskTrackingMiddleware: any, taskEventEmitter?: TaskEventEmitter) {
     return [
         taskTrackingMiddleware.onTaskCompleted,
         (req: any, res: any) => {
             const task = getTask(db, req.params.id, TaskStatus.RUNNING);
             if (task) {
-                updateTaskData(db, task.id, req.body.data);
-                updateTaskStatus(db, transitionTracker, task.id, TaskStatus.COMPLETED);
+                updateTaskData(db, task.id, req.body.data, taskEventEmitter);
+                updateTaskStatus(db, transitionTracker, task.id, TaskStatus.COMPLETED, taskEventEmitter);
 
                 res.json({});
                 console.log(`Task ${req.params.id} completed with data ${JSON.stringify(req.body.data)}`);
@@ -224,15 +230,16 @@ export function createCompleteTaskHandler(db: DatabaseSync, transitionTracker: T
 /**
  * Creates a handler that updates a task's data object.
  * @param {DatabaseSync} db - The SQLite database instance
+ * @param {TaskEventEmitter} taskEventEmitter - Event emitter for task events
  * @returns {Function} Express route handler function
  */
-export function createUpdateTaskDataHandler(db: DatabaseSync) {
+export function createUpdateTaskDataHandler(db: DatabaseSync, taskEventEmitter?: TaskEventEmitter) {
     return (req: any, res: any) => {
         const task = getTask(db, req.params.id);
         if (task) {
             res.json({});
             console.log(`Adding data to task ${req.params.id}: ${JSON.stringify(req.body.data)}`);
-            updateTaskData(db, task.id, req.body.data);
+            updateTaskData(db, task.id, req.body.data, taskEventEmitter);
         } else {
             res.status(404);
             res.send();
@@ -245,15 +252,16 @@ export function createUpdateTaskDataHandler(db: DatabaseSync) {
  * @param {DatabaseSync} db - The SQLite database instance
  * @param {TransitionTracker} transitionTracker - Tracker for task transitions
  * @param {any} taskTrackingMiddleware - Middleware for task tracking
+ * @param {TaskEventEmitter} taskEventEmitter - Event emitter for task events
  * @returns {Array} Array of middleware and handler functions for Express
  */
-export function createFailTaskHandler(db: DatabaseSync, transitionTracker: TransitionTracker, taskTrackingMiddleware: any) {
+export function createFailTaskHandler(db: DatabaseSync, transitionTracker: TransitionTracker, taskTrackingMiddleware: any, taskEventEmitter?: TaskEventEmitter) {
     return [
         taskTrackingMiddleware.onTaskFailed,
         (req: any, res: any) => {
             const task = getTask(db, req.params.id, TaskStatus.RUNNING);
             if (task) {
-                updateTaskStatus(db, transitionTracker, task.id, TaskStatus.FAILED);
+                updateTaskStatus(db, transitionTracker, task.id, TaskStatus.FAILED, taskEventEmitter);
 
                 res.json({});
             } else {
@@ -267,9 +275,10 @@ export function createFailTaskHandler(db: DatabaseSync, transitionTracker: Trans
 /**
  * Creates a handler that clones an existing task with all its artefacts.
  * @param {DatabaseSync} db - The SQLite database instance
+ * @param {TaskEventEmitter} taskEventEmitter - Event emitter for task events
  * @returns {Function} Express route handler function
  */
-export function createCloneTaskHandler(db: DatabaseSync) {
+export function createCloneTaskHandler(db: DatabaseSync, taskEventEmitter?: TaskEventEmitter) {
     return async (req: any, res: any) => {
         const task = getTask(db, req.params.id);
         if (task) {
@@ -281,7 +290,7 @@ export function createCloneTaskHandler(db: DatabaseSync) {
             for (const artefact of task.artefacts) {
                 await Deno.copyFile(`./artefacts/tasks/${oldTaskid}/${artefact}`, `${dirpath}/${artefact}`);
             }
-            addTask(db, task);
+            addTask(db, task, taskEventEmitter);
             res.json(task);
             res.send();
         } else {
@@ -316,9 +325,10 @@ export function createGetTaskToCompleteHandler(db: DatabaseSync, agentTrackingMi
 /**
  * Creates a handler that uploads artefact files for a task.
  * @param {DatabaseSync} db - The SQLite database instance
+ * @param {TaskEventEmitter} taskEventEmitter - Event emitter for task events
  * @returns {Array} Array of middleware and handler functions for Express
  */
-export function createUploadArtefactHandler(db: DatabaseSync) {
+export function createUploadArtefactHandler(db: DatabaseSync, taskEventEmitter?: TaskEventEmitter) {
     const upload = multer({ dest: './artefacts/' });
     return [
         upload.single('file'),
@@ -329,7 +339,7 @@ export function createUploadArtefactHandler(db: DatabaseSync) {
                 await Deno.mkdir(dirpath, { recursive: true });
                 await Deno.rename(req.file.path, `${dirpath}/${req.file.originalname}`);
                 const artefactURL = `${req.protocol}://${req.get('host')}/tasks/${req.params.id}/artefacts/${req.file.originalname}`;
-                updateTaskAddArtefact(db, task.id, req.file.originalname);
+                updateTaskAddArtefact(db, task.id, req.file.originalname, taskEventEmitter);
                 const directURL = `${req.protocol}://${req.get('host')}/artefacts/tasks/${req.params.id}/${req.file.originalname}`
                 res.json({url: artefactURL, directURL: directURL });
                 res.send();
@@ -362,15 +372,16 @@ export function createGetArtefactHandler(db: DatabaseSync) {
 /**
  * Creates a handler that deletes artefact files from a task.
  * @param {DatabaseSync} db - The SQLite database instance
+ * @param {TaskEventEmitter} taskEventEmitter - Event emitter for task events
  * @returns {Function} Express route handler function
  */
-export function createDeleteArtefactHandler(db: DatabaseSync) {
+export function createDeleteArtefactHandler(db: DatabaseSync, taskEventEmitter?: TaskEventEmitter) {
     return async (req: any, res: any) => {
         const task = getTask(db, req.params.id);
         if (task) {
             const dirpath = `./artefacts/tasks/${req.params.id}`;
             await Deno.remove(`${dirpath}/${req.params.filename}`);
-            updateTaskRemoveArtefact(db, task.id, req.params.filename);
+            updateTaskRemoveArtefact(db, task.id, req.params.filename, taskEventEmitter);
             res.status(204);
             res.send();
         } else {

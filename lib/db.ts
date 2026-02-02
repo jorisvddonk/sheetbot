@@ -1,5 +1,6 @@
 import { DatabaseSync } from "node:sqlite";
 import { TransitionTracker } from "./transitiontracker.ts";
+import { TaskEventEmitter } from "./task-events.ts";
 import { processScheduledTransitions } from "./tasks.ts";
 
 export function openDatabase(): DatabaseSync {
@@ -46,7 +47,7 @@ export function initDatabaseTables(): void {
     console.log("Database tables initialized.");
 }
 
-export function startTransitionWorker(db: DatabaseSync, transitionTracker: TransitionTracker) {
+export function startTransitionWorker(db: DatabaseSync, transitionTracker: TransitionTracker, taskEventEmitter?: TaskEventEmitter) {
     // Start background worker for transitions
-    setInterval(() => processScheduledTransitions(db, transitionTracker), 1000); // Check every second
+    setInterval(() => processScheduledTransitions(db, transitionTracker, taskEventEmitter), 1000); // Check every second
 }

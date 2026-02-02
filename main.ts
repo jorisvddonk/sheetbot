@@ -68,7 +68,7 @@ const agentTrackingMiddleware = createAgentTrackingMiddleware(agentEventEmitter,
 const transitionTracker = new TransitionTracker();
 transitionTracker.startCleanup();
 
-startTransitionWorker(db, transitionTracker);
+startTransitionWorker(db, transitionTracker, taskEventEmitter);
 
 const userdb = new UserDB();
 
@@ -157,43 +157,43 @@ app.post("/artefacts-credentials", requiresLogin, createAwsCredentialsHandler())
 app.get("/tasks", requiresLogin, createGetTasksHandler(db));
 
 // POST /tasks - Creates a new task with the provided configuration
-app.post("/tasks", requiresLogin, requiresPermission("createTasks"), ...createCreateTaskHandler(db, transitionTracker, taskTrackingMiddleware));
+app.post("/tasks", requiresLogin, requiresPermission("createTasks"), ...createCreateTaskHandler(db, transitionTracker, taskTrackingMiddleware, taskEventEmitter));
 
 // GET /tasks/:id - Retrieves a specific task by its ID
 app.get("/tasks/:id", requiresLogin, requiresPermission("viewTasks"), createGetTaskHandler(db));
 
 // DELETE /tasks/:id - Permanently deletes a task from the system
-app.delete("/tasks/:id", requiresLogin, requiresPermission("deleteTasks"), createDeleteTaskHandler(db));
+app.delete("/tasks/:id", requiresLogin, requiresPermission("deleteTasks"), createDeleteTaskHandler(db, taskEventEmitter));
 
 // PATCH /tasks/:id - Updates a task's status or other properties
-app.patch("/tasks/:id", requiresLogin, requiresPermission("updateTasks"), createUpdateTaskHandler(db, transitionTracker));
+app.patch("/tasks/:id", requiresLogin, requiresPermission("updateTasks"), createUpdateTaskHandler(db, transitionTracker, taskEventEmitter));
 
 // POST /tasks/:id/accept - Marks a task as accepted and changes its status to RUNNING
-app.post("/tasks/:id/accept", requiresLogin, requiresPermission("performTasks"), createAcceptTaskHandler(db, transitionTracker));
+app.post("/tasks/:id/accept", requiresLogin, requiresPermission("performTasks"), createAcceptTaskHandler(db, transitionTracker, taskEventEmitter));
 
 // POST /tasks/:id/complete - Marks a task as completed with the provided result data
-app.post("/tasks/:id/complete", requiresLogin, requiresPermission("performTasks"), ...createCompleteTaskHandler(db, transitionTracker, taskTrackingMiddleware));
+app.post("/tasks/:id/complete", requiresLogin, requiresPermission("performTasks"), ...createCompleteTaskHandler(db, transitionTracker, taskTrackingMiddleware, taskEventEmitter));
 
 // POST /tasks/:id/data - Updates a task's data object with additional information
-app.post("/tasks/:id/data", requiresLogin, requiresPermission("performTasks"), createUpdateTaskDataHandler(db));
+app.post("/tasks/:id/data", requiresLogin, requiresPermission("performTasks"), createUpdateTaskDataHandler(db, taskEventEmitter));
 
 // POST /tasks/:id/failed - Marks a task as failed, typically called by agents when execution fails
-app.post("/tasks/:id/failed", requiresLogin, requiresPermission("performTasks"), ...createFailTaskHandler(db, transitionTracker, taskTrackingMiddleware));
+app.post("/tasks/:id/failed", requiresLogin, requiresPermission("performTasks"), ...createFailTaskHandler(db, transitionTracker, taskTrackingMiddleware, taskEventEmitter));
 
 // POST /tasks/:id/clone - Creates a copy of an existing task with all its artefacts
-app.post("/tasks/:id/clone", requiresLogin, requiresPermission("createTasks"), createCloneTaskHandler(db));
+app.post("/tasks/:id/clone", requiresLogin, requiresPermission("createTasks"), createCloneTaskHandler(db, taskEventEmitter));
 
 // POST /tasks/get - Retrieves the next available task for an agent to execute
 app.post("/tasks/get", requiresLogin, requiresPermission("performTasks"), ...createGetTaskToCompleteHandler(db, agentTrackingMiddleware));
 
 // POST /tasks/:id/artefacts - Uploads a file artefact for a task
-app.post('/tasks/:id/artefacts', requiresLogin, requiresPermission("performTasks"), ...createUploadArtefactHandler(db));
+app.post('/tasks/:id/artefacts', requiresLogin, requiresPermission("performTasks"), ...createUploadArtefactHandler(db, taskEventEmitter));
 
 // GET /tasks/:id/artefacts/:filename - Downloads a specific artefact file from a task
 app.get('/tasks/:id/artefacts/:filename', createGetArtefactHandler(db));
 
 // DELETE /tasks/:id/artefacts/:filename - Removes an artefact file from a task
-app.delete('/tasks/:id/artefacts/:filename', requiresLogin, requiresPermission("deleteTasks"), createDeleteTaskArtefactHandler(db));
+app.delete('/tasks/:id/artefacts/:filename', requiresLogin, requiresPermission("deleteTasks"), createDeleteTaskArtefactHandler(db, taskEventEmitter));
 
 // ██      ██ ██████  ██████   █████  ██████  ██    ██     ██████   ██████  ██    ██ ████████ ███████ ███████
 // ██      ██ ██   ██ ██   ██ ██   ██ ██   ██  ██  ██      ██   ██ ██    ██ ██    ██    ██    ██      ██
