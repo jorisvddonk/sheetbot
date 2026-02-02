@@ -154,14 +154,13 @@ export function updateTaskStatus(db: DatabaseSync, transitionTracker: Transition
     const stmt = db.prepare("UPDATE tasks SET status = ? WHERE id = ?");
     stmt.run(status, taskId);
 
-    if (oldStatus !== undefined && oldStatus !== status) {
-        eventEmitter?.emitTaskStatusChanged(taskId, oldStatus, status);
-    }
-
     // Check for transitions
     const updatedTask = getTask(db, taskId);
     if (updatedTask) {
         updatedTask.status = status; // Update the task object
+        if (oldStatus !== undefined && oldStatus !== status) {
+            eventEmitter?.emitTaskStatusChanged(updatedTask, oldStatus, status);
+        }
         eventEmitter?.emitTaskChanged(updatedTask, { status });
         checkTransitions(db, transitionTracker, updatedTask, eventEmitter);
     }

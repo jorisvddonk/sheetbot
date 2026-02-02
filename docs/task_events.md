@@ -71,6 +71,7 @@ taskEventEmitter.on(TaskEvent.DELETED, (data) => {
 {
     taskId: string;
     timestamp: number;
+    task: Task;
     oldStatus: TaskStatus;
     newStatus: TaskStatus;
 }

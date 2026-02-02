@@ -23,6 +23,7 @@ export interface TaskChangedEventData extends TaskEventData {
 }
 
 export interface TaskStatusChangedEventData extends TaskEventData {
+  task: Task;
   oldStatus: TaskStatus;
   newStatus: TaskStatus;
 }
@@ -48,8 +49,8 @@ export class TaskEventEmitter extends EventEmitter {
     this.emit(TaskEvent.CHANGED, { taskId: task.id, timestamp: Date.now(), task, changes });
   }
 
-  emitTaskStatusChanged(taskId: string, oldStatus: TaskStatus, newStatus: TaskStatus) {
-    this.emit(TaskEvent.STATUS_CHANGED, { taskId, timestamp: Date.now(), oldStatus, newStatus });
+  emitTaskStatusChanged(task: Task, oldStatus: TaskStatus, newStatus: TaskStatus) {
+    this.emit(TaskEvent.STATUS_CHANGED, { taskId: task.id, timestamp: Date.now(), task, oldStatus, newStatus });
   }
 
   emitTaskDeleted(taskId: string) {
