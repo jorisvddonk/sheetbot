@@ -160,6 +160,37 @@ app.set('trust proxy', (ip: string) => {
     }
 });
 
+// ███    ███ ██ ██████  ██████  ██      ███████ ██     ██  █████  ██████  ███████     ██████  ██████  ███████
+// ████  ████ ██ ██   ██ ██   ██ ██      ██      ██     ██ ██   ██ ██   ██ ██          ██   ██ ██   ██ ██
+// ██ ████ ██ ██ ██   ██ ██   ██ ██      █████   ██  █  ██ ███████ ██████  █████       ██████  ██████  █████
+// ██  ██  ██ ██ ██   ██ ██   ██ ██      ██      ██ ███ ██ ██   ██ ██   ██ ██          ██      ██   ██ ██
+// ██      ██ ██ ██████  ██████  ███████ ███████  ███ ███  ██   ██ ██   ██ ███████     ██      ██   ██ ███████
+
+const middlewarePaths = Deno.env.get("SHEETBOT_MIDDLEWARE_SEARCH_PATHS");
+if (middlewarePaths) {
+    const paths = middlewarePaths.split(":").filter(p => p.trim());
+    for (const path of paths) {
+        try {
+            for (const entry of Deno.readDirSync(path)) {
+                if (entry.isFile && entry.name.endsWith(".ts")) {
+                    const modulePath = `${path}/${entry.name}`;
+                    try {
+                        const module = await import(modulePath);
+                        if (module.setupMiddleware && typeof module.setupMiddleware === "function") {
+                            console.log(`Loading pre-route middleware: ${modulePath}`);
+                            module.setupMiddleware(app);
+                        }
+                    } catch (e) {
+                        console.error(`Failed to load middleware ${modulePath}:`, e);
+                    }
+                }
+            }
+        } catch (e) {
+            console.error(`Failed to read middleware directory ${path}:`, e);
+        }
+    }
+}
+
 // API validation middleware (only in development)
 if (Deno.env.get("NODE_ENV") === "development") {
     app.use(OpenApiValidator.middleware({
@@ -336,6 +367,37 @@ app.get('/artefacts/:bucket/*', extractAWSCredentialsIfPresent(), requiresLogin,
 
 // DELETE /artefacts/* - Deletes artefact files from the system
 app.delete('/artefacts/*', extractAWSCredentialsIfPresent(), requiresLogin, requiresPermission("deleteArtefacts"), createDeleteArtefactHandler());
+
+// ██████   ██████  ███████ ████████     ██████   ██████  ██    ██ ████████ ███████     ███    ███ ██ ██████  ██████  ██      ███████ ██     ██  █████  ██████  ███████
+// ██   ██ ██    ██ ██         ██        ██   ██ ██    ██ ██    ██    ██    ██          ████  ████ ██ ██   ██ ██   ██ ██      ██      ██     ██ ██   ██ ██   ██ ██
+// ██████  ██    ██ ███████    ██        ██████  ██    ██ ██    ██    ██    █████       ██ ████ ██ ██ ██   ██ ██   ██ ██      █████   ██  █  ██ ███████ ██████  █████
+// ██      ██    ██      ██    ██        ██   ██ ██    ██ ██    ██    ██    ██          ██  ██  ██ ██ ██   ██ ██   ██ ██      ██      ██ ███ ██ ██   ██ ██   ██ ██
+// ██       ██████  ███████    ██        ██   ██  ██████   ██████     ██    ███████     ██      ██ ██ ██████  ██████  ███████ ███████  ███ ███  ██   ██ ██   ██ ███████
+
+const postRouteMiddlewarePaths = Deno.env.get("SHEETBOT_MIDDLEWARE_SEARCH_PATHS");
+if (postRouteMiddlewarePaths) {
+    const paths = postRouteMiddlewarePaths.split(":").filter(p => p.trim());
+    for (const path of paths) {
+        try {
+            for (const entry of Deno.readDirSync(path)) {
+                if (entry.isFile && entry.name.endsWith(".ts")) {
+                    const modulePath = `${path}/${entry.name}`;
+                    try {
+                        const module = await import(modulePath);
+                        if (module.setupPostRouteMiddleware && typeof module.setupPostRouteMiddleware === "function") {
+                            console.log(`Loading post-route middleware: ${modulePath}`);
+                            module.setupPostRouteMiddleware(app);
+                        }
+                    } catch (e) {
+                        console.error(`Failed to load post-route middleware ${modulePath}:`, e);
+                    }
+                }
+            }
+        } catch (e) {
+            console.error(`Failed to read post-route middleware directory ${path}:`, e);
+        }
+    }
+}
 
 // ███████ ███████ ██████  ██    ██ ███████ ██████      ███████ ████████  █████  ██████  ████████ ██    ██ ██████
 // ██      ██      ██   ██ ██    ██ ██      ██   ██     ██         ██    ██   ██ ██   ██    ██    ██    ██ ██   ██
