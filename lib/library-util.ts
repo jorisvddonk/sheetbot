@@ -2,7 +2,7 @@ export function getLibraryPaths(): string[] {
     const paths = ["./library/"];
     const envPaths = Deno.env.get("SHEETBOT_LIBRARY_SEARCH_PATH");
     if (envPaths) {
-        paths.push(...envPaths.split(":").filter(p => p.trim()));
+        paths.push(...envPaths.split(":").filter(p => p.trim()).map(p => p.endsWith("/") ? p : p + "/"));
     }
     return paths;
 }
