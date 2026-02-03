@@ -64,7 +64,7 @@ export function createInjectDependenciesMiddleware(getTaskFn: (id: string) => an
  * @returns {Function} Express middleware function
  */
 export function extractAWSCredentialsIfPresent() {
-  return async (req: any, res: any, next: any) => {
+  return (req: any, res: any, next: any) => {
     // Check for AWS session token
     const sessionToken = req.headers['x-amz-security-token'];
 

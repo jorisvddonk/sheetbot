@@ -164,7 +164,7 @@ function setupMobileMenu() {
 
     // Show/hide mobile menu button based on screen size
     function checkScreenSize() {
-        if (window.innerWidth <= 480) {
+        if (globalThis.innerWidth <= 480) {
             if (menuBtn) menuBtn.style.display = 'block';
         } else {
             if (menuBtn) menuBtn.style.display = 'none';
@@ -172,7 +172,7 @@ function setupMobileMenu() {
         }
     }
 
-    window.addEventListener('resize', checkScreenSize);
+    globalThis.addEventListener('resize', checkScreenSize);
     checkScreenSize(); // Initial check
 }
 
@@ -205,7 +205,7 @@ function initializeTheme() {
         if (themeBtn) themeBtn.textContent = '🌙';
     } else {
         // No saved preference, check system preference
-        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        if (globalThis.matchMedia && globalThis.matchMedia('(prefers-color-scheme: dark)').matches) {
             html.classList.add('dark-mode');
             if (themeBtn) themeBtn.textContent = '☀️';
         } else {

@@ -43,7 +43,7 @@ export class ScheduleTaskWidget extends LitElement {
 
     scheduleTask() {
       // Navigate to addtask page with script parameter
-      window.location.href = `/addtask.html?script=${encodeURIComponent(this.data)}`;
+      globalThis.location.href = `/addtask.html?script=${encodeURIComponent(this.data)}`;
     }
 
     getCopyText() {

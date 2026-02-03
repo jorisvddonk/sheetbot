@@ -80,7 +80,7 @@ export class QrCodeWidget extends LitElement {
       }
     }
 
-    async generateQR() {
+    generateQR() {
       const canvas = this.shadowRoot.querySelector('canvas');
       if (!canvas) {
         console.error('Canvas not found');
@@ -92,7 +92,7 @@ export class QrCodeWidget extends LitElement {
 
       console.log('Generating QR for:', data);
       console.log('Canvas element:', canvas);
-      console.log('QRCode available:', typeof window.QRCode);
+      console.log('QRCode available:', typeof globalThis.QRCode);
 
       // Clear canvas first
       ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -106,7 +106,7 @@ export class QrCodeWidget extends LitElement {
 
       try {
         // Check if qrcode-generator library is loaded
-        if (typeof window.qrcode === 'undefined') {
+        if (typeof globalThis.qrcode === 'undefined') {
           console.error('qrcode-generator library failed to load');
           ctx.fillStyle = '#ff6b6b';
           ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -123,7 +123,7 @@ export class QrCodeWidget extends LitElement {
         console.log('Generating QR code with qrcode-generator...');
 
         // Create QR code with qrcode-generator
-        const qr = window.qrcode(0, 'M'); // Type 0 (auto), Error correction 'M'
+        const qr = globalThis.qrcode(0, 'M'); // Type 0 (auto), Error correction 'M'
         qr.addData(data);
         qr.make();
 
@@ -204,7 +204,7 @@ export class QrCodeWidget extends LitElement {
         },
         {
           text: 'copy QR image',
-          action: async () => {
+          action: () => {
             try {
               const canvas = this.shadowRoot.querySelector('canvas');
               if (canvas) {

@@ -61,7 +61,9 @@ export function setOffloadHttpDispatcher() {
                 } else if (parsedArgs.length > 1) {
                   dummy = `zip_${Date.now()}.zip`;
                 }
-              } catch (e) {}
+              } catch (e) {
+                // Ignore parsing errors for arguments
+              }
             }
           } else if (task.deps.length === 2) {
             dummy = `zip_${Date.now()}.zip`;

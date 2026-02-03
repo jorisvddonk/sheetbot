@@ -5,7 +5,7 @@
 // ██ ██      ██ ██       ██████  ██   ██    ██    ███████
 
 import https from "node:https";
-import { existsSync } from "https://deno.land/std@0.220.1/fs/mod.ts";
+import { existsSync, readFileSync } from "node:fs";
 import express from "npm:express@4.18.3";
 import OpenApiValidator from "npm:express-openapi-validator@5.6.0";
 import { openDatabase, startTransitionWorker } from "./lib/db.ts";
@@ -42,20 +42,21 @@ if (initSearchPaths) {
 
 for (const initDir of initDirs) {
     try {
-        if (!Deno.existsSync(initDir)) {
+        if (!existsSync(initDir)) {
             if (initDir === "./init/") {
                 await Deno.mkdir(initDir, { recursive: true });
             }
             continue;
         }
-    } catch {
+    } catch (e) {
+        console.log(e);
         continue;
     }
     
     const initFiles = Array.from(Deno.readDirSync(initDir))
         .filter(entry => entry.isFile && entry.name.endsWith('.ts'))
         .sort((a, b) => a.name.localeCompare(b.name));
-    
+
     for (const file of initFiles) {
         const modulePath = `${initDir.endsWith("/") ? initDir : initDir + "/"}${file.name}`;
         try {
@@ -409,8 +410,8 @@ app.listen(3000);
 console.log("listening on http://localhost:3000/");
 
 if (existsSync("./key.pem") && existsSync("./cert.pem")) {
-    const key = new TextDecoder().decode(Deno.readFileSync('./key.pem'));
-    const cert = new TextDecoder().decode(Deno.readFileSync('./cert.pem'));
+    const key = new TextDecoder().decode(readFileSync('./key.pem'));
+    const cert = new TextDecoder().decode(readFileSync('./cert.pem'));
     https.createServer({key: key, cert: cert}, app).listen(443);
     console.log("listening on http://localhost:443/");
 } else {
