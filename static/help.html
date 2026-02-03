@@ -56,6 +56,11 @@
         <p>To run a Bash agent, use the following command:</p>
         <pre><code id="bash-prod" class="language-bash">curl -fsSL ${SHEETBOT_BASEURL}/scripts/agent.sh | bash</code></pre>
         <p>For authentication, set SHEETBOT_AUTH_USER and SHEETBOT_AUTH_PASS, or SHEETBOT_AUTH_APIKEY if needed.</p>
+        
+        <h3>Terminal UI (TUI)</h3>
+        <p>View tasks from the terminal:</p>
+        <pre><code id="tui-cmd" class="language-bash">deno run --allow-net --allow-env ${SHEETBOT_BASEURL}/tui.ts</code></pre>
+        
         <h3>Example Script</h3>
         <p>You can create a bash script to run the agent with authentication:</p>
         <pre><code id="example-script" class="language-bash">#!/bin/bash
@@ -184,6 +189,7 @@ deno run --reload -A ${SHEETBOT_BASEURL}/scripts/agent.ts</code></pre>
         document.getElementById('deno-prod').textContent = document.getElementById('deno-prod').textContent.replace('${SHEETBOT_BASEURL}', baseUrl);
         document.getElementById('python-prod').textContent = document.getElementById('python-prod').textContent.replace('${SHEETBOT_BASEURL}', baseUrl);
         document.getElementById('bash-prod').textContent = document.getElementById('bash-prod').textContent.replace('${SHEETBOT_BASEURL}', baseUrl);
+        document.getElementById('tui-cmd').textContent = document.getElementById('tui-cmd').textContent.replace('${SHEETBOT_BASEURL}', baseUrl);
         hljs.highlightAll();
 
         // Sample data for each widget section

@@ -104,6 +104,10 @@ See [Distributed Runtime](docs/Distributed_Runtime.md) for info on an experiment
    export SHEETBOT_BASEURL=http://localhost:3000
    deno run --allow-net --allow-env --allow-read ${SHEETBOT_BASEURL}/scripts/agent.ts
    ```
+8. (Optional) View tasks from the terminal using the TUI:
+   ```bash
+   deno run --allow-net --allow-env ${SHEETBOT_BASEURL}/tui.ts
+   ```
 
 By default, SheetBot listens on all interfaces (`0.0.0.0`) - change this in `main.ts` as needed.
 
