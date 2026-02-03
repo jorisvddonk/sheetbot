@@ -18,13 +18,26 @@ function getSecretKey(): string {
 export function createLoginHandler(userdb: UserDB) {
     return async (req: any, res: any) => {
         try {
-            const { username, password } = req.body;
-            const user = userdb.findUser(username);
-            const loginvalid = await userdb.verifyLogin(username, password);
-            if (!loginvalid) {
-              return res.status(401).json({ error: 'Authentication failed' });
+            const { username, password, apiKey } = req.body;
+            let user;
+
+            if (apiKey) {
+                user = await userdb.verifyApiKey(apiKey);
+                if (!user) {
+                    return res.status(401).json({ error: 'Invalid API Key' });
+                }
+            } else {
+                if (!username || !password) {
+                     return res.status(400).json({ error: 'Missing credentials' });
+                }
+                user = userdb.findUser(username);
+                const loginvalid = await userdb.verifyLogin(username, password);
+                if (!loginvalid) {
+                  return res.status(401).json({ error: 'Authentication failed' });
+                }
             }
-            const token = jsonwebtoken.sign({ userId: username, permissions: String(user.permissions).split(",") }, getSecretKey(), { expiresIn: '1h' });
+            
+            const token = jsonwebtoken.sign({ userId: user.id, permissions: String(user.permissions).split(",") }, getSecretKey(), { expiresIn: '1h' });
             res.json({ token });
           } catch (e) {
             console.log(e);
