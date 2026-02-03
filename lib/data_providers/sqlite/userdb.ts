@@ -29,8 +29,19 @@ export class UserDB {
                 key_hash TEXT NOT NULL,
                 name TEXT,
                 created_at INTEGER,
+                permissions TEXT,
                 FOREIGN KEY(user_id) REFERENCES "${USERDB_DATA_TABLENAME}"(id) ON DELETE CASCADE
             )`);
+        
+        try {
+             // Simple migration to add permissions column if it doesn't exist
+             const columns = this.db.prepare(`PRAGMA table_info("${API_KEYS_TABLENAME}")`).all() as any[];
+             if (!columns.some(c => c.name === 'permissions')) {
+                 this.db.exec(`ALTER TABLE "${API_KEYS_TABLENAME}" ADD COLUMN permissions TEXT`);
+             }
+        } catch (e) {
+            // ignore
+        }
     }
 
 
@@ -79,9 +90,10 @@ export class UserDB {
      * Adds a new API key for a user.
      * @param userId The user ID
      * @param name The name of the key
+     * @param permissions The permissions for the key (comma separated or *)
      * @returns The generated API key string (id.secret)
      */
-    async addApiKey(userId: string, name: string = "default") {
+    async addApiKey(userId: string, name: string = "default", permissions: string = "*") {
         // Verify user exists
         this.findUser(userId); // throws if not found
 
@@ -91,8 +103,8 @@ export class UserDB {
         const hash = await bcrypt.hash(secret, salt);
         const createdAt = Date.now();
 
-        const stmt = this.db.prepare(`INSERT INTO "${API_KEYS_TABLENAME}" (id, user_id, key_hash, name, created_at) VALUES (?, ?, ?, ?, ?)`);
-        stmt.run(keyId, userId, hash, name, createdAt);
+        const stmt = this.db.prepare(`INSERT INTO "${API_KEYS_TABLENAME}" (id, user_id, key_hash, name, created_at, permissions) VALUES (?, ?, ?, ?, ?, ?)`);
+        stmt.run(keyId, userId, hash, name, createdAt, permissions);
 
         return `${keyId}.${secret}`;
     }
@@ -100,7 +112,7 @@ export class UserDB {
     /**
      * Verifies an API key.
      * @param apiKey The API key string
-     * @returns The user object if valid, null otherwise
+     * @returns Object with user and key permissions if valid, null otherwise
      */
     async verifyApiKey(apiKey: string) {
         if (!apiKey || !apiKey.includes('.')) return null;
@@ -117,7 +129,11 @@ export class UserDB {
         if (!valid) return null;
 
         try {
-            return this.findUser(row.user_id);
+            const user = this.findUser(row.user_id);
+            return {
+                user,
+                keyPermissions: (row.permissions || "*").split(",")
+            };
         } catch (e) {
             return null;
         }

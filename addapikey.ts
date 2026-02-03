@@ -17,9 +17,10 @@ try {
 }
 
 const keyName = prompt("key name (optional)", "default") || "default";
+const permissions = prompt("permissions (separate with commas or use * for all)", "*") || "*";
 
 console.log("Generating key...");
-const apiKey = await userdb.addApiKey(username, keyName);
+const apiKey = await userdb.addApiKey(username, keyName, permissions);
 
 console.log("\nAPI Key generated successfully:");
 console.log("----------------------------------------");
