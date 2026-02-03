@@ -98,6 +98,8 @@ deno run --allow-all addtask.ts --script library/hello_world.ts
 # Set environment variables for authentication:
 export SHEETBOT_AUTH_USER=your_username
 export SHEETBOT_AUTH_PASS=your_password
+# Or use API key:
+# export SHEETBOT_AUTH_APIKEY=your_api_key
 export SHEETBOT_BASEURL=http://localhost:3000
 
 # Then run a Deno agent:

@@ -7,10 +7,17 @@ import { Runtime, RemoteTask } from "./distributed_runtime.ts";
 export function setHttpDispatcher() {
   Runtime.dispatchFunction = async (task: RemoteTask<any>) => {
     // Login to get token
+    let loginBody: any;
+    if (Deno.env.get("SHEETBOT_DISPATCH_AUTH_APIKEY") || Deno.env.get("SHEETBOT_AUTH_APIKEY")) {
+      loginBody = { apiKey: Deno.env.get("SHEETBOT_DISPATCH_AUTH_APIKEY") || Deno.env.get("SHEETBOT_AUTH_APIKEY") };
+    } else {
+      loginBody = { username: Deno.env.get("SHEETBOT_DISPATCH_AUTH_USER") || Deno.env.get("SHEETBOT_AUTH_USER"), password: Deno.env.get("SHEETBOT_DISPATCH_AUTH_PASS") || Deno.env.get("SHEETBOT_AUTH_PASS") };
+    }
+    
     const loginResponse = await fetch("http://localhost:3000/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username: Deno.env.get("SHEETBOT_DISPATCH_AUTH_USER") || Deno.env.get("SHEETBOT_AUTH_USER"), password: Deno.env.get("SHEETBOT_DISPATCH_AUTH_PASS") || Deno.env.get("SHEETBOT_AUTH_PASS") }),
+      body: JSON.stringify(loginBody),
     });
     if (!loginResponse.ok) {
       throw new Error("Login failed");

@@ -33,7 +33,19 @@ def check_for_errors(response):
 
 
 headers = {}
-if os.environ.get("SHEETBOT_AUTH_USER") and os.environ.get("SHEETBOT_AUTH_PASS"):
+if os.environ.get("SHEETBOT_AUTH_APIKEY"):
+    auth_response = requests.post(
+        SHEETBOT_BASEURL + "/login",
+        json={
+            "apiKey": os.environ["SHEETBOT_AUTH_APIKEY"]
+        },
+    )
+    if auth_response.status_code == 200:
+        auth_json = auth_response.json()
+        headers["Authorization"] = f"Bearer {auth_json['token']}"
+    else:
+        raise ValueError("Login failed with API key")
+elif os.environ.get("SHEETBOT_AUTH_USER") and os.environ.get("SHEETBOT_AUTH_PASS"):
     auth_response = requests.post(
         SHEETBOT_BASEURL + "/login",
         json={
@@ -41,13 +53,16 @@ if os.environ.get("SHEETBOT_AUTH_USER") and os.environ.get("SHEETBOT_AUTH_PASS")
             "password": os.environ["SHEETBOT_AUTH_PASS"],
         },
     )
-    del os.environ["SHEETBOT_AUTH_USER"]
-    del os.environ["SHEETBOT_AUTH_PASS"]
     if auth_response.status_code == 200:
         auth_json = auth_response.json()
         headers["Authorization"] = f"Bearer {auth_json['token']}"
     else:
         raise ValueError("Login failed")
+
+# Clean up all auth environment variables
+for key in ["SHEETBOT_AUTH_USER", "SHEETBOT_AUTH_PASS", "SHEETBOT_AUTH_APIKEY"]:
+    if key in os.environ:
+        del os.environ[key]
 
 local_capabilities = {}
 try:

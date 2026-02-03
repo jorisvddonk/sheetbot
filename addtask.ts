@@ -11,8 +11,14 @@ const script: string = await Select.prompt({
 });
 
 console.log("Adding task, please login first (using SHEETBOT_AUTH_* env variables if present)");
-const username = Deno.env.get("SHEETBOT_AUTH_USER") || prompt("username");
-const password = Deno.env.get("SHEETBOT_AUTH_PASS") || promptSecret("password");
+let loginBody: any;
+if (Deno.env.get("SHEETBOT_AUTH_APIKEY")) {
+    loginBody = { apiKey: Deno.env.get("SHEETBOT_AUTH_APIKEY") };
+} else {
+    const username = Deno.env.get("SHEETBOT_AUTH_USER") || prompt("username");
+    const password = Deno.env.get("SHEETBOT_AUTH_PASS") || promptSecret("password");
+    loginBody = { username, password };
+}
 const baseurl = Deno.env.get("SHEETBOT_BASEURL") || prompt("base URL", "http://127.0.0.1:3000");
 
 const token = await fetch(`${baseurl}/login`, {
@@ -20,10 +26,7 @@ const token = await fetch(`${baseurl}/login`, {
     headers: {
         "Content-Type": "application/json"
     },
-    body: JSON.stringify({
-        username,
-        password
-    })
+    body: JSON.stringify(loginBody)
 }).then(checkError).then(res => res.json()).then(json => json.token);
 
 Deno.env.set("SHEETBOT_AUTHORIZATION_HEADER", `Bearer ${token}`);

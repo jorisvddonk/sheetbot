@@ -12,10 +12,17 @@ export function setOffloadHttpDispatcher() {
       (async () => {
         try {
           // Login to get token
+          let loginBody: any;
+          if (Deno.env.get("SHEETBOT_DISPATCH_AUTH_APIKEY") || Deno.env.get("SHEETBOT_AUTH_APIKEY")) {
+            loginBody = { apiKey: Deno.env.get("SHEETBOT_DISPATCH_AUTH_APIKEY") || Deno.env.get("SHEETBOT_AUTH_APIKEY") };
+          } else {
+            loginBody = { username: Deno.env.get("SHEETBOT_DISPATCH_AUTH_USER") || Deno.env.get("SHEETBOT_AUTH_USER"), password: Deno.env.get("SHEETBOT_DISPATCH_AUTH_PASS") || Deno.env.get("SHEETBOT_AUTH_PASS") };
+          }
+          
           const loginResponse = await fetch("http://localhost:3000/login", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ username: Deno.env.get("SHEETBOT_DISPATCH_AUTH_USER") || Deno.env.get("SHEETBOT_AUTH_USER"), password: Deno.env.get("SHEETBOT_DISPATCH_AUTH_PASS") || Deno.env.get("SHEETBOT_AUTH_PASS") }),
+            body: JSON.stringify(loginBody),
           });
           if (!loginResponse.ok) {
             console.error("Login failed in offload mode");
@@ -83,10 +90,17 @@ export function setOffloadHttpDispatcher() {
 
     // Original logic for non-offload mode
     // Login to get token
+    let loginBody: any;
+    if (Deno.env.get("SHEETBOT_DISPATCH_AUTH_APIKEY") || Deno.env.get("SHEETBOT_AUTH_APIKEY")) {
+      loginBody = { apiKey: Deno.env.get("SHEETBOT_DISPATCH_AUTH_APIKEY") || Deno.env.get("SHEETBOT_AUTH_APIKEY") };
+    } else {
+      loginBody = { username: Deno.env.get("SHEETBOT_DISPATCH_AUTH_USER") || Deno.env.get("SHEETBOT_AUTH_USER"), password: Deno.env.get("SHEETBOT_DISPATCH_AUTH_PASS") || Deno.env.get("SHEETBOT_AUTH_PASS") };
+    }
+    
     const loginResponse = await fetch("http://localhost:3000/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username: Deno.env.get("SHEETBOT_DISPATCH_AUTH_USER") || Deno.env.get("SHEETBOT_AUTH_USER"), password: Deno.env.get("SHEETBOT_DISPATCH_AUTH_PASS") || Deno.env.get("SHEETBOT_AUTH_PASS") }),
+      body: JSON.stringify(loginBody),
     });
     if (!loginResponse.ok) {
       throw new Error("Login failed");

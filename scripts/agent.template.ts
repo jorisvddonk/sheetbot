@@ -25,7 +25,24 @@ async function checkForErrors(responsePromise) {
 }
 
 let headers = {};
-if (Deno.env.has("SHEETBOT_AUTH_USER") && Deno.env.has("SHEETBOT_AUTH_PASS")) {
+if (Deno.env.has("SHEETBOT_AUTH_APIKEY")) {
+    const authr = await fetch(SHEETBOT_BASEURL + "/login", {
+      method: "POST",
+      body: JSON.stringify({
+        apiKey: Deno.env.get("SHEETBOT_AUTH_APIKEY")
+      }),
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+    Deno.env.delete("SHEETBOT_AUTH_APIKEY");
+    if (authr.status === 200) {
+      const authj = await authr.json();
+      headers["Authorization"] = `Bearer ${authj.token}`;
+    } else {
+      throw new Error("Login failed with API key");
+    }
+} else if (Deno.env.has("SHEETBOT_AUTH_USER") && Deno.env.has("SHEETBOT_AUTH_PASS")) {
   const authr = await fetch(SHEETBOT_BASEURL + "/login", {
     method: "POST",
     body: JSON.stringify({
@@ -45,6 +62,11 @@ if (Deno.env.has("SHEETBOT_AUTH_USER") && Deno.env.has("SHEETBOT_AUTH_PASS")) {
     throw new Error("Login failed");
   }
 }
+
+// Clean up any remaining auth environment variables
+Deno.env.delete("SHEETBOT_AUTH_USER");
+Deno.env.delete("SHEETBOT_AUTH_PASS");
+Deno.env.delete("SHEETBOT_AUTH_APIKEY");
 
 let localCapabilities = {};
 try {

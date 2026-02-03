@@ -42,7 +42,19 @@ check_for_errors() {
 
 # Authentication
 headers=()
-if [ -n "${SHEETBOT_AUTH_USER:-}" ] && [ -n "${SHEETBOT_AUTH_PASS:-}" ]; then
+if [ -n "${SHEETBOT_AUTH_APIKEY:-}" ]; then
+    echo "Attempting authentication with API key" >&2
+    auth_output=$(curl -s -w "%{http_code}" -X POST "$SHEETBOT_BASEURL/login" \
+        -H "Content-Type: application/json" \
+        -d "{\"apiKey\":\"$SHEETBOT_AUTH_APIKEY\"}")
+    auth_status="${auth_output: -3}"
+    auth_body="${auth_output%???}"
+    echo "Auth status: $auth_status" >&2
+    check_for_errors "$auth_status"
+    token=$(echo "$auth_body" | jq -r '.token')
+    echo "Token obtained: ${token:0:10}..." >&2
+    headers+=(-H "Authorization: Bearer $token")
+elif [ -n "${SHEETBOT_AUTH_USER:-}" ] && [ -n "${SHEETBOT_AUTH_PASS:-}" ]; then
     echo "Attempting authentication with user: $SHEETBOT_AUTH_USER" >&2
     auth_output=$(curl -s -w "%{http_code}" -X POST "$SHEETBOT_BASEURL/login" \
         -H "Content-Type: application/json" \
@@ -54,10 +66,12 @@ if [ -n "${SHEETBOT_AUTH_USER:-}" ] && [ -n "${SHEETBOT_AUTH_PASS:-}" ]; then
     token=$(echo "$auth_body" | jq -r '.token')
     echo "Token obtained: ${token:0:10}..." >&2
     headers+=(-H "Authorization: Bearer $token")
-    unset SHEETBOT_AUTH_USER SHEETBOT_AUTH_PASS
 else
     echo "No authentication credentials provided" >&2
 fi
+
+# Clean up all auth environment variables
+unset SHEETBOT_AUTH_USER SHEETBOT_AUTH_PASS SHEETBOT_AUTH_APIKEY
 
 # Load capabilities
 local_capabilities="{}"

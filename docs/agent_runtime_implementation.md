@@ -67,6 +67,13 @@ Authenticates an agent and returns a JWT token for subsequent API calls.
 }
 ```
 
+Or using an API key:
+```json
+{
+  "apiKey": "string"
+}
+```
+
 **Response (Success - 200):**
 ```json
 {

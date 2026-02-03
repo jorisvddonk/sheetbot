@@ -91,13 +91,16 @@ See [Distributed Runtime](docs/Distributed_Runtime.md) for info on an experiment
 
 1. Ensure Deno is [installed](https://docs.deno.com/runtime/getting_started/installation/), then clone this repository
 2. Add a user via `deno run adduser.ts` - this will prompt you first for read and write access to files like the user database file; read through them and accept if you agree, then type in the username and password to generate a new user. Use `*` for permissions to give access to all features, or see [docs/permissions.md](docs/permissions.md) for more info on the permissions system.
-3. Run the main server: `deno run --allow-read=./static --allow-read=./secret.txt --allow-read=./users.db --allow-write=./users.db --allow-read=./tasks.db --allow-write=./tasks.db --allow-read=./artefacts/ --allow-write=./artefacts/ --allow-read=./sheets/ --allow-write=./sheets/ --allow-read=./library/ --allow-read=./scripts/ --allow-read=./init/ main.ts` - this will again prompt for a few extra permissions; read through them and accept if you agree.
-4. Access the web interface at http://localhost:3000/
-5. To test SheetBot, go to the Library page and add the "Hello World" task.
-6. Run an agent to execute the task:
+3. (Optional) Generate an API key via `deno run -A addapikey.ts` for secure agent authentication - see [docs/api_keys.md](docs/api_keys.md) for details.
+4. Run the main server: `deno run --allow-read=./static --allow-read=./secret.txt --allow-read=./users.db --allow-write=./users.db --allow-read=./tasks.db --allow-write=./tasks.db --allow-read=./artefacts/ --allow-write=./artefacts/ --allow-read=./sheets/ --allow-write=./sheets/ --allow-read=./library/ --allow-read=./scripts/ --allow-read=./init/ main.ts` - this will again prompt for a few extra permissions; read through them and accept if you agree.
+5. Access the web interface at http://localhost:3000/
+6. To test SheetBot, go to the Library page and add the "Hello World" task.
+7. Run an agent to execute the task:
    ```bash
    export SHEETBOT_AUTH_USER=your_username
    export SHEETBOT_AUTH_PASS=your_password
+   # Alternatively, use an API key:
+   # export SHEETBOT_AUTH_APIKEY=your.api.key
    export SHEETBOT_BASEURL=http://localhost:3000
    deno run --allow-net --allow-env --allow-read ${SHEETBOT_BASEURL}/scripts/agent.ts
    ```

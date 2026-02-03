@@ -55,12 +55,15 @@
         <pre><code id="python-prod" class="language-bash">uv run --script ${SHEETBOT_BASEURL}/scripts/agent.py</code></pre>
         <p>To run a Bash agent, use the following command:</p>
         <pre><code id="bash-prod" class="language-bash">curl -fsSL ${SHEETBOT_BASEURL}/scripts/agent.sh | bash</code></pre>
-        <p>For authentication, set SHEETBOT_AUTH_USER and SHEETBOT_AUTH_PASS if needed.</p>
+        <p>For authentication, set SHEETBOT_AUTH_USER and SHEETBOT_AUTH_PASS, or SHEETBOT_AUTH_APIKEY if needed.</p>
         <h3>Example Script</h3>
         <p>You can create a bash script to run the agent with authentication:</p>
         <pre><code id="example-script" class="language-bash">#!/bin/bash
+# Username/password auth:
 export SHEETBOT_AUTH_USER=username
 export SHEETBOT_AUTH_PASS=password
+# Or API key auth:
+# export SHEETBOT_AUTH_APIKEY=your_api_key
 export SHEETBOT_BASEURL={{BASE_URL}}
 
 deno run --reload -A ${SHEETBOT_BASEURL}/scripts/agent.ts</code></pre>
