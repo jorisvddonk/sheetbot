@@ -4,9 +4,9 @@
     "start-agent": "deno run --reload -A http://localhost:3000/scripts/agent.ts"
   },
   "lint": {
-    "exclude": ["library/*.ts"],
     "rules": {
       "exclude": ["no-import-prefix", "no-unused-vars", "no-explicit-any", "prefer-const"]
     }
-  }
+  },
+  "exclude": ["library/"]
 }

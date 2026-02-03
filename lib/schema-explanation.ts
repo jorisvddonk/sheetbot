@@ -272,7 +272,7 @@ export class SchemaExplainer {
 
     if (schema.dependentRequired) {
       explanation += `${indent}Dependent required properties:\n`;
-      for (const [prop, requiredProps] of Object.entries(schema.dependentRequired)) {
+      for (const [prop, requiredProps] of Object.entries(schema.dependentRequired as Record<string, string[]>)) {
         explanation += `${indent}  If ${prop} is present, these properties are also required: ${requiredProps.join(', ')}\n`;
       }
     }
