@@ -26,6 +26,7 @@ import { createGetAgentTemplateHandler, createGetTaskScriptHandler } from "./lib
 import { createUpsertSheetDataHandler, createDeleteSheetRowHandler, createGetSheetHandler, createListSheetsHandler } from "./lib/handlers/sheets.ts";
 import { createDeleteArtefactHandler, createListArtefactsHandler, createPutArtefactHandler, createPostArtefactHandler } from "./lib/handlers/artefacts.ts";
 import { createAwsCredentialsHandler } from "./lib/handlers/aws-credentials.ts";
+import { createEventsSSEHandler } from "./lib/handlers/events.ts";
 import { extractAWSCredentialsIfPresent } from "./lib/middleware.ts";
 
 // ██ ███    ██ ██ ████████     ███████ ██    ██ ███████ ████████ ███████ ███    ███
@@ -305,6 +306,9 @@ app.get("/agenttracker", requiresLogin, createGetAgentTrackerHandler(agentTracke
 
 // GET /transitiontracker - Retrieves task transition evaluation statistics
 app.get("/transitiontracker", requiresLogin, createGetTransitionTrackerHandler(transitionTracker));
+
+// GET /events - Server-Sent Events (SSE) endpoint for real-time event notifications
+app.get("/events", requiresLogin, createEventsSSEHandler(taskEventEmitter, agentEventEmitter));
 
 // ███████  ██████ ██████  ██ ██████  ████████     ██████   ██████  ██    ██ ████████ ███████ ███████
 // ██      ██      ██   ██ ██ ██   ██    ██        ██   ██ ██    ██ ██    ██    ██    ██      ██
