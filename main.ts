@@ -8,6 +8,46 @@ import https from "node:https";
 import { existsSync, readFileSync } from "node:fs";
 import express from "npm:express@4.18.3";
 import OpenApiValidator from "npm:express-openapi-validator@5.6.0";
+
+// Parse command line arguments
+const args = Deno.args;
+
+// Show help if requested
+if (args.includes("--help") || args.includes("-h")) {
+    console.log(`
+SheetBot - Task Management and Automation System
+
+Usage:
+  deno run --allow-all main.ts [options]
+
+Options:
+  --port, -p <number>       HTTP port to listen on (default: 3000)
+  --https-port, -P <number> HTTPS port to listen on (default: 443)
+  --help, -h                Show this help message
+
+Environment Variables:
+  SHEETBOT_PORT             HTTP port (overrides --port)
+  SHEETBOT_HTTPS_PORT       HTTPS port (overrides --https-port)
+  SHEETBOT_INIT_SEARCH_PATHS  Custom init script search paths
+  SHEETBOT_EVENTHANDLER_SEARCH_PATHS  Custom event handler search paths
+  SHEETBOT_MIDDLEWARE_SEARCH_PATHS  Custom middleware search paths
+
+Examples:
+  deno run --allow-all main.ts --port 8080
+  deno run --allow-all main.ts -p 8080 --https-port 8443
+`);
+    Deno.exit(0);
+}
+
+const portArgIndex = args.findIndex(arg => arg === "--port" || arg === "-p");
+const port = portArgIndex !== -1 && args[portArgIndex + 1] 
+  ? parseInt(args[portArgIndex + 1]) 
+  : (Deno.env.get("SHEETBOT_PORT") ? parseInt(Deno.env.get("SHEETBOT_PORT")) : 3000);
+
+const httpsPortArgIndex = args.findIndex(arg => arg === "--https-port" || arg === "-P");
+const httpsPort = httpsPortArgIndex !== -1 && args[httpsPortArgIndex + 1]
+  ? parseInt(args[httpsPortArgIndex + 1])
+  : (Deno.env.get("SHEETBOT_HTTPS_PORT") ? parseInt(Deno.env.get("SHEETBOT_HTTPS_PORT")) : 443);
 import { openDatabase, startTransitionWorker } from "./lib/db.ts";
 import { TaskTracker } from "./lib/tasktracker.ts";
 import { TaskEventEmitter } from "./lib/task-events.ts";
@@ -410,14 +450,14 @@ if (postRouteMiddlewarePaths) {
 //      ██ ██      ██   ██  ██  ██  ██      ██   ██          ██    ██    ██   ██ ██   ██    ██    ██    ██ ██
 // ███████ ███████ ██   ██   ████   ███████ ██   ██     ███████    ██    ██   ██ ██   ██    ██     ██████  ██
 
-app.listen(3000);
-console.log("listening on http://localhost:3000/");
+app.listen(port);
+console.log(`listening on http://localhost:${port}/`);
 
 if (existsSync("./key.pem") && existsSync("./cert.pem")) {
     const key = new TextDecoder().decode(readFileSync('./key.pem'));
     const cert = new TextDecoder().decode(readFileSync('./cert.pem'));
-    https.createServer({key: key, cert: cert}, app).listen(443);
-    console.log("listening on http://localhost:443/");
+    https.createServer({key: key, cert: cert}, app).listen(httpsPort);
+    console.log(`listening on https://localhost:${httpsPort}/`);
 } else {
     console.log("No key.pem and cert.pem exist, so not setting up HTTPS!");
 }
