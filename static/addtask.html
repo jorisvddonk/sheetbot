@@ -29,10 +29,34 @@
     <div id="header-placeholder"></div>
     <h2>Add New Task</h2>
     <form id="addTaskForm">
-        <label for="scriptSelect">Select Script:</label>
-        <select id="scriptSelect" required>
-            <option value="">-- Choose a script --</option>
-        </select><br><br>
+        <label>Script Source:</label>
+        <div>
+            <input type="radio" id="sourceLibrary" name="scriptSource" value="library" checked>
+            <label for="sourceLibrary" style="display:inline;">Select from library</label>
+            <input type="radio" id="sourceManual" name="scriptSource" value="manual" style="margin-left:15px;">
+            <label for="sourceManual" style="display:inline;">Manual entry</label>
+        </div><br>
+
+        <div id="librarySection">
+            <label for="scriptSelect">Select Script:</label>
+            <select id="scriptSelect">
+                <option value="">-- Choose a script --</option>
+            </select><br><br>
+        </div>
+
+        <div id="manualSection" style="display:none;">
+            <label for="manualScript">Script Content:</label>
+            <textarea id="manualScript" rows="15" cols="50" placeholder="Enter your script here..."></textarea><br><br>
+
+            <label for="taskType">Task Type:</label>
+            <select id="taskType" onchange="toggleTaskTypeOther()">
+                <option value="python">Python</option>
+                <option value="bash">Bash</option>
+                <option value="deno">Deno</option>
+                <option value="other">Other (specify)</option>
+            </select>
+            <input type="text" id="taskTypeOther" placeholder="Enter task type..." style="display:none; margin-left:10px;"><br><br>
+        </div>
 
         <label for="taskName">Task Name:</label>
         <input type="text" id="taskName" placeholder="Optional task name"><br><br>
@@ -83,6 +107,32 @@
             })
             .catch(err => console.error('Failed to load library:', err));
 
+        // Toggle between library and manual script entry
+        document.querySelectorAll('input[name="scriptSource"]').forEach(radio => {
+            radio.addEventListener('change', function() {
+                const librarySection = document.getElementById('librarySection');
+                const manualSection = document.getElementById('manualSection');
+                if (this.value === 'library') {
+                    librarySection.style.display = 'block';
+                    manualSection.style.display = 'none';
+                    document.getElementById('scriptSelect').required = true;
+                    document.getElementById('manualScript').required = false;
+                } else {
+                    librarySection.style.display = 'none';
+                    manualSection.style.display = 'block';
+                    document.getElementById('scriptSelect').required = false;
+                    document.getElementById('manualScript').required = true;
+                }
+            });
+        });
+
+        // Toggle task type "other" input
+        function toggleTaskTypeOther() {
+            const select = document.getElementById('taskType');
+            const otherInput = document.getElementById('taskTypeOther');
+            otherInput.style.display = select.value === 'other' ? 'inline-block' : 'none';
+        }
+
         // Handle script selection
         document.getElementById('scriptSelect').addEventListener('change', function() {
             const selected = library.find(item => item.filename === this.value);
@@ -100,43 +150,61 @@
         // Handle form submission
         document.getElementById('addTaskForm').addEventListener('submit', function(e) {
             e.preventDefault();
-            const selectedScript = document.getElementById('scriptSelect').value;
-            const scriptItem = library.find(item => item.filename === selectedScript);
-            if (!scriptItem) return;
+            
+            const scriptSource = document.querySelector('input[name="scriptSource"]:checked').value;
+            let scriptContent, taskType;
 
-            // Determine which directory the script is in
-            const dir = selectedScript.includes('.template.') ? 'scripts' : 'library';
-            fetch(`/${dir}/${selectedScript}`)
-                .then(res => res.text())
-                .then(scriptContent => {
-                    const body = {
-                        script: scriptContent,
-                        name: document.getElementById('taskName').value || undefined,
-                        data: JSON.parse(document.getElementById('taskData').value || '{}'),
-                        transitions: JSON.parse(document.getElementById('transitions').value || '[]'),
-                        status: parseInt(document.getElementById('status').value),
-                        type: selectedScript.endsWith('.py') ? 'python' : selectedScript.endsWith('.sh') ? 'bash' : 'deno',
-                        capabilitiesSchema: scriptItem.capabilitiesSchema
-                    };
+            if (scriptSource === 'library') {
+                const selectedScript = document.getElementById('scriptSelect').value;
+                const scriptItem = library.find(item => item.filename === selectedScript);
+                if (!scriptItem) return;
 
-                    return fetch('/tasks', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            ...headers
-                        },
-                        body: JSON.stringify(body)
+                const dir = selectedScript.includes('.template.') ? 'scripts' : 'library';
+                fetch(`/${dir}/${selectedScript}`)
+                    .then(res => res.text())
+                    .then(content => {
+                        scriptContent = content;
+                        taskType = selectedScript.endsWith('.py') ? 'python' : selectedScript.endsWith('.sh') ? 'bash' : 'deno';
+                        submitTask(scriptContent, taskType, scriptItem.capabilitiesSchema);
                     });
+            } else {
+                scriptContent = document.getElementById('manualScript').value;
+                let type = document.getElementById('taskType').value;
+                if (type === 'other') {
+                    type = document.getElementById('taskTypeOther').value;
+                }
+                taskType = type;
+                submitTask(scriptContent, taskType, null);
+            }
+
+            function submitTask(script, type, capabilitiesSchema) {
+                const body = {
+                    script: script,
+                    name: document.getElementById('taskName').value || undefined,
+                    data: JSON.parse(document.getElementById('taskData').value || '{}'),
+                    transitions: JSON.parse(document.getElementById('transitions').value || '[]'),
+                    status: parseInt(document.getElementById('status').value),
+                    type: type,
+                    capabilitiesSchema: capabilitiesSchema
+                };
+
+                fetch('/tasks', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...headers
+                    },
+                    body: JSON.stringify(body)
                 })
                 .then(res => res.json())
                 .then(data => {
                     alert(`Task added! ID: ${data.id}`);
-                    // Maybe redirect to task.html or clear form
                 })
                 .catch(err => {
                     console.error('Failed to add task:', err);
                     alert('Failed to add task');
                 });
+            }
         });
     </script>
 </body>
