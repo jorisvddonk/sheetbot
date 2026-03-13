@@ -56,6 +56,9 @@
                 <option value="other">Other (specify)</option>
             </select>
             <input type="text" id="taskTypeOther" placeholder="Enter task type..." style="display:none; margin-left:10px;"><br><br>
+
+            <label for="capabilitiesSchema">Capabilities Schema (JSON):</label>
+            <textarea id="capabilitiesSchema" rows="8" cols="50" placeholder='{}'></textarea><br><br>
         </div>
 
         <label for="taskName">Task Name:</label>
@@ -174,7 +177,13 @@
                     type = document.getElementById('taskTypeOther').value;
                 }
                 taskType = type;
-                submitTask(scriptContent, taskType, null);
+                let capabilitiesSchema = {};
+                try {
+                    capabilitiesSchema = JSON.parse(document.getElementById('capabilitiesSchema').value || '{}');
+                } catch (e) {
+                    capabilitiesSchema = {};
+                }
+                submitTask(scriptContent, taskType, capabilitiesSchema);
             }
 
             function submitTask(script, type, capabilitiesSchema) {
