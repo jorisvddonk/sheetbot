@@ -41,6 +41,7 @@
     <script src="widget-audio.js" type="module"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
     <script src="widget-qr-code.js" type="module"></script>
+    <script src="widget-attachments.js" type="module"></script>
     <script src="header.js"></script>
 </head>
 
@@ -107,6 +108,7 @@ deno run --reload -A ${SHEETBOT_BASEURL}/scripts/agent.ts</code></pre>
     <script src="widget-metric.js" type="module"></script>
     <script src="widget-video.js" type="module"></script>
     <script src="widget-audio.js" type="module"></script>
+    <script src="widget-attachments.js" type="module"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
     <script src="widget-qr-code.js" type="module"></script>
 
@@ -218,10 +220,11 @@ deno run --reload -A ${SHEETBOT_BASEURL}/scripts/agent.ts</code></pre>
                     { name: "widget_download", widgettype: "download", minwidth: 200, minheight: 200, maxwidth: 400, maxheight: 400, columnorder: 2, datatype: "TEXT" },
                     { name: "widget_hashimg", widgettype: "hashimg", minwidth: 200, minheight: 200, maxwidth: 400, maxheight: 400, columnorder: 3, datatype: "TEXT" },
                     { name: "widget_video", widgettype: "video", minwidth: 200, minheight: 200, columnorder: 4, datatype: "TEXT" },
-                    { name: "widget_audio", widgettype: "audio", minwidth: 200, minheight: 200, columnorder: 5, datatype: "TEXT" }
+                    { name: "widget_audio", widgettype: "audio", minwidth: 200, minheight: 200, columnorder: 5, datatype: "TEXT" },
+                    { name: "widget_attachments", widgettype: "attachments", minwidth: 200, minheight: 200, columnorder: 6, datatype: "TEXT" }
                 ],
                 rows: [
-                    ["logo.png", "example.txt", "abc123", "https://download.blender.org/peach/bigbuckbunny_movies/BigBuckBunny_640x360.m4v", "https://upload.wikimedia.org/wikipedia/commons/0/0c/JOHN_MICHEL_CELLO-BEETHOVEN_SYMPHONY_7_Allegretto.ogg"]
+                    ["logo.png", "example.txt", "abc123", "https://download.blender.org/peach/bigbuckbunny_movies/BigBuckBunny_640x360.m4v", "https://upload.wikimedia.org/wikipedia/commons/0/0c/JOHN_MICHEL_CELLO-BEETHOVEN_SYMPHONY_7_Allegretto.ogg", JSON.stringify(["report.pdf", "screenshot.png", "output.json"])]
                 ]
             },
             task: {

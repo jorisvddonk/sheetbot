@@ -92,6 +92,7 @@ Interactive buttons, multi-widgets, utility components, and QR codes.
 - **`multi`**: Multiple widgets in one cell (specify array of widget types)
 - **`transitions`**: Task transitions display
 - **`qr-code`**: QR code generation from text
+- **`attachments`**: Links to task attachments/artefacts
 
 ## Creating Custom Widgets
 

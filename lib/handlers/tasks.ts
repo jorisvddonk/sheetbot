@@ -354,6 +354,7 @@ export function createUploadArtefactHandler(db: DatabaseSync, taskEventEmitter?:
 
 /**
  * Creates a handler that serves artefact files for download.
+ * Redirects to the artefact URL with a JWT cookie for automatic authentication.
  * @param {DatabaseSync} db - The SQLite database instance
  * @returns {Function} Express route handler function
  */
@@ -361,7 +362,17 @@ export function createGetArtefactHandler(db: DatabaseSync) {
     return (req: any, res: any) => {
         const task = getTask(db, req.params.id);
         if (task) {
-            res.redirect(307, `/artefacts/tasks/${req.params.id}/${req.params.filename}`);
+            const artefactPath = `/artefacts/tasks/${req.params.id}/${req.params.filename}`;
+            
+            const hdr = req.header('Authorization');
+            if (hdr) {
+                const hdrs = hdr.split(" ");
+                if (hdrs[0].toLowerCase() === "bearer" && hdrs[1]) {
+                    res.cookie('jwt', hdrs[1], { httpOnly: false, path: '/', sameSite: 'lax', maxAge: 3600000 });
+                }
+            }
+            
+            res.redirect(307, artefactPath);
         } else {
             res.status(404);
             res.send();

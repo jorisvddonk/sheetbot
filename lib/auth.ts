@@ -10,17 +10,22 @@ function getSecretKey(): string {
 }
 
 export const requiresLogin = (req: any, res: any, next: any) => {
+    let token: string | undefined;
+    
     const hdr = req.header('Authorization');
-    if (hdr === undefined) {
-        return res.status(401).json({ error: 'Unauthorized' });
+    if (hdr !== undefined) {
+        const hdrs = hdr.split(" ");
+        if (hdrs[0].toLowerCase() === "bearer" && hdrs[1]) {
+            token = hdrs[1];
+        }
     }
-    const hdrs = hdr.split(" ")
-    if (hdrs[0].toLowerCase() !== "bearer") {
-        return res.status(401).json({ error: 'Unknown authorization scheme' });
+    
+    if (!token && req.cookies?.jwt) {
+        token = req.cookies.jwt;
     }
-    const token = hdrs[1];
+
     if (!token) {
-        return res.status(401).json({ error: 'Authentication failed' });
+        return res.status(401).json({ error: 'Unauthorized' });
     }
 
     jsonwebtoken.verify(token, getSecretKey(), (err: any, user: any) => {
@@ -31,7 +36,7 @@ export const requiresLogin = (req: any, res: any, next: any) => {
         req.user = user;
         next();
     });
-}
+};
 
 export const requiresPermission = (permission: string) => {
     return (req: any, res: any, next: any) => {

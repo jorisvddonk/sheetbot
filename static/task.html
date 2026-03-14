@@ -33,6 +33,7 @@
     <script src="widget-video.js" type="module"></script>
     <script src="widget-audio.js" type="module"></script>
     <script src="widget-qr-code.js" type="module"></script>
+    <script src="widget-attachments.js" type="module"></script>
     <script src="header.js"></script>
  </head>
 
@@ -97,8 +98,10 @@
                 },
                 {
                     "name": "artefacts",
-                    "widgettype": "code",
-                    "maxwidth": 250,
+                    "widgettype": "attachments",
+                    "minwidth": 250,
+                    "maxwidth": 400,
+                    "maxheight": 200,
                     "columnorder": 5,
                     "datatype": "TEXT"
                 },
