@@ -9,6 +9,18 @@ import { existsSync, readFileSync } from "node:fs";
 import express from "npm:express@4.18.3";
 import OpenApiValidator from "npm:express-openapi-validator@5.6.0";
 
+function simpleCookieParser(cookieHeader: string | undefined) {
+    if (!cookieHeader) return {};
+    const cookies: Record<string, string> = {};
+    cookieHeader.split(';').forEach(cookie => {
+        const [name, ...rest] = cookie.split('=');
+        if (name && rest.length > 0) {
+            cookies[name.trim()] = rest.join('=').trim();
+        }
+    });
+    return cookies;
+}
+
 // Parse command line arguments
 const args = Deno.args;
 
@@ -193,6 +205,20 @@ app.use((req: any, res: any, next: any) => {
 
 app.use(express.json());
 app.use(express.static('static'));
+app.use((req: any, res: any, next: any) => {
+    req.cookies = simpleCookieParser(req.headers.cookie);
+    res.cookie = (name: string, value: string, options?: any) => {
+        let cookieStr = `${name}=${value}`;
+        if (options) {
+            if (options.path) cookieStr += `; path=${options.path}`;
+            if (options.maxAge) cookieStr += `; max-age=${options.maxAge}`;
+            if (options.sameSite) cookieStr += `; samesite=${options.sameSite}`;
+            if (options.httpOnly === false) {} else cookieStr += `; httponly`;
+        }
+        res.setHeader('Set-Cookie', cookieStr);
+    };
+    next();
+});
 
 app.set('trust proxy', (ip: string) => {
     if (ip === '127.0.0.1') {

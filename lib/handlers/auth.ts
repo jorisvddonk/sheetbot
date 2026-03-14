@@ -64,6 +64,11 @@ export function createLoginHandler(userdb: UserDB) {
             }
             
             const token = jsonwebtoken.sign({ userId: user.id, permissions: permissions }, getSecretKey(), { expiresIn: '1h' });
+            
+            if (typeof res.cookie === 'function') {
+                res.cookie('jwt', token, { path: '/', maxAge: 3600000 });
+            }
+            
             res.json({ token });
           } catch (e) {
             console.log(e);
