@@ -1028,8 +1028,8 @@ export async function nextPendingStar(
     const prefix = `${name}|`;
     const rows = [...planets.entries()].filter(([k]) => k.startsWith(prefix)).map(([, v]) => v);
     if (rows.length === 0) return name;
-    const done = rows.every((r) => r[`${engine}_surf`]);
-    if (!done) return name;
+    const attempted = rows.some((r) => r[`${engine}_surf`]);
+    if (!attempted) return name;
   }
   return undefined;
 }
