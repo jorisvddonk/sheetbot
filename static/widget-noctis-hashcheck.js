@@ -1,28 +1,30 @@
 import {html, css, LitElement} from 'https://cdn.jsdelivr.net/gh/lit/dist@3/all/lit-all.min.js';
 
-let sheetCache = null;
+let sheetPromise = null;
 
-async function getSheet() {
-  if (!sheetCache) {
-    const sheet = new URL(document.URL).searchParams.get('sheet');
-    const res = await fetch(`/sheets/${sheet}`, {
-      headers: {
-        Authorization: `Bearer ${localStorage["jwt_token"]}`
-      }
-    });
-    const data = await res.json();
-    const columns = data.columns.map((c) => c.name);
-    const rows = new Map();
-    for (const row of data.rows) {
-      const obj = {};
-      columns.forEach((name, i) => {
-        obj[name] = row[i];
+function getSheet() {
+  if (!sheetPromise) {
+    sheetPromise = (async () => {
+      const sheet = new URL(document.URL).searchParams.get('sheet');
+      const res = await fetch(`/sheets/${sheet}`, {
+        headers: {
+          Authorization: `Bearer ${localStorage["jwt_token"]}`
+        }
       });
-      rows.set(obj["key"], obj);
-    }
-    sheetCache = { rows };
+      const data = await res.json();
+      const columns = data.columns.map((c) => c.name);
+      const rows = new Map();
+      for (const row of data.rows) {
+        const obj = {};
+        columns.forEach((name, i) => {
+          obj[name] = row[i];
+        });
+        rows.set(obj["key"], obj);
+      }
+      return { rows };
+    })();
   }
-  return sheetCache;
+  return sheetPromise;
 }
 
 export class NoctisHashCheckWidget extends LitElement {
