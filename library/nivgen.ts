@@ -7,11 +7,13 @@ import {
   coordsFromSeedval,
   ensureStarInSheet,
   importStars,
+  lrEngine,
   nextPendingStar,
   origEngine,
   origExplore,
   planetKey,
   runNivgen,
+  runNivtest,
   rustEngine,
   sheetRows,
   upsertSheet,
@@ -39,7 +41,10 @@ Engines:
          (needs dosbox-x on PATH + niv-toolchain/BCPP31 in the repo)
   rust - the deterministic Rust port (tests/nivgen/target/release/nivgen;
          build it first with `cargo build --release`)
-  more engines can be added later (noctis_iv_lr, linoleum, ...)
+  lr   - the noctis-iv-lr port's headless nivtest harness
+         (build/nivtest in the sibling ../noctis-iv-lr checkout, or set
+         NIVLR_DIR to override the lr repo path)
+  more engines can be added later (linoleum, ...)
 
 Data fields:
   engine  (default "rust")      engine to run
@@ -173,7 +178,7 @@ async function verifyStar(
   const before = await sheetRows(SHEET_PLANETS);
   let gapDef: string | undefined;
   let gapRand: string | undefined;
-  if (engine === "rust") {
+  if (engine === "rust" || engine === "lr") {
     const row = before.get(planetKey(name, 0));
     if (row && row["orig_sect_def_gap"]) gapDef = String(row["orig_sect_def_gap"]);
     if (row && row["orig_sect_rand_gap"]) gapRand = String(row["orig_sect_rand_gap"]);
@@ -188,6 +193,8 @@ async function verifyStar(
   };
   if (engine === "rust") {
     result = await rustEngine(repoDir, coords, { gapDef, gapRand, dump: true });
+  } else if (engine === "lr") {
+    result = await lrEngine(repoDir, coords, { gapDef, gapRand });
   } else if (engine === "orig") {
     result = await origEngine(repoDir, coords, { build: !!data.build, force: !!data.force });
   } else {
@@ -339,6 +346,12 @@ async function actionExplore(
     if (data.lon !== null && data.lon !== undefined) args.push("-lon", String(data.lon));
     if (data.lat !== null && data.lat !== undefined) args.push("-lat", String(data.lat));
     output = await runNivgen(repoDir, [sub, ...args]);
+  } else if (engine === "lr") {
+    const args = ["-x", String(coords.x), "-y", String(coords.y), "-z", String(coords.z)];
+    if (data.body !== null && data.body !== undefined) args.push("-p", String(data.body));
+    if (data.lon !== null && data.lon !== undefined) args.push("-lon", String(data.lon));
+    if (data.lat !== null && data.lat !== undefined) args.push("-lat", String(data.lat));
+    output = await runNivtest(repoDir, [sub, ...args]);
   } else if (engine === "orig") {
     const extra: string[] = [];
     if (data.body !== null && data.body !== undefined) extra.push(`-p ${data.body}`);

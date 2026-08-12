@@ -52,12 +52,12 @@ export class NoctisHashCheckWidget extends LitElement {
     if (!this.rowkey || !this.column) {
       return;
     }
-    if (!this.column.startsWith("rust_")) {
+    if (!/^(rust|lr)_/.test(this.column)) {
       this.match = "plain";
       this.requestUpdate();
       return;
     }
-    const origCol = this.column.replace(/^rust_/, 'orig_');
+    const origCol = this.column.replace(/^(rust|lr)_/, 'orig_');
     try {
       const grid = this.closest('element-grid');
       if (!grid || !grid.data) {
