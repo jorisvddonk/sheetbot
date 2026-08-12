@@ -96,7 +96,7 @@ export class NoctisHashCheckWidget extends LitElement {
     if (this.match === false) {
       return html`<span class="bad" title="rust ${this.data} != orig">✗ ${this.data}</span>`;
     }
-    return html`<span class="unknown" title="no orig reference">–</span>`;
+    return html`<span class="plain" title="rust ${this.data} (no orig reference yet)">${this.data}</span>`;
   }
 
   getCopyText() {
