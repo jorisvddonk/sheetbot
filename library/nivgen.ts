@@ -107,8 +107,8 @@ Suggested transitions for this task: <transitions>
   {
     "statuses": ["COMPLETED"],
     "condition": {},
-    "timing": { "immediate": true },
-    "transitionTo": "DELETED"
+    "timing": { "every": "15m" },
+    "transitionTo": "AWAITING"
   }
 ]
 </transitions>
@@ -290,31 +290,26 @@ async function actionVerify(
 ): Promise<Record<string, unknown>> {
   const batch = Math.max(1, Number(data.batch ?? 1));
   const explicit = String(data.star ?? "").trim();
-  const toProcess: string[] = [];
-  if (explicit) {
-    toProcess.push(explicit);
-  } else {
-    for (let i = 0; i < batch; i++) {
-      const next = await nextPendingStar(repoDir, engine);
-      if (!next) break;
-      toProcess.push(next);
-    }
-  }
-  if (toProcess.length === 0) {
-    log.push(`VERIFY: no star needs processing for engine '${engine}'`);
-    await addRun({ action: "verify", engine, result: "OK", summary: "no star needs processing" });
-    return { action: "verify", engine, ok: 0, total: 0, note: "no star needs processing" };
-  }
 
   let ok = 0;
   let total = 0;
   const report: string[] = [];
-  for (const name of toProcess) {
+  let processed = 0;
+  while (processed < batch) {
+    const name = explicit || (await nextPendingStar(repoDir, engine));
+    if (!name) break;
     const r = await verifyStar(repoDir, engine, name, data, log);
     ok += r.ok;
     total += r.total;
     report.push(`${name}: ${r.ok}/${r.total}`);
     await addRun({ action: "verify", engine, star: name, result: "OK", ok_bodies: r.ok, total_bodies: r.total });
+    processed++;
+    if (explicit) break;
+  }
+  if (report.length === 0) {
+    log.push(`VERIFY: no star needs processing for engine '${engine}'`);
+    await addRun({ action: "verify", engine, result: "OK", summary: "no star needs processing" });
+    return { action: "verify", engine, ok: 0, total: 0, note: "no star needs processing" };
   }
   const summary = report.join(" | ");
   log.push(`VERIFY DONE: ${summary}`);
