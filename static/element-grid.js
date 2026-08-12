@@ -254,10 +254,11 @@ export class GridElement extends LitElement {
                             function generateElement(widgettype) {
                                 let elem = document.createElement(`widget-${widgettype}`);
                                 elem.setAttribute("rowkey", row[0]);
+                                const coldef = tabledef.columns[columnindex];
+                                elem.setAttribute("column", coldef.name);
                                 elem.setAttribute("style", `overflow: auto; display: inline-block; position: relative; width: 100%; height: 100%;`);
                                 elem.style.gridRow = rowindex + 2; // header is row 1!
                                 elem.style.gridColumn = columnindex + 1;
-                                const coldef = tabledef.columns[columnindex];
                                 if (coldef.maxwidth !== undefined) {
                                     elem.style.maxWidth = coldef.maxwidth + "px";
                                 }

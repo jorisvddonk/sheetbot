@@ -256,8 +256,9 @@ export class TableElement extends LitElement {
                             function generateElement(widgettype) {
                                 let elem = document.createElement(`widget-${widgettype}`);
                                 elem.setAttribute("rowkey", row[0]);
-                                elem.setAttribute("style", `overflow: auto; display: inline-block; position: relative;`);
                                 const coldef = tabledef.columns[columnindex];
+                                elem.setAttribute("column", coldef.name);
+                                elem.setAttribute("style", `overflow: auto; display: inline-block; position: relative;`);
                                 if (coldef.maxwidth !== undefined) {
                                     elem.style.maxWidth = coldef.maxwidth + "px";
                                 }
