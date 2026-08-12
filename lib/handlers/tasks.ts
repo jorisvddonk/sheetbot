@@ -9,6 +9,35 @@ import { createAgentTrackingMiddleware } from "../agent-tracking-middleware.ts";
 import { taskify, addTask, getTasks, getTask, updateTaskStatus, deleteTask, updateTaskData, getTaskToComplete, checkTransitions, updateTaskAddArtefact, updateTaskRemoveArtefact } from "../tasks.ts";
 import { TaskStatus } from "../models.ts";
 
+const VALID_TASK_STATUSES = [
+    TaskStatus.AWAITING,
+    TaskStatus.RUNNING,
+    TaskStatus.COMPLETED,
+    TaskStatus.FAILED,
+    TaskStatus.PAUSED,
+    TaskStatus.DELETED,
+];
+
+function parseTaskStatus(value: unknown): TaskStatus {
+    let n: number;
+    if (typeof value === "number") {
+        n = value;
+    } else if (typeof value === "string") {
+        const trimmed = value.trim();
+        if (/^\d+$/.test(trimmed)) {
+            n = parseInt(trimmed, 10);
+        } else if (trimmed in TaskStatus) {
+            const v = TaskStatus[trimmed as keyof typeof TaskStatus];
+            return typeof v === "number" ? v : TaskStatus.AWAITING;
+        } else {
+            return TaskStatus.AWAITING;
+        }
+    } else {
+        return TaskStatus.AWAITING;
+    }
+    return VALID_TASK_STATUSES.includes(n) ? n : TaskStatus.AWAITING;
+}
+
 const PERMISSION_VIEW_TASKS = "viewTasks";
 const PERMISSION_CREATE_TASKS = "createTasks";
 const PERMISSION_PERFORM_TASKS = "performTasks";
@@ -40,6 +69,9 @@ export function createCreateTaskHandler(db: DatabaseSync, transitionTracker: Tra
         taskTrackingMiddleware.onTaskCreated,
         upload.array('file'),
         async (req: any, res: any) => {
+            if (!req.body.script) {
+                return res.status(400).json({ error: "script is required" });
+            }
             const task = taskify(req.body.script);
             if (req.body.id) {
                 task.id = req.body.id;
@@ -92,7 +124,7 @@ export function createCreateTaskHandler(db: DatabaseSync, transitionTracker: Tra
             } catch (e) {
                 dependsOn = [];
             }
-            task.status = req.body.status !== undefined ? parseInt(req.body.status) : TaskStatus.AWAITING;
+            task.status = parseTaskStatus(req.body.status);
             const dirpath = `./artefacts/tasks/${task.id}`;
             await Deno.mkdir(dirpath, { recursive: true });
             const artefacts = [];
