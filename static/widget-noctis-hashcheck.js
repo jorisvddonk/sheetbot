@@ -1,32 +1,5 @@
 import {html, css, LitElement} from 'https://cdn.jsdelivr.net/gh/lit/dist@3/all/lit-all.min.js';
 
-let sheetPromise = null;
-
-function getSheet() {
-  if (!sheetPromise) {
-    sheetPromise = (async () => {
-      const sheet = new URL(document.URL).searchParams.get('sheet');
-      const res = await fetch(`/sheets/${sheet}`, {
-        headers: {
-          Authorization: `Bearer ${localStorage["jwt_token"]}`
-        }
-      });
-      const data = await res.json();
-      const columns = data.columns.map((c) => c.name);
-      const rows = new Map();
-      for (const row of data.rows) {
-        const obj = {};
-        columns.forEach((name, i) => {
-          obj[name] = row[i];
-        });
-        rows.set(obj["key"], obj);
-      }
-      return { rows };
-    })();
-  }
-  return sheetPromise;
-}
-
 export class NoctisHashCheckWidget extends LitElement {
   static styles = css`
     .ok {
@@ -71,7 +44,7 @@ export class NoctisHashCheckWidget extends LitElement {
     this.check();
   }
 
-  async check() {
+  check() {
     if (!this.rowkey || !this.column || this.data === null || this.data === undefined || this.data === '') {
       return;
     }
@@ -82,13 +55,23 @@ export class NoctisHashCheckWidget extends LitElement {
     }
     const origCol = this.column.replace(/^rust_/, 'orig_');
     try {
-      const sheet = await getSheet();
-      const row = sheet.rows.get(this.rowkey);
-      const orig = row ? row[origCol] : undefined;
-      if (orig === undefined || orig === null) {
+      const grid = this.closest('element-grid');
+      if (!grid || !grid.data) {
         this.match = "unknown";
       } else {
-        this.match = String(orig) === String(this.data);
+        const columns = grid.getColumnDefinitions();
+        const row = grid.getRowData(this.rowkey);
+        if (!columns || !row) {
+          this.match = "unknown";
+        } else {
+          const idx = columns.findIndex((c) => c.name === origCol);
+          const orig = idx !== -1 ? row[idx] : undefined;
+          if (orig === undefined || orig === null) {
+            this.match = "unknown";
+          } else {
+            this.match = String(orig) === String(this.data);
+          }
+        }
       }
     } catch (e) {
       this.match = "unknown";
