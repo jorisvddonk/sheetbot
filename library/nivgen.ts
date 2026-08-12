@@ -81,7 +81,16 @@ Suggested capabilitiesSchema for this task: <capabilitiesSchema>
   "type": "object",
   "properties": {
     "os": {
-      "const": "darwin"
+      "anyOf": [
+        { "const": "darwin" },
+        {
+          "type": "object",
+          "properties": {
+            "os": { "const": "darwin" }
+          },
+          "required": ["os"]
+        }
+      ]
     }
   },
   "required": ["os"]
