@@ -13,6 +13,9 @@ export class NoctisIsMoonWidget extends LitElement {
   }
 
   render() {
+    if (this.data === null || this.data === undefined || this.data === '' || this.data === 'null') {
+      return html``;
+    }
     const v = String(this.data).trim();
     if (v === "1" || v === "true") {
       return html`<span>yes</span>`;

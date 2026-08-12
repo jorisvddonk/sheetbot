@@ -27,6 +27,9 @@ export class NoctisTypeWidget extends LitElement {
   }
 
   render() {
+    if (this.data === null || this.data === undefined || this.data === '' || this.data === 'null') {
+      return html``;
+    }
     const n = parseInt(this.data, 10);
     const name = Number.isFinite(n) ? TYPE_NAMES[n] : undefined;
     if (name) {

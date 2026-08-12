@@ -45,7 +45,11 @@ export class NoctisHashCheckWidget extends LitElement {
   }
 
   check() {
-    if (!this.rowkey || !this.column || this.data === null || this.data === undefined || this.data === '') {
+    if (this.data === null || this.data === undefined || this.data === '' || this.data === 'null') {
+      this.match = "empty";
+      return;
+    }
+    if (!this.rowkey || !this.column) {
       return;
     }
     if (!this.column.startsWith("rust_")) {
@@ -80,6 +84,9 @@ export class NoctisHashCheckWidget extends LitElement {
   }
 
   render() {
+    if (this.match === "empty") {
+      return html``;
+    }
     if (this.match === "plain") {
       return html`<span class="plain" title="${this.column}">${this.data}</span>`;
     }
