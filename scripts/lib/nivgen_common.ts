@@ -943,18 +943,23 @@ export async function lrEngine(
   for (const body of planets.keys()) {
     const dir = await Deno.makeTempDir({ prefix: "nivlr_surf_" });
     try {
-      const t = await runNivtest(repoDir, ["planet", ...base, "-p", String(body), "-dump", dir]);
-      for (const [b, sp] of parseCanonicalPlanets(t)) {
-        const pp = planets.get(b);
-        if (pp && sp.seedval !== undefined) pp.seedval = sp.seedval;
-      }
-      const p = planets.get(body);
-      const mapPath = `${dir}/surfmap.bin`;
-      if (p && existsSync(mapPath)) {
-        const map = Deno.readFileSync(mapPath);
-        const pal = await getPlanetPalette(repoDir, coords, body);
-        const url = await renderSurfacePng(map, pal, p.isMoon, `lr_surface_${body}.png`);
-        if (url) surfaces.set(body, url);
+      try {
+        const t = await runNivtest(repoDir, ["planet", ...base, "-p", String(body), "-dump", dir]);
+        for (const [b, sp] of parseCanonicalPlanets(t)) {
+          const pp = planets.get(b);
+          if (pp && sp.seedval !== undefined) pp.seedval = sp.seedval;
+        }
+        const p = planets.get(body);
+        const mapPath = `${dir}/surfmap.bin`;
+        if (p && existsSync(mapPath)) {
+          const map = Deno.readFileSync(mapPath);
+          const pal = await getPlanetPalette(repoDir, coords, body);
+          const url = await renderSurfacePng(map, pal, p.isMoon, `lr_surface_${body}.png`);
+          if (url) surfaces.set(body, url);
+        }
+      } catch (e) {
+        console.error(`lr: body ${body} planet failed, skipping: ${(e as Error).message}`);
+        planets.delete(body);
       }
     } finally {
       try {
@@ -968,36 +973,41 @@ export async function lrEngine(
   const textures = new Map<number, { def: TextureHashes; rand: TextureHashes }>();
   const dumps = new Map<number, { def: { stex?: string; sky?: string }; rand: { stex?: string; sky?: string } }>();
   for (const [body, p] of planets) {
-    const { lon, lat } = coordsFromSeedval(p.seedval ?? 0);
-    const defArgs = [...base, "-p", String(body), "-lon", "0", "-lat", "60"];
-    const randArgs = [...base, "-p", String(body), "-lon", String(lon), "-lat", String(lat)];
-    const defGap = opts.gapDef;
-    const randGap = opts.gapRand;
-    const def = parseSectorOutput(await runNivtest(repoDir, ["sector", ...defArgs, ...(defGap ? ["-gap", defGap] : [])]));
-    const rand = parseSectorOutput(await runNivtest(repoDir, ["sector", ...randArgs, ...(randGap ? ["-gap", randGap] : [])]));
-    sectors.set(body, { def, rand });
-    const defDir = await Deno.makeTempDir({ prefix: "nivlr_tex_" });
-    const randDir = await Deno.makeTempDir({ prefix: "nivlr_tex_" });
+    if (p.seedval === undefined) continue;
     try {
-      const defTex = parseTextureOutput(
-        await runNivtest(repoDir, ["surftex", ...defArgs, ...(defGap ? ["-gap", defGap] : []), "-dump", defDir]),
-      );
-      const randTex = parseTextureOutput(
-        await runNivtest(repoDir, ["surftex", ...randArgs, ...(randGap ? ["-gap", randGap] : []), "-dump", randDir]),
-      );
-      textures.set(body, { def: defTex, rand: randTex });
-      const defPal = await getPalette(repoDir, coords, body, 0, 60);
-      const randPal = await getPalette(repoDir, coords, body, lon, lat);
-      const defDump = await dumpTexture(repoDir, defDir, `lr_def_${body}_0_60`, { palette: defPal });
-      const randDump = await dumpTexture(repoDir, randDir, `lr_rand_${body}_${lon}_${lat}`, { palette: randPal });
-      dumps.set(body, { def: defDump, rand: randDump });
-    } finally {
+      const { lon, lat } = coordsFromSeedval(p.seedval);
+      const defArgs = [...base, "-p", String(body), "-lon", "0", "-lat", "60"];
+      const randArgs = [...base, "-p", String(body), "-lon", String(lon), "-lat", String(lat)];
+      const defGap = opts.gapDef;
+      const randGap = opts.gapRand;
+      const def = parseSectorOutput(await runNivtest(repoDir, ["sector", ...defArgs, ...(defGap ? ["-gap", defGap] : [])]));
+      const rand = parseSectorOutput(await runNivtest(repoDir, ["sector", ...randArgs, ...(randGap ? ["-gap", randGap] : [])]));
+      sectors.set(body, { def, rand });
+      const defDir = await Deno.makeTempDir({ prefix: "nivlr_tex_" });
+      const randDir = await Deno.makeTempDir({ prefix: "nivlr_tex_" });
       try {
-        Deno.removeSync(defDir, { recursive: true });
-        Deno.removeSync(randDir, { recursive: true });
-      } catch {
-        // ignore
+        const defTex = parseTextureOutput(
+          await runNivtest(repoDir, ["surftex", ...defArgs, ...(defGap ? ["-gap", defGap] : []), "-dump", defDir]),
+        );
+        const randTex = parseTextureOutput(
+          await runNivtest(repoDir, ["surftex", ...randArgs, ...(randGap ? ["-gap", randGap] : []), "-dump", randDir]),
+        );
+        textures.set(body, { def: defTex, rand: randTex });
+        const defPal = await getPalette(repoDir, coords, body, 0, 60);
+        const randPal = await getPalette(repoDir, coords, body, lon, lat);
+        const defDump = await dumpTexture(repoDir, defDir, `lr_def_${body}_0_60`, { palette: defPal });
+        const randDump = await dumpTexture(repoDir, randDir, `lr_rand_${body}_${lon}_${lat}`, { palette: randPal });
+        dumps.set(body, { def: defDump, rand: randDump });
+      } finally {
+        try {
+          Deno.removeSync(defDir, { recursive: true });
+          Deno.removeSync(randDir, { recursive: true });
+        } catch {
+          // ignore
+        }
       }
+    } catch (e) {
+      console.error(`lr: body ${body} sector/surftex failed, skipping: ${(e as Error).message}`);
     }
   }
   return { planets, sectors, textures, dumps, surfaces };
