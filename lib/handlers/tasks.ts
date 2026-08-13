@@ -72,6 +72,9 @@ export function createCreateTaskHandler(db: DatabaseSync, transitionTracker: Tra
             if (!req.body.script) {
                 return res.status(400).json({ error: "script is required" });
             }
+            if (!["deno", "bash", "python"].includes(req.body.type)) {
+                return res.status(400).json({ error: "type is required and must be one of: deno, bash, python" });
+            }
             const task = taskify(req.body.script);
             if (req.body.id) {
                 task.id = req.body.id;
@@ -87,7 +90,7 @@ export function createCreateTaskHandler(db: DatabaseSync, transitionTracker: Tra
                 task.capabilitiesSchema = req.body.capabilitiesSchema || {};
             }
             task.name = req.body.name;
-            task.type = req.body.type || "deno";
+            task.type = req.body.type;
             try {
                 task.transitions = JSON.parse(req.body.transitions);
             } catch (e) {
