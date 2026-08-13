@@ -87,7 +87,7 @@ export function createCreateTaskHandler(db: DatabaseSync, transitionTracker: Tra
                 task.capabilitiesSchema = req.body.capabilitiesSchema || {};
             }
             task.name = req.body.name;
-            task.type = req.body.type;
+            task.type = req.body.type || "deno";
             try {
                 task.transitions = JSON.parse(req.body.transitions);
             } catch (e) {
