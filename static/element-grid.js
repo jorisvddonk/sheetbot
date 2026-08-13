@@ -435,7 +435,14 @@ export class GridElement extends LitElement {
             }
         });
         if (res.ok) {
-            this.data = JSON.stringify(await res.json());
+            const json = await res.json();
+            this.data = JSON.stringify({
+                data: json.rows,
+                columns: json.columns,
+                total: json.total,
+                page: json.page,
+                pageSize: json.pageSize
+            });
         }
     }
 
