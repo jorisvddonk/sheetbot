@@ -126,6 +126,16 @@
      z-index: 10;
  }
 
+ .grid-scroll {
+     overflow: auto;
+     -webkit-overflow-scrolling: touch;
+     max-height: calc(100vh - 190px);
+ }
+
+ .grid.sticky-headers {
+     position: relative;
+ }
+
 .grid .cell.header span {
     justify-self: center;
     align-self: center;

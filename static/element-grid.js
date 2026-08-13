@@ -253,7 +253,7 @@ export class GridElement extends LitElement {
     }
 
     tableGenerator(tabledef) {
-        return html`
+        const grid = html`
             <div class="grid${this.stickyHeaders ? " sticky-headers" : ""}">
                 ${tabledef.columns.map((column, columnindex) => {
                     return html`<div class="cell header" style="grid-column: ${columnindex + 1}; grid-row: 1" col="${columnindex}" @click="${event => this.selectColumn(columnindex, event)}">
@@ -335,6 +335,10 @@ export class GridElement extends LitElement {
                 })}
             </div>
         `;
+        if (this.stickyHeaders) {
+            return html`<div class="grid-scroll">${grid}</div>`;
+        }
+        return grid;
     }
 
     /**
@@ -437,7 +441,14 @@ export class GridElement extends LitElement {
             }
         });
         if (res.ok) {
-            this.data = JSON.stringify(await res.json());
+            const json = await res.json();
+            this.data = JSON.stringify({
+                data: json.rows,
+                columns: json.columns,
+                total: json.total,
+                page: json.page,
+                pageSize: json.pageSize
+            });
         }
     }
 
