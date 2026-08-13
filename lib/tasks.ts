@@ -34,7 +34,7 @@ export function addTask(db: DatabaseSync, task: Task, eventEmitter?: TaskEventEm
         JSON.stringify(task.artefacts),
         JSON.stringify(task.dependsOn),
         JSON.stringify(task.transitions),
-        task.type,
+        task.type ?? null,
         JSON.stringify(task.capabilitiesSchema)
     );
     eventEmitter?.emitTaskAdded(task);

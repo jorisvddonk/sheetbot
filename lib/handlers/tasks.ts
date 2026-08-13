@@ -72,9 +72,6 @@ export function createCreateTaskHandler(db: DatabaseSync, transitionTracker: Tra
             if (!req.body.script) {
                 return res.status(400).json({ error: "script is required" });
             }
-            if (!["deno", "bash", "python"].includes(req.body.type)) {
-                return res.status(400).json({ error: "type is required and must be one of: deno, bash, python" });
-            }
             const task = taskify(req.body.script);
             if (req.body.id) {
                 task.id = req.body.id;
