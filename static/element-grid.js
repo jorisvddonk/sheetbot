@@ -5,7 +5,8 @@ export class GridElement extends LitElement {
         data: { type: String },
         page: { type: Number },
         pageSize: { type: Number },
-        total: { type: Number }
+        total: { type: Number },
+        stickyHeaders: { type: Boolean }
     };
 
     constructor() {
@@ -13,6 +14,7 @@ export class GridElement extends LitElement {
         this.page = 1;
         this.pageSize = 50;
         this.total = 0;
+        this.stickyHeaders = true;
         this._sheet = new URL(document.URL).searchParams.get('sheet');
         this._columns = null;
         this._fullData = null;
@@ -252,7 +254,7 @@ export class GridElement extends LitElement {
 
     tableGenerator(tabledef) {
         return html`
-            <div class="grid">
+            <div class="grid${this.stickyHeaders ? " sticky-headers" : ""}">
                 ${tabledef.columns.map((column, columnindex) => {
                     return html`<div class="cell header" style="grid-column: ${columnindex + 1}; grid-row: 1" col="${columnindex}" @click="${event => this.selectColumn(columnindex, event)}">
                         <span>${column.name}</span>
