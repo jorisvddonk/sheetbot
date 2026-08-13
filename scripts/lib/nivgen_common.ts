@@ -722,7 +722,7 @@ export async function dumpSurface(
     if (!existsSync(mapPath)) return undefined;
     const map = Deno.readFileSync(mapPath);
     const pal = Deno.readFileSync(`${dir}/palette.raw`);
-    return await renderSurfacePng(map, pal, isMoon, `${prefix}_surface_${body}.png`);
+    return await renderSurfacePng(map, pal, isMoon, `${prefix}_surface_${coords.x}_${coords.y}_${coords.z}_${body}.png`);
   } finally {
     try {
       Deno.removeSync(dir, { recursive: true });
@@ -788,8 +788,8 @@ export async function rustEngine(
     if (workDump) {
       for (const [body, p] of planets) {
         const { lon, lat } = coordsFromSeedval(p.seedval ?? 0);
-        const defPrefix = `rust_def_${body}_${0}_${60}`;
-        const randPrefix = `rust_rand_${body}_${lon}_${lat}`;
+        const defPrefix = `rust_def_${coords.x}_${coords.y}_${coords.z}_${body}_${0}_${60}`;
+        const randPrefix = `rust_rand_${coords.x}_${coords.y}_${coords.z}_${body}_${lon}_${lat}`;
         const defDump = await dumpTexture(repoDir, `${workDump}/def_${body}`, defPrefix);
         const randDump = await dumpTexture(repoDir, `${workDump}/rand_${body}`, randPrefix);
         dumps.set(body, { def: defDump, rand: randDump });
@@ -883,8 +883,8 @@ export async function origEngine(
         const [rlon, rlat] = landings.get(body)!.rand;
         const defPal = await getPalette(repoDir, coords, body, dlon, dlat);
         const randPal = await getPalette(repoDir, coords, body, rlon, rlat);
-        const defDump = await dumpTexture(repoDir, `${work}/dd${body}D`, `orig_def_${body}_${dlon}_${dlat}`, { palette: defPal });
-        const randDump = await dumpTexture(repoDir, `${work}/dd${body}R`, `orig_rand_${body}_${rlon}_${rlat}`, { palette: randPal });
+        const defDump = await dumpTexture(repoDir, `${work}/dd${body}D`, `orig_def_${coords.x}_${coords.y}_${coords.z}_${body}_${dlon}_${dlat}`, { palette: defPal });
+        const randDump = await dumpTexture(repoDir, `${work}/dd${body}R`, `orig_rand_${coords.x}_${coords.y}_${coords.z}_${body}_${rlon}_${rlat}`, { palette: randPal });
         dumps.set(body, { def: defDump, rand: randDump });
         let surfUrl: string | undefined;
         try {
@@ -892,7 +892,7 @@ export async function origEngine(
             if (f.isFile && /^surfmap\.bin$/i.test(f.name)) {
               const map = Deno.readFileSync(`${work}/ps${body}/${f.name}`);
               const pal = await getPlanetPalette(repoDir, coords, body);
-              surfUrl = await renderSurfacePng(map, pal, p.isMoon, `orig_surface_${body}.png`);
+              surfUrl = await renderSurfacePng(map, pal, p.isMoon, `orig_surface_${coords.x}_${coords.y}_${coords.z}_${body}.png`);
               break;
             }
           }
@@ -964,7 +964,7 @@ export async function lrEngine(
           const map = Deno.readFileSync(mapPath);
           const palPath = `${dir}/palette.raw`;
           const pal = existsSync(palPath) ? Deno.readFileSync(palPath) : await getPlanetPalette(repoDir, coords, body);
-          const url = await renderSurfacePng(map, pal, p.isMoon, `lr_surface_${body}.png`);
+          const url = await renderSurfacePng(map, pal, p.isMoon, `lr_surface_${coords.x}_${coords.y}_${coords.z}_${body}.png`);
           if (url) surfaces.set(body, url);
         }
       } catch (e) {
@@ -1005,8 +1005,8 @@ export async function lrEngine(
         textures.set(body, { def: defTex, rand: randTex });
         const defPal = await getPalette(repoDir, coords, body, 0, 60);
         const randPal = await getPalette(repoDir, coords, body, lon, lat);
-        const defDump = await dumpTexture(repoDir, defDir, `lr_def_${body}_0_60`, { palette: defPal });
-        const randDump = await dumpTexture(repoDir, randDir, `lr_rand_${body}_${lon}_${lat}`, { palette: randPal });
+        const defDump = await dumpTexture(repoDir, defDir, `lr_def_${coords.x}_${coords.y}_${coords.z}_${body}_0_60`, { palette: defPal });
+        const randDump = await dumpTexture(repoDir, randDir, `lr_rand_${coords.x}_${coords.y}_${coords.z}_${body}_${lon}_${lat}`, { palette: randPal });
         dumps.set(body, { def: defDump, rand: randDump });
       } finally {
         try {
