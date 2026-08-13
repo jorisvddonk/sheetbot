@@ -120,6 +120,12 @@
      padding: 5px;
  }
 
+ .grid.sticky-headers .cell.header {
+     position: sticky;
+     top: 0;
+     z-index: 10;
+ }
+
 .grid .cell.header span {
     justify-self: center;
     align-self: center;
