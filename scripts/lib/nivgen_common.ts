@@ -834,7 +834,7 @@ export async function origEngine(
     }
   }
   if (planets.size === 0) {
-    throw new Error("planet-all produced no bodies");
+    return { planets, sectors: new Map(), textures: new Map(), dumps: new Map(), surfaces: new Map() };
   }
   const bodies = [...planets.keys()].sort((a, b) => a - b);
   const CHUNK = 12;
@@ -1024,11 +1024,11 @@ export async function nextPendingStar(
   }
   if (stars.size === 0) return undefined;
   const planets = await sheetRows(SHEET_PLANETS);
-  for (const name of stars.keys()) {
+  for (const [name, starRow] of stars) {
     const prefix = `${name}|`;
     const rows = [...planets.entries()].filter(([k]) => k.startsWith(prefix)).map(([, v]) => v);
-    if (rows.length === 0) return name;
-    const attempted = rows.some((r) => r[`${engine}_surf`]);
+    const attempted = rows.some((r) => r[`${engine}_surf`]) ||
+      (starRow[`${engine}_attempted`] !== undefined && starRow[`${engine}_attempted`] !== null);
     if (!attempted) return name;
   }
   return undefined;

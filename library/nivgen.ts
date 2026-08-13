@@ -3,6 +3,7 @@ import {
   DEFAULT_REPO,
   ENGINES,
   SHEET_PLANETS,
+  SHEET_STARS,
   addRun,
   coordsFromSeedval,
   ensureStarInSheet,
@@ -279,6 +280,7 @@ async function verifyStar(
   }
   const total = result.planets.size;
   log.push(`  ${name}: ${ok}/${total} bodies match another engine`);
+  await upsertSheet(SHEET_STARS, name, { [`${engine}_attempted`]: new Date().toISOString() });
   return { ok, total, lines };
 }
 
