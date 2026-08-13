@@ -18,22 +18,54 @@ export class ImageWidget extends LitElement {
         height: 100%;
       }
     `;
-  
+
     static properties = {
       data: {type: String},
+      loaded: {type: Boolean},
     };
-  
+
     constructor() {
       super();
       this.data = '';
+      this.loaded = false;
+      this._observer = null;
+    }
+
+    connectedCallback() {
+      super.connectedCallback();
+      if (this.data === null || this.data === undefined || this.data === "null" || this.data === "") {
+        return;
+      }
+      if (typeof IntersectionObserver === "undefined") {
+        this.loaded = true;
+        return;
+      }
+      this._observer = new IntersectionObserver((entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            this.loaded = true;
+            this._observer?.disconnect();
+            this._observer = null;
+            break;
+          }
+        }
+      }, { rootMargin: "100px" });
+      this._observer.observe(this);
+    }
+
+    disconnectedCallback() {
+      super.disconnectedCallback();
+      if (this._observer) {
+        this._observer.disconnect();
+        this._observer = null;
+      }
     }
 
     render() {
-      if (this.data !== null && this.data !== undefined && this.data !== "null") {
-        return html`<div><img src="${this.data}"></img></div>`;
-      } else {
-        return html`<span></span>`;
+      if (this.loaded && this.data !== null && this.data !== undefined && this.data !== "null" && this.data !== "") {
+        return html`<div><img src="${this.data}" loading="lazy"></img></div>`;
       }
+      return html`<div></div>`;
     }
 
     getCopyText() {
