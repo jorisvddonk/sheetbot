@@ -569,17 +569,38 @@ async function uploadPng(
   data: Uint8Array,
   filename: string,
 ): Promise<string | undefined> {
-  const f = await Deno.makeTempFile({ prefix: "nivgen_png_" });
+  return await uploadPublicPng(data, filename);
+}
+
+/**
+ * Uploads a PNG into the public artefact bucket so it is readable without
+ * auth. The write itself is authenticated; only the resulting URL is public.
+ */
+export async function uploadPublicPng(
+  data: Uint8Array,
+  filename: string,
+): Promise<string | undefined> {
+  const base = Deno.env.get("SHEETBOT_BASEURL");
+  if (!base) return undefined;
+  const url = `${base.replace(/\/$/, "")}/artefacts/public/nivgen/${filename}`;
+  const auth = Deno.env.get("SHEETBOT_AUTHORIZATION_HEADER");
   try {
-    await Deno.writeFile(f, data);
-    const a = await uploadArtefactFromFilepath(f, filename);
-    return a.directURL || a.url;
-  } finally {
-    try {
-      await Deno.remove(f);
-    } catch {
-      // ignore
+    const res = await fetch(url, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "image/png",
+        ...(auth ? { Authorization: auth } : {}),
+      },
+      body: data,
+    });
+    if (!res.ok) {
+      console.error(`uploadPublicPng PUT ${filename} failed (${res.status}): ${(await res.text()).slice(-200)}`);
+      return undefined;
     }
+    return url;
+  } catch (e) {
+    console.error(`uploadPublicPng ${filename} threw: ${(e as Error).message}`);
+    return undefined;
   }
 }
 
