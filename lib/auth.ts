@@ -9,20 +9,43 @@ function getSecretKey(): string {
     return secretKey;
 }
 
-export const requiresLogin = (req: any, res: any, next: any) => {
-    let token: string | undefined;
-    
+function extractToken(req: any): string | undefined {
     const hdr = req.header('Authorization');
     if (hdr !== undefined) {
         const hdrs = hdr.split(" ");
         if (hdrs[0].toLowerCase() === "bearer" && hdrs[1]) {
-            token = hdrs[1];
+            return hdrs[1];
         }
     }
-    
-    if (!token && req.cookies?.jwt) {
-        token = req.cookies.jwt;
+    if (req.cookies?.jwt) {
+        return req.cookies.jwt;
     }
+    return undefined;
+}
+
+/**
+ * Verifies the bearer/cookie token if present. Returns the decoded user when
+ * valid, null when no token was supplied. Throws the JWT error object when a
+ * token was supplied but is invalid.
+ */
+export async function resolveUser(req: any): Promise<any | null> {
+    const token = extractToken(req);
+    if (!token) {
+        return null;
+    }
+    return await new Promise((resolve, reject) => {
+        jsonwebtoken.verify(token, getSecretKey(), (err: any, user: any) => {
+            if (err) {
+                reject(err);
+            } else {
+                resolve(user);
+            }
+        });
+    });
+}
+
+export const requiresLogin = (req: any, res: any, next: any) => {
+    const token = extractToken(req);
 
     if (!token) {
         return res.status(401).json({ error: 'Unauthorized' });

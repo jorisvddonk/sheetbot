@@ -1,0 +1,92 @@
+<html>
+
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#4682b4">
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" href="logo.png" type="image/png">
+    <link rel="manifest" href="manifest.json">
+    <script src="header.js"></script>
+</head>
+
+<body>
+    <div id="header-placeholder"></div>
+    <div style="padding: 20px;">
+        <h2>Sheet Access Admin</h2>
+        <p style="color: #888;">Toggle public (anonymous read-only) access per sheet. Changes apply immediately.</p>
+        <div id="sheet-admin-list" style="margin-top: 16px;">
+            <p>Loading sheets…</p>
+        </div>
+    </div>
+
+    <script>
+        const headers = {};
+        const token = localStorage.getItem("jwt_token");
+        if (!token) {
+            window.location.href = "index.html";
+        } else {
+            headers["Authorization"] = `Bearer ${token}`;
+        }
+
+        function toggle(sheet, enabled) {
+            const row = document.getElementById(`row-${CSS.escape(sheet)}`);
+            const msg = row.querySelector(".grant-msg");
+            msg.textContent = "saving…";
+            fetch(`/sheets/${encodeURIComponent(sheet)}/public`, {
+                method: "PUT",
+                headers: { ...headers, "Content-Type": "application/json" },
+                body: JSON.stringify({ public: enabled })
+            })
+            .then(async res => {
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({}));
+                    throw new Error(err.error || `HTTP ${res.status}`);
+                }
+                return res.json();
+            })
+            .then(data => {
+                row.querySelector(".grant-checkbox").checked = data.public;
+                msg.textContent = data.public ? "public" : "private";
+                msg.style.color = data.public ? "#2e8b57" : "#888";
+            })
+            .catch(err => {
+                msg.textContent = `error: ${err.message}`;
+                msg.style.color = "#c0392b";
+                row.querySelector(".grant-checkbox").checked = !enabled;
+            });
+        }
+
+        fetch("/sheets", { headers })
+        .then(res => res.json())
+        .then(async sheets => {
+            const list = document.getElementById("sheet-admin-list");
+            if (!sheets.length) {
+                list.innerHTML = "<p>No sheets found.</p>";
+                return;
+            }
+            const rows = [];
+            for (const sheet of sheets) {
+                let pub = false;
+                try {
+                    const r = await fetch(`/sheets/${encodeURIComponent(sheet)}/public`, { headers });
+                    if (r.ok) pub = (await r.json()).public;
+                } catch (e) {
+                    // leave as private
+                }
+                rows.push({ sheet, pub });
+            }
+            rows.sort((a, b) => a.sheet.localeCompare(b.sheet));
+            list.innerHTML = rows.map(r => `
+                <div id="row-${CSS.escape(r.sheet)}" style="display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--grid-border);">
+                    <a href="sheet.html?sheet=${encodeURIComponent(r.sheet)}" style="min-width:220px;">${r.sheet}</a>
+                    <input type="checkbox" class="grant-checkbox" ${r.pub ? "checked" : ""} onchange="toggle(${JSON.stringify(r.sheet)}, this.checked)">
+                    <span class="grant-msg" style="color:${r.pub ? "#2e8b57" : "#888"};font-size:14px;">${r.pub ? "public" : "private"}</span>
+                </div>`).join("");
+        })
+        .catch(err => {
+            document.getElementById("sheet-admin-list").innerHTML = `<p style="color:#c0392b;">Failed to load sheets: ${err.message}</p>`;
+        });
+    </script>
+</body>
+
+</html>

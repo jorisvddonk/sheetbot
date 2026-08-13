@@ -75,11 +75,12 @@ import { createGetTasksHandler, createCreateTaskHandler, createGetTaskHandler, c
 import { createGetLibraryHandler } from "./lib/handlers/library.ts";
 import { createGetTaskTrackerHandler, createGetAgentTrackerHandler, createGetTransitionTrackerHandler } from "./lib/handlers/tracker.ts";
 import { createGetAgentTemplateHandler, createGetTaskScriptHandler } from "./lib/handlers/scripts.ts";
-import { createUpsertSheetDataHandler, createDeleteSheetRowHandler, createGetSheetHandler, createListSheetsHandler } from "./lib/handlers/sheets.ts";
+import { createUpsertSheetDataHandler, createDeleteSheetRowHandler, createGetSheetHandler, createListSheetsHandler, createGetSheetPublicHandler, createSetSheetPublicHandler } from "./lib/handlers/sheets.ts";
 import { createDeleteArtefactHandler, createListArtefactsHandler, createPutArtefactHandler, createPostArtefactHandler } from "./lib/handlers/artefacts.ts";
 import { createAwsCredentialsHandler } from "./lib/handlers/aws-credentials.ts";
 import { createEventsSSEHandler } from "./lib/handlers/events.ts";
 import { extractAWSCredentialsIfPresent } from "./lib/middleware.ts";
+import { publicSheetOrLogin, optionalLogin } from "./lib/sheet_access.ts";
 
 // ██ ███    ██ ██ ████████     ███████ ██    ██ ███████ ████████ ███████ ███    ███
 // ██ ████   ██ ██    ██        ██       ██  ██  ██         ██    ██      ████  ████
@@ -406,11 +407,17 @@ app.post("/sheets/:id/data", requiresLogin, requiresPermission("putSheetData"), 
 // DELETE /sheets/:id/data/:key - Deletes a row from a sheet by its primary key
 app.delete("/sheets/:id/data/:key", requiresLogin, requiresPermission("putSheetData"), createDeleteSheetRowHandler());
 
-// GET /sheets/:id - Retrieves all data from a specific sheet
-app.get("/sheets/:id", requiresLogin, createGetSheetHandler());
+// GET /sheets/:id - Retrieves all data from a specific sheet (public sheets readable anonymously)
+app.get("/sheets/:id", publicSheetOrLogin, createGetSheetHandler());
 
-// GET /sheets - Lists all available sheets in the system
-app.get("/sheets", requiresLogin, createListSheetsHandler());
+// GET /sheets/:id/public - Retrieves the current public read grant for a sheet
+app.get("/sheets/:id/public", requiresLogin, requiresPermission("manageSheetPermissions"), createGetSheetPublicHandler());
+
+// PUT /sheets/:id/public - Sets the public read grant for a sheet at runtime
+app.put("/sheets/:id/public", requiresLogin, requiresPermission("manageSheetPermissions"), createSetSheetPublicHandler());
+
+// GET /sheets - Lists all available sheets (anonymous sees only public sheets)
+app.get("/sheets", optionalLogin, createListSheetsHandler());
 
 // █████  ██████  ████████ ███████ ███████  █████   ██████ ████████     ██████   ██████  ██    ██ ████████ ███████ ███████
 // ██   ██ ██   ██    ██    ██      ██      ██   ██ ██         ██        ██   ██ ██    ██ ██    ██    ██    ██      ██
@@ -419,10 +426,10 @@ app.get("/sheets", requiresLogin, createListSheetsHandler());
 // ██   ██ ██   ██    ██    ███████ ██      ██   ██  ██████    ██        ██   ██  ██████   ██████     ██    ███████ ███████
 
 // GET /artefacts/public - Lists artefacts in the public bucket without login
-//app.get('/artefacts/public', createListArtefactsHandler('public'));
+app.get('/artefacts/public', createListArtefactsHandler('public'));
 
 // GET /artefacts/public/* - Retrieves public artefact files without login
-//app.get('/artefacts/public/*', createListArtefactsHandler('public'));
+app.get('/artefacts/public/*', createListArtefactsHandler('public'));
 
 // POST /artefacts/{bucket}/* - Handles multipart upload operations, S3-style
 app.post('/artefacts/:bucket/*', extractAWSCredentialsIfPresent(), requiresLogin, requiresPermission("createArtefacts"), createPostArtefactHandler());

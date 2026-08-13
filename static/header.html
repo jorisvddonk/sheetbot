@@ -10,17 +10,19 @@
     <a href="index.html">Home</a>
     <a href="task.html">Tasks</a>
     <a href="sheet.html">Sheets</a>
-    <a href="agents.html">Agents</a>
-    <a href="library.html">Library</a>
+    <a href="agents.html" class="auth-only">Agents</a>
+    <a href="library.html" class="auth-only">Library</a>
     <a href="addtask.html">Add Task</a>
-    <a href="schema-playground.html">Schema Playground</a>
-    <a href="help.html">Help</a>
+    <a href="schema-playground.html" class="auth-only">Schema Playground</a>
+    <a href="help.html" class="auth-only">Help</a>
+    <a href="admin-sheets.html" class="auth-only">Admin</a>
   </nav>
   <div class="header-right">
     <div id="user-profile" class="user-profile">
       <span id="user-name"></span>
+      <a id="login-btn" href="index.html">Login</a>
       <button id="theme-toggle-btn">🌙</button>
-      <button id="logout-btn">Logout</button>
+      <button id="logout-btn" style="display: none;">Logout</button>
     </div>
     <div id="agent-stats" class="stats-section"></div>
     <div id="task-stats" class="stats-section"></div>

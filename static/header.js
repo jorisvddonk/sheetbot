@@ -22,22 +22,49 @@ function decodeJWT(token) {
     }
 }
 
+function isValidToken(token) {
+    if (!token) return false;
+    const payload = decodeJWT(token);
+    if (!payload) return false;
+    if (payload.exp && Date.now() / 1000 >= payload.exp) return false;
+    return true;
+}
+
+function applyAuthUI(loggedIn) {
+    document.querySelectorAll('.auth-only').forEach(el => {
+        el.style.display = loggedIn ? '' : 'none';
+    });
+    const logoutBtn = document.getElementById('logout-btn');
+    const loginBtn = document.getElementById('login-btn');
+    const userName = document.getElementById('user-name');
+    if (logoutBtn) logoutBtn.style.display = loggedIn ? '' : 'none';
+    if (loginBtn) loginBtn.style.display = loggedIn ? 'none' : '';
+    if (userName) userName.textContent = loggedIn ? userName.dataset.user || '' : '';
+}
+
 function showWelcomeMessage() {
     const token = localStorage.getItem('jwt_token');
     document.getElementById('welcome-message').textContent = "Sheetbot";
-    if (token) {
+    if (isValidToken(token)) {
         console.log('JWT token found');
         const payload = decodeJWT(token);
         if (payload && payload.userId) {
             document.getElementById('user-name').textContent = payload.userId;
+            document.getElementById('user-name').dataset.user = payload.userId;
         } else {
             console.log('No payload or userId:', payload);
         }
+        applyAuthUI(true);
         loadTaskStats(token);
         loadAgentStats(token);
         loadTransitionStats(token);
     } else {
-        console.log('No JWT token in localStorage');
+        if (token) {
+            console.log('JWT token expired or invalid, clearing');
+            localStorage.removeItem('jwt_token');
+        }
+        console.log('Not logged in');
+        applyAuthUI(false);
     }
 }
 
@@ -227,7 +254,7 @@ function setupLogout() {
 // Update stats every 30 seconds
 setInterval(() => {
     const token = localStorage.getItem('jwt_token');
-    if (token) {
+    if (isValidToken(token)) {
         loadTaskStats(token);
         loadAgentStats(token);
         loadTransitionStats(token);
