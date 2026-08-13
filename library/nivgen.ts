@@ -300,11 +300,20 @@ async function actionVerify(
   while (processed < batch) {
     const name = explicit || (await nextPendingStar(repoDir, engine));
     if (!name) break;
-    const r = await verifyStar(repoDir, engine, name, data, log);
-    ok += r.ok;
-    total += r.total;
-    report.push(`${name}: ${r.ok}/${r.total}`);
-    await addRun({ action: "verify", engine, star: name, result: "OK", ok_bodies: r.ok, total_bodies: r.total });
+    try {
+      const r = await verifyStar(repoDir, engine, name, data, log);
+      ok += r.ok;
+      total += r.total;
+      report.push(`${name}: ${r.ok}/${r.total}`);
+      await addRun({ action: "verify", engine, star: name, result: "OK", ok_bodies: r.ok, total_bodies: r.total });
+    } catch (e) {
+      const msg = (e as Error).message;
+      log.push(`  ${name}: FAILED - ${msg}`);
+      report.push(`${name}: FAILED`);
+      await upsertSheet(SHEET_STARS, name, { [`${engine}_failed`]: new Date().toISOString() });
+      await addRun({ action: "verify", engine, star: name, result: "FAILED", summary: msg.slice(0, 200) });
+      if (explicit) throw e;
+    }
     processed++;
     if (explicit) break;
   }

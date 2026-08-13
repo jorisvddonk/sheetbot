@@ -1028,7 +1028,8 @@ export async function nextPendingStar(
     const prefix = `${name}|`;
     const rows = [...planets.entries()].filter(([k]) => k.startsWith(prefix)).map(([, v]) => v);
     const attempted = rows.some((r) => r[`${engine}_surf`]) ||
-      (starRow[`${engine}_attempted`] !== undefined && starRow[`${engine}_attempted`] !== null);
+      (starRow[`${engine}_attempted`] !== undefined && starRow[`${engine}_attempted`] !== null) ||
+      (starRow[`${engine}_failed`] !== undefined && starRow[`${engine}_failed`] !== null);
     if (!attempted) return name;
   }
   return undefined;
