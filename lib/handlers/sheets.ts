@@ -78,9 +78,23 @@ export function createGetSheetHandler() {
             return;
         }
         const schema = sheetdb.getSchema();
-        const rows = sheetdb.getRows();
+        const page = parseInt(req.query.page, 10);
+        const pageSize = parseInt(req.query.pageSize, 10);
+        let rows;
+        let total;
+        let pageOut;
+        let pageSizeOut;
+        if (Number.isInteger(page) && page >= 1 && Number.isInteger(pageSize) && pageSize >= 1) {
+            pageOut = page;
+            pageSizeOut = pageSize;
+            rows = sheetdb.getRows(pageSize, (page - 1) * pageSize);
+            total = sheetdb.getRowCount();
+        } else {
+            rows = sheetdb.getRows();
+            total = rows.length;
+        }
         sheetdb.close();
-        res.json({columns: schema, rows});
+        res.json({ columns: schema, rows, total, page: pageOut, pageSize: pageSizeOut });
         res.send();
     };
 }

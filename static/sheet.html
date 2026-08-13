@@ -42,10 +42,11 @@
             headers["Authorization"] = `Bearer ${localStorage["jwt_token"]}`;
         }
         if (params.has("sheet")) {
-            const data = fetch(`/sheets/${params.get("sheet")}`, { headers: headers }).then(response => {
+            const pageSize = parseInt(params.get("pageSize") || "50", 10);
+            const data = fetch(`/sheets/${params.get("sheet")}?page=1&pageSize=${pageSize}`, { headers: headers }).then(response => {
                 return response.json()
             }).then(data => {
-                document.getElementById('spreadsheet').setAttribute('data', JSON.stringify({data: data.rows, columns: data.columns}));
+                document.getElementById('spreadsheet').setAttribute('data', JSON.stringify({data: data.rows, columns: data.columns, total: data.total, page: 1, pageSize}));
             });
         } else {
             const data = fetch(`/sheets`, { headers: headers }).then(response => {

@@ -86,11 +86,17 @@ export class SheetDB {
 
     /**
      * Retrieves all rows from the sheet.
+     * @param limit Optional maximum number of rows to return (page size)
+     * @param offset Optional number of rows to skip (page offset)
      * @returns Array of rows
      */
-    getRows() {
+    getRows(limit?: number, offset?: number) {
         const columnsSchema = this.getSchema();
-        const stmt = this.db.prepare(`SELECT * FROM "${SHEETDB_DATA_VIEWNAME}"`);
+        let sql = `SELECT * FROM "${SHEETDB_DATA_VIEWNAME}"`;
+        if (limit !== undefined) {
+            sql += ` LIMIT ${Math.floor(limit)} OFFSET ${Math.floor(offset || 0)}`;
+        }
+        const stmt = this.db.prepare(sql);
         const rowsRaw = stmt.all();
         const rows = rowsRaw.map(row => {
             const returnrow = [];
@@ -109,6 +115,15 @@ export class SheetDB {
             return returnrow;
         });
         return rows;
+    }
+
+    /**
+     * Returns the total number of rows in the sheet (ignores pagination).
+     */
+    getRowCount() {
+        const stmt = this.db.prepare(`SELECT COUNT(*) AS c FROM "${SHEETDB_DATA_VIEWNAME}"`);
+        const row = stmt.get();
+        return Number(row.c);
     }
 
     /**

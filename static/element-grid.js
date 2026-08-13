@@ -2,11 +2,21 @@ import { css, LitElement, createRef, ref, html } from 'https://cdn.jsdelivr.net/
 
 export class GridElement extends LitElement {
     static properties = {
-        data: { type: String }
+        data: { type: String },
+        page: { type: Number },
+        pageSize: { type: Number },
+        total: { type: Number }
     };
 
     constructor() {
         super();
+        this.page = 1;
+        this.pageSize = 50;
+        this.total = 0;
+        this._sheet = new URL(document.URL).searchParams.get('sheet');
+        this._columns = null;
+        this._fullData = null;
+        this._pageRows = null;
     }
 
     contextMenuRef = createRef();
@@ -361,9 +371,86 @@ export class GridElement extends LitElement {
         }
     }
 
+    _updateData() {
+        this._columns = null;
+        this._fullData = null;
+        this._pageRows = null;
+        this.total = 0;
+        if (this.data === null || this.data === undefined) {
+            return;
+        }
+        try {
+            const tabledef = JSON.parse(this.data);
+            this._columns = tabledef.columns || null;
+            if (typeof tabledef.total === "number") {
+                this._fullData = null;
+                this._pageRows = tabledef.data || [];
+                this.total = tabledef.total;
+                this.page = tabledef.page || 1;
+                if (tabledef.pageSize) this.pageSize = tabledef.pageSize;
+            } else {
+                this._fullData = tabledef.data || [];
+                this._pageRows = null;
+                this.total = this._fullData.length;
+            }
+        } catch (e) {
+            console.error("Error parsing table data:", e);
+        }
+    }
+
+    willUpdate(changedProperties) {
+        if (changedProperties.has("data")) {
+            this._updateData();
+        }
+    }
+
+    get currentRows() {
+        if (this._fullData) {
+            const start = (this.page - 1) * this.pageSize;
+            return this._fullData.slice(start, start + this.pageSize);
+        }
+        return this._pageRows || [];
+    }
+
+    get pageCount() {
+        return Math.max(1, Math.ceil(this.total / Math.max(1, this.pageSize)));
+    }
+
+    async gotoPage(n) {
+        const pages = this.pageCount;
+        const p = Math.min(Math.max(1, n || 1), pages);
+        if (p === this.page && this._pageRows !== null) {
+            return;
+        }
+        if (this._fullData) {
+            this.page = p;
+            return;
+        }
+        if (!this._sheet) {
+            return;
+        }
+        const res = await fetch(`/sheets/${this._sheet}?page=${p}&pageSize=${this.pageSize}`, {
+            headers: {
+                Authorization: `Bearer ${localStorage["jwt_token"]}`
+            }
+        });
+        if (res.ok) {
+            this.data = JSON.stringify(await res.json());
+        }
+    }
+
     render() {
         if (this.data !== null && this.data !== undefined) {
-            return html`<span>${this.tableGenerator(JSON.parse(this.data))}<span><element-contextmenu ${ref(this.contextMenuRef)}/></span></span>`;
+            const tabledef = { columns: this._columns || [], data: this.currentRows };
+            const pages = this.pageCount;
+            const pagination = pages > 1 ? html`
+                <div class="grid-pagination" style="padding: 8px 0; display: flex; align-items: center; gap: 8px;">
+                    <button @click="${() => this.gotoPage(this.page - 1)}" ?disabled="${this.page <= 1}">‹ Prev</button>
+                    <span>Page ${this.page} / ${pages} (${this.total} rows)</span>
+                    <button @click="${() => this.gotoPage(this.page + 1)}" ?disabled="${this.page >= pages}">Next ›</button>
+                    <input type="number" min="1" max="${pages}" .value="${this.page}" @change="${(e) => this.gotoPage(parseInt(e.target.value))}" style="width: 60px" />
+                </div>` : '';
+            return html`<span>${this.tableGenerator(tabledef)}<span><element-contextmenu ${ref(this.contextMenuRef)}/></span>${pagination}</span>`;
         }
         return html`<div></div>`;
     }
