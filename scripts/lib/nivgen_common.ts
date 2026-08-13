@@ -962,7 +962,8 @@ export async function lrEngine(
         const mapPath = `${dir}/surfmap.bin`;
         if (p && existsSync(mapPath)) {
           const map = Deno.readFileSync(mapPath);
-          const pal = await getPlanetPalette(repoDir, coords, body);
+          const palPath = `${dir}/palette.raw`;
+          const pal = existsSync(palPath) ? Deno.readFileSync(palPath) : await getPlanetPalette(repoDir, coords, body);
           const url = await renderSurfacePng(map, pal, p.isMoon, `lr_surface_${body}.png`);
           if (url) surfaces.set(body, url);
         }
