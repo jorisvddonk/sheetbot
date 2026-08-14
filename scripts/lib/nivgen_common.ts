@@ -1150,6 +1150,19 @@ export async function addRun(
 export const SHEET_ENGINES = "nivgen_engines";
 export const ENGINE_BATCH_CAPS: Record<string, number> = { orig: 2, rust: 20, lr: 20 };
 
+/** Planet sheet row cap: once reached, no new stars are processed, only
+ * version-based refreshes of already-processed content. */
+export const PLANET_ROW_CAP = (() => {
+  const v = Deno.env.get("NOCTIS_PLANET_ROW_CAP");
+  const n = v ? parseInt(v, 10) : NaN;
+  return Number.isFinite(n) && n > 0 ? n : 7500;
+})();
+
+export async function countPlanetRows(): Promise<number> {
+  const planets = await sheetRows(SHEET_PLANETS);
+  return planets.size;
+}
+
 const MATCH_FIELDS = [
   "surf", "atmo", "pal",
   "sect_def_hm", "sect_def_oc", "sect_rand_hm", "sect_rand_oc",
@@ -1211,10 +1224,10 @@ export async function countProcessedStars(repoDir: string, engine: string): Prom
 }
 
 /**
- * Number of stars awaiting (re)processing for an engine: stale (version drift),
- * failed at an older version, or never processed.
+ * Stars that need a refresh for an engine: processed at a stale version, or
+ * failed at an older version. This is the version-drift refresh backlog.
  */
-export async function countPendingStars(
+export async function countStaleStars(
   repoDir: string,
   engine: string,
   currentVersion: string,
@@ -1232,9 +1245,26 @@ export async function countPendingStars(
       if (starVersion !== currentVersion) n++;
     } else if (failed) {
       if (starVersion !== currentVersion) n++;
-    } else {
-      n++;
     }
+  }
+  return n;
+}
+
+/** Stars never processed by the engine (the initial catalog backlog). */
+export async function countNewStars(
+  repoDir: string,
+  engine: string,
+): Promise<number> {
+  const stars = await sheetRows(SHEET_STARS);
+  const planets = await sheetRows(SHEET_PLANETS);
+  const atCap = planets.size >= PLANET_ROW_CAP;
+  let n = 0;
+  for (const [name, starRow] of stars) {
+    const prefix = `${name}|`;
+    const rows = [...planets.entries()].filter(([k]) => k.startsWith(prefix)).map(([, v]) => v);
+    const hasData = rows.some((r) => r[`${engine}_surf`]) || !!starRow[`${engine}_attempted`];
+    const failed = !!starRow[`${engine}_failed`];
+    if (!hasData && !failed && !atCap) n++;
   }
   return n;
 }
@@ -1252,6 +1282,7 @@ export async function pickPendingStars(
 ): Promise<string[]> {
   const stars = await sheetRows(SHEET_STARS);
   const planets = await sheetRows(SHEET_PLANETS);
+  const atCap = planets.size >= PLANET_ROW_CAP;
   const stale: { name: string; updated: string }[] = [];
   const retry: string[] = [];
   const fresh: string[] = [];
@@ -1267,7 +1298,7 @@ export async function pickPendingStars(
       }
     } else if (failed) {
       if (starVersion !== currentVersion) retry.push(name);
-    } else {
+    } else if (!atCap) {
       fresh.push(name);
     }
   }
@@ -1444,21 +1475,48 @@ export async function runVerifyCycle(
   const prev = registry.get(engine);
   const engineUpdated = prev ? String(prev["version"] ?? "") !== version : true;
 
-  const pendingCount = await countPendingStars(repoDir, engine, version);
+  const staleCount = await countStaleStars(repoDir, engine, version);
+  const newCount = await countNewStars(repoDir, engine);
   const processedCount = await countProcessedStars(repoDir, engine);
+  const planetRows = await countPlanetRows();
+  const atCap = planetRows >= PLANET_ROW_CAP;
 
+  const note = engineUpdated
+    ? "engine updated - rolling refresh active"
+    : staleCount > 0
+    ? "rolling refresh in progress"
+    : newCount > 0
+    ? atCap
+      ? "at row cap - refresh only until engine update"
+      : "initial catalog processing"
+    : "idle - waiting for engine update";
   await updateEngineRegistry(engine, version, {
     processed_stars: processedCount,
-    stale_stars: pendingCount,
-    note: engineUpdated ? "engine updated - rolling refresh active" : "",
+    stale_stars: staleCount,
+    new_stars: newCount,
+    planet_rows: planetRows,
+    row_cap: PLANET_ROW_CAP,
+    note,
   });
   if (engineUpdated) {
     log.push(`ENGINE ${engine}: version ${String(prev?.["version"] ?? "?").slice(0, 8)} -> ${version.slice(0, 8)} - rolling refresh`);
   }
 
   const explicit = String(opts.star ?? "").trim();
+
+  // Idle: catalog fully processed at the current version -> nothing to do
+  // until an engine version changes.
+  if (!explicit && staleCount === 0 && newCount === 0) {
+    log.push(`VERIFY ${engine}: idle - all ${processedCount} stars current at version ${version.slice(0, 8)}`);
+    return {
+      action: "verify", engine, version, processed_stars: processedCount,
+      stale_stars: 0, new_stars: 0, engine_updated: engineUpdated,
+      ok: 0, total: 0, summary: "idle", stars: [],
+    };
+  }
+
   const cap = ENGINE_BATCH_CAPS[engine] ?? 3;
-  const effectiveBatch = Math.max(batch, Math.min(pendingCount, cap));
+  const effectiveBatch = Math.max(batch, Math.min(staleCount, cap));
 
   let ok = 0;
   let total = 0;
@@ -1490,10 +1548,9 @@ export async function runVerifyCycle(
   const summary = report.length ? report.join(" | ") : "no star needs processing";
   if (report.length === 0) {
     log.push(`VERIFY: no star needs processing for engine '${engine}'`);
-    await addRun({ action: "verify", engine, engine_version: version, result: "OK", summary });
   }
   log.push(`VERIFY DONE: ${summary}`);
-  return { action: "verify", engine, version, stale_stars: pendingCount, engine_updated: engineUpdated, ok, total, summary, stars: report };
+  return { action: "verify", engine, version, processed_stars: processedCount, stale_stars: staleCount, new_stars: newCount, engine_updated: engineUpdated, ok, total, summary, stars: report };
 }
 
 /** Runs the `stars` action (populate the star catalog). */
@@ -1567,6 +1624,9 @@ export async function runNivgenAction(
   if (action === "explore") {
     return await runExploreAction(repoDir, engine, data, log);
   }
+  if (action === "coverage") {
+    return await runCoverageAction(repoDir, log);
+  }
   const batch = Math.max(1, Number(data.batch ?? 1));
   return await runVerifyCycle(repoDir, engine, batch, {
     star: String(data.star ?? "").trim(),
@@ -1574,4 +1634,64 @@ export async function runNivgenAction(
     build: !!data.build,
     log,
   });
+}
+
+export const SHEET_COVERAGE = "nivgen_coverage";
+
+/**
+ * Periodically snapshots planet-sheet completeness: per-engine coverage and
+ * how many planets are missing an engine result (companion bodies excluded).
+ * Each run appends one row keyed by timestamp to the nivgen_coverage sheet.
+ */
+export async function runCoverageAction(
+  repoDir: string,
+  log: string[],
+): Promise<Record<string, unknown>> {
+  const planets = await sheetRows(SHEET_PLANETS);
+  let planetRows = 0;
+  let companion = 0;
+  let complete = 0;
+  let incomplete = 0;
+  const missing: Record<string, number> = { orig: 0, rust: 0, lr: 0 };
+  const present: Record<string, number> = { orig: 0, rust: 0, lr: 0 };
+  for (const [, row] of planets) {
+    planetRows++;
+    if (Number(row["type"] ?? 0) === 10) {
+      companion++;
+      continue;
+    }
+    const has: Record<string, boolean> = {
+      orig: !!row["orig_surf"],
+      rust: !!row["rust_surf"],
+      lr: !!row["lr_surf"],
+    };
+    for (const e of ENGINES) {
+      if (has[e]) present[e]++;
+      else missing[e]++;
+    }
+    if (has.orig && has.rust && has.lr) complete++;
+    else incomplete++;
+  }
+  const nonCompanion = planetRows - companion;
+  const pct = nonCompanion > 0 ? Math.round((complete / nonCompanion) * 1000) / 10 : 0;
+  const snapshot: Record<string, unknown> = {
+    planet_rows: planetRows,
+    companion_rows: companion,
+    complete,
+    incomplete,
+    missing_orig: missing.orig,
+    missing_rust: missing.rust,
+    missing_lr: missing.lr,
+    complete_orig: present.orig,
+    complete_rust: present.rust,
+    complete_lr: present.lr,
+    pct_complete: pct,
+  };
+  const key = new Date().toISOString();
+  await upsertSheet(SHEET_COVERAGE, key, { key, ...snapshot });
+  log.push(
+    `COVERAGE: ${complete}/${nonCompanion} complete (${pct}%), missing orig=${missing.orig} rust=${missing.rust} lr=${missing.lr}`,
+  );
+  await addRun({ action: "coverage", result: "OK", summary: `complete=${complete}/${nonCompanion} (${pct}%)` });
+  return { action: "coverage", ...snapshot };
 }
