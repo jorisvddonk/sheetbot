@@ -1224,55 +1224,83 @@ export async function countProcessedStars(repoDir: string, engine: string): Prom
 }
 
 /**
- * Stars that need a refresh for an engine: processed at a stale version, or
- * failed at an older version. This is the version-drift refresh backlog.
+ * Classifies all stars for an engine:
+ *  - stale:      this engine processed the star at an older version (refresh)
+ *  - incomplete: the star has rows in the planets sheet but this engine hasn't
+ *                produced results for it (cross-check fill; no new rows added)
+ *  - retry:      the star failed at an older version (retry after version change)
+ *  - fresh:      brand-new star with no rows at all (adds new rows, capped)
  */
+export async function classifyStars(
+  repoDir: string,
+  engine: string,
+  currentVersion: string,
+): Promise<{ stale: string[]; incomplete: string[]; retry: string[]; fresh: string[] }> {
+  const stars = await sheetRows(SHEET_STARS);
+  const planets = await sheetRows(SHEET_PLANETS);
+  const stale: { name: string; updated: string }[] = [];
+  const incomplete: string[] = [];
+  const retry: string[] = [];
+  const fresh: string[] = [];
+  for (const [name, starRow] of stars) {
+    const prefix = `${name}|`;
+    const rows = [...planets.entries()].filter(([k]) => k.startsWith(prefix)).map(([, v]) => v);
+    const hasEngine = rows.some((r) => r[`${engine}_surf`]) || !!starRow[`${engine}_attempted`];
+    const inSheet = rows.length > 0;
+    const failed = !!starRow[`${engine}_failed`];
+    const starVersion = starRow[`${engine}_version`];
+    if (hasEngine) {
+      if (starVersion !== currentVersion) {
+        stale.push({ name, updated: String(starRow[`${engine}_updated_at`] ?? "") });
+      }
+    } else if (inSheet) {
+      incomplete.push(name);
+    } else if (failed) {
+      if (starVersion !== currentVersion) retry.push(name);
+    } else {
+      fresh.push(name);
+    }
+  }
+  stale.sort((a, b) => (a.updated < b.updated ? -1 : a.updated > b.updated ? 1 : 0));
+  return { stale: stale.map((s) => s.name), incomplete, retry, fresh };
+}
+
 export async function countStaleStars(
   repoDir: string,
   engine: string,
   currentVersion: string,
 ): Promise<number> {
-  const stars = await sheetRows(SHEET_STARS);
-  const planets = await sheetRows(SHEET_PLANETS);
-  let n = 0;
-  for (const [name, starRow] of stars) {
-    const prefix = `${name}|`;
-    const rows = [...planets.entries()].filter(([k]) => k.startsWith(prefix)).map(([, v]) => v);
-    const hasData = rows.some((r) => r[`${engine}_surf`]) || !!starRow[`${engine}_attempted`];
-    const failed = !!starRow[`${engine}_failed`];
-    const starVersion = starRow[`${engine}_version`];
-    if (hasData) {
-      if (starVersion !== currentVersion) n++;
-    } else if (failed) {
-      if (starVersion !== currentVersion) n++;
-    }
-  }
-  return n;
+  return (await classifyStars(repoDir, engine, currentVersion)).stale.length;
 }
 
-/** Stars never processed by the engine (the initial catalog backlog). */
-export async function countNewStars(
+/** Stars in the planets sheet that are missing this engine's result. */
+export async function countIncompleteStars(
   repoDir: string,
   engine: string,
+  currentVersion: string,
 ): Promise<number> {
-  const stars = await sheetRows(SHEET_STARS);
-  const planets = await sheetRows(SHEET_PLANETS);
-  const atCap = planets.size >= PLANET_ROW_CAP;
-  let n = 0;
-  for (const [name, starRow] of stars) {
-    const prefix = `${name}|`;
-    const rows = [...planets.entries()].filter(([k]) => k.startsWith(prefix)).map(([, v]) => v);
-    const hasData = rows.some((r) => r[`${engine}_surf`]) || !!starRow[`${engine}_attempted`];
-    const failed = !!starRow[`${engine}_failed`];
-    if (!hasData && !failed && !atCap) n++;
-  }
-  return n;
+  return (await classifyStars(repoDir, engine, currentVersion)).incomplete.length;
 }
 
 /**
- * Picks pending stars for an engine, rolling-first: stale stars (oldest
- * processed first), then stars that failed at an older version, then never
- * processed stars.
+ * Brand-new stars with no rows in the planets sheet. Only picked while the
+ * sheet is below the row cap (they would add rows).
+ */
+export async function countNewStars(
+  repoDir: string,
+  engine: string,
+  currentVersion: string,
+): Promise<number> {
+  const atCap = (await countPlanetRows()) >= PLANET_ROW_CAP;
+  const c = await classifyStars(repoDir, engine, currentVersion);
+  return atCap ? 0 : c.fresh.length;
+}
+
+/**
+ * Picks pending stars for an engine: stale (oldest first) for rolling refresh,
+ * then incomplete in-sheet stars to cross-check every engine, then
+ * failed-at-older-version retries, then brand-new stars (only below the row
+ * cap).
  */
 export async function pickPendingStars(
   repoDir: string,
@@ -1280,30 +1308,10 @@ export async function pickPendingStars(
   count: number,
   currentVersion: string,
 ): Promise<string[]> {
-  const stars = await sheetRows(SHEET_STARS);
-  const planets = await sheetRows(SHEET_PLANETS);
-  const atCap = planets.size >= PLANET_ROW_CAP;
-  const stale: { name: string; updated: string }[] = [];
-  const retry: string[] = [];
-  const fresh: string[] = [];
-  for (const [name, starRow] of stars) {
-    const prefix = `${name}|`;
-    const rows = [...planets.entries()].filter(([k]) => k.startsWith(prefix)).map(([, v]) => v);
-    const hasData = rows.some((r) => r[`${engine}_surf`]) || !!starRow[`${engine}_attempted`];
-    const failed = !!starRow[`${engine}_failed`];
-    const starVersion = starRow[`${engine}_version`];
-    if (hasData) {
-      if (starVersion !== currentVersion) {
-        stale.push({ name, updated: String(starRow[`${engine}_updated_at`] ?? "") });
-      }
-    } else if (failed) {
-      if (starVersion !== currentVersion) retry.push(name);
-    } else if (!atCap) {
-      fresh.push(name);
-    }
-  }
-  stale.sort((a, b) => (a.updated < b.updated ? -1 : a.updated > b.updated ? 1 : 0));
-  return [...stale.map((s) => s.name), ...retry, ...fresh].slice(0, count);
+  const c = await classifyStars(repoDir, engine, currentVersion);
+  const atCap = (await countPlanetRows()) >= PLANET_ROW_CAP;
+  const fresh = atCap ? [] : c.fresh;
+  return [...c.stale, ...c.incomplete, ...c.retry, ...fresh].slice(0, count);
 }
 
 function pickOtherEngine(row: Record<string, unknown>, engine: string): string | undefined {
@@ -1476,23 +1484,28 @@ export async function runVerifyCycle(
   const engineUpdated = prev ? String(prev["version"] ?? "") !== version : true;
 
   const staleCount = await countStaleStars(repoDir, engine, version);
-  const newCount = await countNewStars(repoDir, engine);
+  const incompleteCount = await countIncompleteStars(repoDir, engine, version);
+  const newCount = await countNewStars(repoDir, engine, version);
   const processedCount = await countProcessedStars(repoDir, engine);
   const planetRows = await countPlanetRows();
   const atCap = planetRows >= PLANET_ROW_CAP;
+  const backlog = staleCount + incompleteCount + newCount;
 
   const note = engineUpdated
     ? "engine updated - rolling refresh active"
     : staleCount > 0
     ? "rolling refresh in progress"
-    : newCount > 0
+    : incompleteCount > 0
     ? atCap
-      ? "at row cap - refresh only until engine update"
-      : "initial catalog processing"
+      ? "at row cap - cross-checking all engines on existing planets"
+      : "cross-checking missing engine results"
+    : newCount > 0
+    ? "initial catalog processing"
     : "idle - waiting for engine update";
   await updateEngineRegistry(engine, version, {
     processed_stars: processedCount,
     stale_stars: staleCount,
+    incomplete_stars: incompleteCount,
     new_stars: newCount,
     planet_rows: planetRows,
     row_cap: PLANET_ROW_CAP,
@@ -1504,19 +1517,20 @@ export async function runVerifyCycle(
 
   const explicit = String(opts.star ?? "").trim();
 
-  // Idle: catalog fully processed at the current version -> nothing to do
-  // until an engine version changes.
-  if (!explicit && staleCount === 0 && newCount === 0) {
-    log.push(`VERIFY ${engine}: idle - all ${processedCount} stars current at version ${version.slice(0, 8)}`);
+  // Idle: nothing to refresh, no missing engine results, and (below cap) no
+  // brand-new stars. Cross-checking existing planets is always allowed even at
+  // the row cap since it never adds rows.
+  if (!explicit && backlog === 0) {
+    log.push(`VERIFY ${engine}: idle - ${processedCount} stars current, no missing engine results at version ${version.slice(0, 8)}`);
     return {
       action: "verify", engine, version, processed_stars: processedCount,
-      stale_stars: 0, new_stars: 0, engine_updated: engineUpdated,
+      stale_stars: 0, incomplete_stars: 0, new_stars: 0, engine_updated: engineUpdated,
       ok: 0, total: 0, summary: "idle", stars: [],
     };
   }
 
   const cap = ENGINE_BATCH_CAPS[engine] ?? 3;
-  const effectiveBatch = Math.max(batch, Math.min(staleCount, cap));
+  const effectiveBatch = Math.max(batch, Math.min(backlog, cap));
 
   let ok = 0;
   let total = 0;
@@ -1550,7 +1564,7 @@ export async function runVerifyCycle(
     log.push(`VERIFY: no star needs processing for engine '${engine}'`);
   }
   log.push(`VERIFY DONE: ${summary}`);
-  return { action: "verify", engine, version, processed_stars: processedCount, stale_stars: staleCount, new_stars: newCount, engine_updated: engineUpdated, ok, total, summary, stars: report };
+  return { action: "verify", engine, version, processed_stars: processedCount, stale_stars: staleCount, incomplete_stars: incompleteCount, new_stars: newCount, engine_updated: engineUpdated, ok, total, summary, stars: report };
 }
 
 /** Runs the `stars` action (populate the star catalog). */
