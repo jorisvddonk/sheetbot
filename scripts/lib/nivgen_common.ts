@@ -1144,3 +1144,434 @@ export async function addRun(
 ): Promise<void> {
   await upsertSheet(SHEET_RUNS, new Date().toISOString(), data);
 }
+
+// ============================== engine versioning ==============================
+
+export const SHEET_ENGINES = "nivgen_engines";
+export const ENGINE_BATCH_CAPS: Record<string, number> = { orig: 2, rust: 20, lr: 20 };
+
+const MATCH_FIELDS = [
+  "surf", "atmo", "pal",
+  "sect_def_hm", "sect_def_oc", "sect_rand_hm", "sect_rand_oc",
+  "sect_def_sky", "sect_def_stex", "sect_rand_sky", "sect_rand_stex",
+];
+
+export async function sha256File(path: string): Promise<string> {
+  const data = await Deno.readFile(path);
+  const hash = await crypto.subtle.digest("SHA-256", data.buffer as ArrayBuffer);
+  return [...new Uint8Array(hash)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+/** Deterministic version of an engine: source hash for orig, binary hash for rust/lr. */
+export async function getEngineVersion(repoDir: string, engine: string): Promise<string> {
+  switch (engine) {
+    case "orig":
+      return await computeSourceHash(repoDir);
+    case "rust":
+      try {
+        return await sha256File(`${repoDir}/tests/nivgen/target/release/nivgen`);
+      } catch {
+        return "missing";
+      }
+    case "lr":
+      try {
+        return await sha256File(lrNivtestPath(repoDir));
+      } catch {
+        return "missing";
+      }
+    default:
+      return `unknown-${engine}`;
+  }
+}
+
+export async function readEngineRegistry(): Promise<Map<string, Record<string, unknown>>> {
+  return await sheetRows(SHEET_ENGINES);
+}
+
+export async function updateEngineRegistry(
+  engine: string,
+  version: string,
+  extra: Record<string, unknown> = {},
+): Promise<void> {
+  await upsertSheet(SHEET_ENGINES, engine, {
+    engine,
+    version,
+    updated_at: new Date().toISOString(),
+    ...extra,
+  });
+}
+
+export async function countProcessedStars(repoDir: string, engine: string): Promise<number> {
+  const stars = await sheetRows(SHEET_STARS);
+  let n = 0;
+  for (const [, row] of stars) {
+    if (row[`${engine}_version`] || row[`${engine}_attempted`]) n++;
+  }
+  return n;
+}
+
+/**
+ * Number of stars awaiting (re)processing for an engine: stale (version drift),
+ * failed at an older version, or never processed.
+ */
+export async function countPendingStars(
+  repoDir: string,
+  engine: string,
+  currentVersion: string,
+): Promise<number> {
+  const stars = await sheetRows(SHEET_STARS);
+  const planets = await sheetRows(SHEET_PLANETS);
+  let n = 0;
+  for (const [name, starRow] of stars) {
+    const prefix = `${name}|`;
+    const rows = [...planets.entries()].filter(([k]) => k.startsWith(prefix)).map(([, v]) => v);
+    const hasData = rows.some((r) => r[`${engine}_surf`]) || !!starRow[`${engine}_attempted`];
+    const failed = !!starRow[`${engine}_failed`];
+    const starVersion = starRow[`${engine}_version`];
+    if (hasData) {
+      if (starVersion !== currentVersion) n++;
+    } else if (failed) {
+      if (starVersion !== currentVersion) n++;
+    } else {
+      n++;
+    }
+  }
+  return n;
+}
+
+/**
+ * Picks pending stars for an engine, rolling-first: stale stars (oldest
+ * processed first), then stars that failed at an older version, then never
+ * processed stars.
+ */
+export async function pickPendingStars(
+  repoDir: string,
+  engine: string,
+  count: number,
+  currentVersion: string,
+): Promise<string[]> {
+  const stars = await sheetRows(SHEET_STARS);
+  const planets = await sheetRows(SHEET_PLANETS);
+  const stale: { name: string; updated: string }[] = [];
+  const retry: string[] = [];
+  const fresh: string[] = [];
+  for (const [name, starRow] of stars) {
+    const prefix = `${name}|`;
+    const rows = [...planets.entries()].filter(([k]) => k.startsWith(prefix)).map(([, v]) => v);
+    const hasData = rows.some((r) => r[`${engine}_surf`]) || !!starRow[`${engine}_attempted`];
+    const failed = !!starRow[`${engine}_failed`];
+    const starVersion = starRow[`${engine}_version`];
+    if (hasData) {
+      if (starVersion !== currentVersion) {
+        stale.push({ name, updated: String(starRow[`${engine}_updated_at`] ?? "") });
+      }
+    } else if (failed) {
+      if (starVersion !== currentVersion) retry.push(name);
+    } else {
+      fresh.push(name);
+    }
+  }
+  stale.sort((a, b) => (a.updated < b.updated ? -1 : a.updated > b.updated ? 1 : 0));
+  return [...stale.map((s) => s.name), ...retry, ...fresh].slice(0, count);
+}
+
+function pickOtherEngine(row: Record<string, unknown>, engine: string): string | undefined {
+  for (const e of ENGINES) {
+    if (e !== engine && row[`${e}_surf`]) return e;
+  }
+  return undefined;
+}
+
+function matchAgainst(
+  row: Record<string, unknown>,
+  engine: string,
+  other: string,
+): { compared: number; mismatches: string[] } {
+  const mismatches: string[] = [];
+  let compared = 0;
+  for (const f of MATCH_FIELDS) {
+    const mine = row[`${engine}_${f}`];
+    const ref = row[`${other}_${f}`];
+    if (mine !== undefined && ref !== undefined) {
+      compared++;
+      if (mine !== ref) mismatches.push(f);
+    }
+  }
+  return { compared, mismatches };
+}
+
+/** Verifies one star with an engine and writes/overwrites its output rows. */
+export async function verifyStarForEngine(
+  repoDir: string,
+  engine: string,
+  name: string,
+  engineVersion: string,
+  opts: { force?: boolean; build?: boolean } = {},
+  log: string[],
+): Promise<{ ok: number; total: number; lines: string[] }> {
+  const star = await ensureStarInSheet(repoDir, name);
+  const coords = { x: star.x, y: star.y, z: star.z };
+  log.push(`VERIFY ${name} engine=${engine} v=${engineVersion.slice(0, 8)} @ (${coords.x},${coords.y},${coords.z})`);
+
+  const before = await sheetRows(SHEET_PLANETS);
+  let gapDef: string | undefined;
+  let gapRand: string | undefined;
+  if (engine === "rust" || engine === "lr") {
+    const row = before.get(planetKey(name, 0));
+    if (row && row["orig_sect_def_gap"]) gapDef = String(row["orig_sect_def_gap"]);
+    if (row && row["orig_sect_rand_gap"]) gapRand = String(row["orig_sect_rand_gap"]);
+  }
+
+  let result: {
+    planets: Map<number, { type: number; isMoon: boolean; seedval?: number; surf?: string; atmo?: string; pal?: string }>;
+    sectors: Map<number, { def: { hm: string; oc: string; gap?: string }; rand: { hm: string; oc: string; gap?: string } }>;
+    textures: Map<number, { def: { stex: string; sky: string }; rand: { stex: string; sky: string } }>;
+    dumps: Map<number, { def: { stex?: string; sky?: string }; rand: { stex?: string; sky?: string } }>;
+    surfaces: Map<number, string>;
+  };
+  if (engine === "rust") {
+    result = await rustEngine(repoDir, coords, { gapDef, gapRand, dump: true });
+  } else if (engine === "lr") {
+    result = await lrEngine(repoDir, coords, { gapDef, gapRand });
+  } else if (engine === "orig") {
+    result = await origEngine(repoDir, coords, { build: !!opts.build, force: !!opts.force });
+  } else {
+    throw new Error(`unknown engine '${engine}' (known: ${ENGINES.join(", ")})`);
+  }
+
+  for (const [body, p] of result.planets) {
+    const { lon, lat } = coordsFromSeedval(p.seedval ?? 0);
+    const def = result.sectors.get(body)?.def;
+    const rand = result.sectors.get(body)?.rand;
+    const defT = result.textures.get(body)?.def;
+    const randT = result.textures.get(body)?.rand;
+    const defD = result.dumps.get(body)?.def;
+    const randD = result.dumps.get(body)?.rand;
+    const surfaceUrl = result.surfaces.get(body);
+
+    const row: Record<string, unknown> = {
+      star: name,
+      body,
+      type: p.type,
+      is_moon: p.isMoon ? 1 : 0,
+      seedval: p.seedval,
+      rand_lon: lon,
+      rand_lat: lat,
+      updated_at: new Date().toISOString(),
+    };
+    if (surfaceUrl) row[`${engine}_surface_url`] = surfaceUrl;
+    if (p.type !== 10) {
+      row[`${engine}_surf`] = p.surf;
+      row[`${engine}_atmo`] = p.atmo;
+      row[`${engine}_pal`] = p.pal;
+    }
+    if (def) {
+      row[`${engine}_sect_def_hm`] = def.hm || undefined;
+      row[`${engine}_sect_def_oc`] = def.oc || undefined;
+      row[`${engine}_sect_def_gap`] = def.gap;
+    }
+    if (rand) {
+      row[`${engine}_sect_rand_hm`] = rand.hm || undefined;
+      row[`${engine}_sect_rand_oc`] = rand.oc || undefined;
+      row[`${engine}_sect_rand_gap`] = rand.gap;
+    }
+    if (defT) {
+      row[`${engine}_sect_def_stex`] = defT.stex || undefined;
+      row[`${engine}_sect_def_sky`] = defT.sky || undefined;
+    }
+    if (randT) {
+      row[`${engine}_sect_rand_stex`] = randT.stex || undefined;
+      row[`${engine}_sect_rand_sky`] = randT.sky || undefined;
+    }
+    if (defD) {
+      row[`${engine}_sect_def_stex_url`] = defD.stex;
+      row[`${engine}_sect_def_sky_url`] = defD.sky;
+    }
+    if (randD) {
+      row[`${engine}_sect_rand_stex_url`] = randD.stex;
+      row[`${engine}_sect_rand_sky_url`] = randD.sky;
+    }
+    await upsertSheet(SHEET_PLANETS, planetKey(name, body), row);
+  }
+
+  const after = await sheetRows(SHEET_PLANETS);
+  let ok = 0;
+  const lines: string[] = [];
+  for (const [body] of result.planets) {
+    const full = after.get(planetKey(name, body));
+    if (!full) continue;
+    const other = pickOtherEngine(full, engine);
+    if (!other) {
+      lines.push(`  body ${String(body).padStart(3)}: stored (no other engine reference yet)`);
+      continue;
+    }
+    const m = matchAgainst(full, engine, other);
+    if (m.compared === 0) {
+      lines.push(`  body ${String(body).padStart(3)}: no ${other} reference`);
+    } else if (m.mismatches.length === 0) {
+      ok++;
+      lines.push(`  body ${String(body).padStart(3)}: OK vs ${other} (${m.compared} hashes)`);
+    } else {
+      lines.push(`  body ${String(body).padStart(3)}: DIFF vs ${other} ${m.mismatches.join(" ")}`);
+    }
+  }
+  const total = result.planets.size;
+  log.push(`  ${name}: ${ok}/${total} bodies match another engine`);
+  const now = new Date().toISOString();
+  await upsertSheet(SHEET_STARS, name, {
+    [`${engine}_attempted`]: now,
+    [`${engine}_version`]: engineVersion,
+    [`${engine}_updated_at`]: now,
+    [`${engine}_failed`]: "",
+  });
+  return { ok, total, lines };
+}
+
+/**
+ * Runs one verify cycle for an engine: registers the engine version, picks
+ * pending stars (rolling refresh first) and processes them, overwriting
+ * existing output in place. Adaptive batch while a stale backlog exists.
+ */
+export async function runVerifyCycle(
+  repoDir: string,
+  engine: string,
+  batch: number,
+  opts: { star?: string; force?: boolean; build?: boolean; log?: string[] } = {},
+): Promise<Record<string, unknown>> {
+  const log = opts.log ?? [];
+  const version = await getEngineVersion(repoDir, engine);
+  const registry = await readEngineRegistry();
+  const prev = registry.get(engine);
+  const engineUpdated = prev ? String(prev["version"] ?? "") !== version : true;
+
+  const pendingCount = await countPendingStars(repoDir, engine, version);
+  const processedCount = await countProcessedStars(repoDir, engine);
+
+  await updateEngineRegistry(engine, version, {
+    processed_stars: processedCount,
+    stale_stars: pendingCount,
+    note: engineUpdated ? "engine updated - rolling refresh active" : "",
+  });
+  if (engineUpdated) {
+    log.push(`ENGINE ${engine}: version ${String(prev?.["version"] ?? "?").slice(0, 8)} -> ${version.slice(0, 8)} - rolling refresh`);
+  }
+
+  const explicit = String(opts.star ?? "").trim();
+  const cap = ENGINE_BATCH_CAPS[engine] ?? 3;
+  const effectiveBatch = Math.max(batch, Math.min(pendingCount, cap));
+
+  let ok = 0;
+  let total = 0;
+  const report: string[] = [];
+  const names = explicit
+    ? [explicit]
+    : await pickPendingStars(repoDir, engine, effectiveBatch, version);
+  for (const name of names) {
+    try {
+      const r = await verifyStarForEngine(repoDir, engine, name, version, opts, log);
+      ok += r.ok;
+      total += r.total;
+      report.push(`${name}: ${r.ok}/${r.total}`);
+      await addRun({ action: "verify", engine, star: name, engine_version: version, result: "OK", ok_bodies: r.ok, total_bodies: r.total });
+    } catch (e) {
+      const msg = (e as Error).message;
+      log.push(`  ${name}: FAILED - ${msg}`);
+      report.push(`${name}: FAILED`);
+      const now = new Date().toISOString();
+      await upsertSheet(SHEET_STARS, name, {
+        [`${engine}_failed`]: now,
+        [`${engine}_version`]: version,
+        [`${engine}_updated_at`]: now,
+      });
+      await addRun({ action: "verify", engine, star: name, engine_version: version, result: "FAILED", summary: msg.slice(0, 200) });
+      if (explicit) throw e;
+    }
+  }
+  const summary = report.length ? report.join(" | ") : "no star needs processing";
+  if (report.length === 0) {
+    log.push(`VERIFY: no star needs processing for engine '${engine}'`);
+    await addRun({ action: "verify", engine, engine_version: version, result: "OK", summary });
+  }
+  log.push(`VERIFY DONE: ${summary}`);
+  return { action: "verify", engine, version, stale_stars: pendingCount, engine_updated: engineUpdated, ok, total, summary, stars: report };
+}
+
+/** Runs the `stars` action (populate the star catalog). */
+export async function runStarsAction(repoDir: string, log: string[]): Promise<Record<string, unknown>> {
+  const { imported, skipped } = await importStars(repoDir);
+  log.push(`STARS: ${imported} imported, ${skipped} already present`);
+  await addRun({ action: "stars", result: "OK", summary: log[log.length - 1] });
+  return { action: "stars", imported, skipped };
+}
+
+/** Runs the `explore` action (one-shot generator output, no sheet writes). */
+export async function runExploreAction(
+  repoDir: string,
+  engine: string,
+  data: Record<string, unknown>,
+  log: string[],
+): Promise<Record<string, unknown>> {
+  const sub = String(data.sub ?? "system");
+  let coords: { x: number; y: number; z: number };
+  if (data.x !== null && data.x !== undefined && data.y !== null && data.y !== undefined && data.z !== null && data.z !== undefined) {
+    coords = { x: Number(data.x), y: Number(data.y), z: Number(data.z) };
+  } else if (String(data.star ?? "").trim()) {
+    const star = await ensureStarInSheet(repoDir, String(data.star).trim());
+    coords = { x: star.x, y: star.y, z: star.z };
+  } else {
+    throw new Error("explore requires star name or explicit x/y/z");
+  }
+  log.push(`EXPLORE ${sub} engine=${engine} @ (${coords.x},${coords.y},${coords.z})`);
+
+  let output: string;
+  if (engine === "rust") {
+    const args = ["-x", String(coords.x), "-y", String(coords.y), "-z", String(coords.z)];
+    if (data.body !== null && data.body !== undefined) args.push("-p", String(data.body));
+    if (data.lon !== null && data.lon !== undefined) args.push("-lon", String(data.lon));
+    if (data.lat !== null && data.lat !== undefined) args.push("-lat", String(data.lat));
+    output = await runNivgen(repoDir, [sub, ...args]);
+  } else if (engine === "lr") {
+    const args = ["-x", String(coords.x), "-y", String(coords.y), "-z", String(coords.z)];
+    if (data.body !== null && data.body !== undefined) args.push("-p", String(data.body));
+    if (data.lon !== null && data.lon !== undefined) args.push("-lon", String(data.lon));
+    if (data.lat !== null && data.lat !== undefined) args.push("-lat", String(data.lat));
+    output = await runNivtest(repoDir, [sub, ...args]);
+  } else if (engine === "orig") {
+    const extra: string[] = [];
+    if (data.body !== null && data.body !== undefined) extra.push(`-p ${data.body}`);
+    if (data.lon !== null && data.lon !== undefined) extra.push(`-lon ${data.lon}`);
+    if (data.lat !== null && data.lat !== undefined) extra.push(`-lat ${data.lat}`);
+    output = await origExplore(repoDir, coords, sub, {
+      extra: extra.join(" "),
+      build: !!data.build,
+      force: !!data.force,
+    });
+  } else {
+    throw new Error(`unknown engine '${engine}'`);
+  }
+  log.push(output);
+  return { action: "explore", engine, sub, star: String(data.star ?? ""), x: coords.x, y: coords.y, z: coords.z, output };
+}
+
+/** Dispatches a task data object to the stars/verify/explore actions. */
+export async function runNivgenAction(
+  repoDir: string,
+  data: Record<string, unknown>,
+  log: string[],
+): Promise<Record<string, unknown>> {
+  const action = String(data.action ?? "verify");
+  const engine = String(data.engine ?? "rust");
+  if (action === "stars") {
+    return await runStarsAction(repoDir, log);
+  }
+  if (action === "explore") {
+    return await runExploreAction(repoDir, engine, data, log);
+  }
+  const batch = Math.max(1, Number(data.batch ?? 1));
+  return await runVerifyCycle(repoDir, engine, batch, {
+    star: String(data.star ?? "").trim(),
+    force: !!data.force,
+    build: !!data.build,
+    log,
+  });
+}
