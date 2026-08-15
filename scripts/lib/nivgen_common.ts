@@ -1718,6 +1718,21 @@ export async function runCoverageAction(
 
 export const SHEET_ACCURACY = "nivgen_accuracy";
 export const SHEET_ACCURACY_SEGMENTS = "nivgen_accuracy_segments";
+export const SHEET_ACCURACY_FIELDS = "nivgen_accuracy_fields";
+
+const FIELD_LABELS: Record<string, string> = {
+  surf: "surface",
+  atmo: "atmosphere",
+  pal: "planettex",
+  sect_def_hm: "sector def heightmap",
+  sect_def_oc: "sector def objectchart",
+  sect_rand_hm: "sector rand heightmap",
+  sect_rand_oc: "sector rand objectchart",
+  sect_def_stex: "sector def surftex",
+  sect_def_sky: "sector def sky",
+  sect_rand_stex: "sector rand surftex",
+  sect_rand_sky: "sector rand sky",
+};
 
 /** Mismatched hash fields of an engine vs orig (fields present on both sides). */
 function mismatchesVsOrig(row: Record<string, unknown>, engine: string): string[] {
@@ -1760,6 +1775,12 @@ export async function writeAccuracySheets(
     comparedLr: number;
     errorsLr: number;
   }>();
+  const byTypeField = new Map<number, Map<string, {
+    comparedRust: number;
+    errorsRust: number;
+    comparedLr: number;
+    errorsLr: number;
+  }>>();
   let errorPlanets = 0;
 
   for (const [key, row] of planets) {
@@ -1795,6 +1816,27 @@ export async function writeAccuracySheets(
     seg.comparedLr += cLr.compared;
     seg.errorsLr += cLr.errors;
     byType.set(type, seg);
+
+    let tf = byTypeField.get(type);
+    if (!tf) {
+      tf = new Map();
+      byTypeField.set(type, tf);
+    }
+    for (const f of MATCH_FIELDS) {
+      const mineRust = row[`rust_${f}`];
+      const mineLr = row[`lr_${f}`];
+      const ref = row[`orig_${f}`];
+      const acc = tf.get(f) ?? { comparedRust: 0, errorsRust: 0, comparedLr: 0, errorsLr: 0 };
+      if (mineRust !== undefined && ref !== undefined) {
+        acc.comparedRust++;
+        if (mineRust !== ref) acc.errorsRust++;
+      }
+      if (mineLr !== undefined && ref !== undefined) {
+        acc.comparedLr++;
+        if (mineLr !== ref) acc.errorsLr++;
+      }
+      tf.set(f, acc);
+    }
   }
 
   const pct = (compared: number, errors: number): number | null =>
@@ -1817,6 +1859,29 @@ export async function writeAccuracySheets(
       total_errors: totalErrors,
       overall_accuracy: pct(totalCompared, totalErrors),
     });
+
+    const fields = byTypeField.get(type) ?? new Map();
+    for (const f of MATCH_FIELDS) {
+      const acc = fields.get(f);
+      if (!acc) continue;
+      const compared = acc.comparedRust + acc.comparedLr;
+      const errors = acc.errorsRust + acc.errorsLr;
+      await upsertSheet(SHEET_ACCURACY_FIELDS, `${type}|${f}`, {
+        key: `${type}|${f}`,
+        type,
+        field: f,
+        label: FIELD_LABELS[f] ?? f,
+        rust_compared: acc.comparedRust,
+        rust_errors: acc.errorsRust,
+        rust_accuracy: pct(acc.comparedRust, acc.errorsRust),
+        lr_compared: acc.comparedLr,
+        lr_errors: acc.errorsLr,
+        lr_accuracy: pct(acc.comparedLr, acc.errorsLr),
+        total_compared: compared,
+        total_errors: errors,
+        overall_accuracy: pct(compared, errors),
+      });
+    }
   }
 
   return { error_planets: errorPlanets };
