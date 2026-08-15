@@ -1703,9 +1703,121 @@ export async function runCoverageAction(
   };
   const key = new Date().toISOString();
   await upsertSheet(SHEET_COVERAGE, key, { key, ...snapshot });
+
+  const accuracy = await writeAccuracySheets(planets);
+  log.push(
+    `ACCURACY: ${accuracy.error_planets} planets with errors, per-type baseline written`,
+  );
+
   log.push(
     `COVERAGE: ${complete}/${nonCompanion} complete (${pct}%), missing orig=${missing.orig} rust=${missing.rust} lr=${missing.lr}`,
   );
   await addRun({ action: "coverage", result: "OK", summary: `complete=${complete}/${nonCompanion} (${pct}%)` });
-  return { action: "coverage", ...snapshot };
+  return { action: "coverage", ...snapshot, accuracy_error_planets: accuracy.error_planets };
+}
+
+export const SHEET_ACCURACY = "nivgen_accuracy";
+export const SHEET_ACCURACY_SEGMENTS = "nivgen_accuracy_segments";
+
+/** Mismatched hash fields of an engine vs orig (fields present on both sides). */
+function mismatchesVsOrig(row: Record<string, unknown>, engine: string): string[] {
+  const out: string[] = [];
+  for (const f of MATCH_FIELDS) {
+    const mine = row[`${engine}_${f}`];
+    const ref = row[`orig_${f}`];
+    if (mine !== undefined && ref !== undefined && mine !== ref) out.push(f);
+  }
+  return out;
+}
+
+/** Compared fields (orig + engine both present) and mismatch count for an engine. */
+function compareVsOrig(row: Record<string, unknown>, engine: string): { compared: number; errors: number } {
+  let compared = 0;
+  let errors = 0;
+  for (const f of MATCH_FIELDS) {
+    const mine = row[`${engine}_${f}`];
+    const ref = row[`orig_${f}`];
+    if (mine !== undefined && ref !== undefined) {
+      compared++;
+      if (mine !== ref) errors++;
+    }
+  }
+  return { compared, errors };
+}
+
+/**
+ * Enumerates per-planet errors across all engines into the nivgen_accuracy
+ * sheet (one row per non-companion planet) and aggregates a per-type accuracy
+ * baseline into the nivgen_accuracy_segments sheet.
+ */
+export async function writeAccuracySheets(
+  planets: Map<string, Record<string, unknown>>,
+): Promise<{ error_planets: number }> {
+  const byType = new Map<number, {
+    planets: number;
+    comparedRust: number;
+    errorsRust: number;
+    comparedLr: number;
+    errorsLr: number;
+  }>();
+  let errorPlanets = 0;
+
+  for (const [key, row] of planets) {
+    if (Number(row["type"] ?? 0) === 10) continue;
+    const type = Number(row["type"] ?? 0);
+    const rust = mismatchesVsOrig(row, "rust");
+    const lr = mismatchesVsOrig(row, "lr");
+    const missingEngines = ENGINES.filter((e) => !row[`${e}_surf`]);
+    const cRust = compareVsOrig(row, "rust");
+    const cLr = compareVsOrig(row, "lr");
+    const totalErrors = rust.length + lr.length + missingEngines.length;
+
+    await upsertSheet(SHEET_ACCURACY, key, {
+      key,
+      star: row["star"],
+      body: row["body"],
+      type,
+      is_moon: row["is_moon"],
+      missing_engines: missingEngines.join(","),
+      rust_errors: rust.length,
+      lr_errors: lr.length,
+      rust_fields: rust.join(" "),
+      lr_fields: lr.join(" "),
+      total_errors: totalErrors,
+      compared: cRust.compared + cLr.compared,
+    });
+    if (totalErrors > 0) errorPlanets++;
+
+    const seg = byType.get(type) ?? { planets: 0, comparedRust: 0, errorsRust: 0, comparedLr: 0, errorsLr: 0 };
+    seg.planets++;
+    seg.comparedRust += cRust.compared;
+    seg.errorsRust += cRust.errors;
+    seg.comparedLr += cLr.compared;
+    seg.errorsLr += cLr.errors;
+    byType.set(type, seg);
+  }
+
+  const pct = (compared: number, errors: number): number | null =>
+    compared > 0 ? Math.round((1 - errors / compared) * 1000) / 10 : null;
+
+  for (const [type, seg] of byType) {
+    const totalCompared = seg.comparedRust + seg.comparedLr;
+    const totalErrors = seg.errorsRust + seg.errorsLr;
+    await upsertSheet(SHEET_ACCURACY_SEGMENTS, String(type), {
+      key: String(type),
+      type,
+      planets: seg.planets,
+      rust_compared: seg.comparedRust,
+      rust_errors: seg.errorsRust,
+      rust_accuracy: pct(seg.comparedRust, seg.errorsRust),
+      lr_compared: seg.comparedLr,
+      lr_errors: seg.errorsLr,
+      lr_accuracy: pct(seg.comparedLr, seg.errorsLr),
+      total_compared: totalCompared,
+      total_errors: totalErrors,
+      overall_accuracy: pct(totalCompared, totalErrors),
+    });
+  }
+
+  return { error_planets: errorPlanets };
 }
