@@ -2,7 +2,7 @@ import { addSheetData, getSheetData } from "./sheetutil.ts";
 import { uploadArtefactFromFilepath } from "./taskutil.ts";
 
 export const DEFAULT_REPO = "/Users/joris/projects/Noctis-IV-Plus";
-export const ENGINES = ["orig", "rust", "lr"];
+export const ENGINES = ["orig", "rust", "lr", "lino"];
 export const SHEET_STARS = "nivgen_stars";
 export const SHEET_PLANETS = "nivgen_planets";
 export const SHEET_RUNS = "nivgen_runs";
@@ -955,6 +955,95 @@ export async function runNivtest(
   return r.stdout + r.stderr;
 }
 
+export function linoNivlinPath(repoDir: string): string {
+  const base = Deno.env.get("NIVLIN_DIR") || `${repoDir}/../noctis-lino`;
+  const bin = `${base}/build/nivlin`;
+  if (!existsSync(bin)) {
+    throw new Error(`noctis-lino nivlin binary not found at ${bin} - build it with the finch container (nivlin.txt -> build/nivlin)`);
+  }
+  return bin;
+}
+
+export async function runNivlin(
+  repoDir: string,
+  args: string[],
+  opts: { timeoutMs?: number } = {},
+): Promise<string> {
+  const bin = linoNivlinPath(repoDir);
+  const tmp = await Deno.makeTempFile({ prefix: "nivlin_", suffix: ".out", dir: "/tmp" });
+  try {
+    const r = await runCmd(bin, [...args, "-o", tmp], repoDir, opts);
+    if (r.code !== 0) {
+      throw new Error(`nivlin ${args.join(" ")} failed (code ${r.code}): ${r.stderr.slice(-500)}`);
+    }
+    // The port writes 4 bytes per char (unit=32); keep every 4th byte.
+    const raw = Deno.readFileSync(tmp);
+    const out = new Uint8Array(Math.floor(raw.length / 4));
+    for (let i = 0; i < out.length; i++) out[i] = raw[i * 4];
+    return new TextDecoder().decode(out);
+  } finally {
+    try {
+      await Deno.remove(tmp);
+    } catch {
+      // ignore
+    }
+  }
+}
+
+export async function linoEngine(
+  repoDir: string,
+  coords: Coords,
+  opts: { gapDef?: string; gapRand?: string } = {},
+): Promise<{
+  planets: Map<number, PlanetSurface>;
+  sectors: Map<number, { def: SectorHashes; rand: SectorHashes }>;
+  textures: Map<number, { def: TextureHashes; rand: TextureHashes }>;
+  dumps: Map<number, { def: { stex?: string; sky?: string }; rand: { stex?: string; sky?: string } }>;
+  surfaces: Map<number, string>;
+}> {
+  const base = ["-x", String(coords.x), "-y", String(coords.y), "-z", String(coords.z)];
+  const allText = await runNivlin(repoDir, ["planet-all", ...base]);
+  const planets = parsePlanetAll(allText);
+  const seeds = new Map<number, number>();
+  for (const body of planets.keys()) {
+    try {
+      const t = await runNivlin(repoDir, ["planet", ...base, "-p", String(body)]);
+      for (const [b, sp] of parseCanonicalPlanets(t)) {
+        const p = planets.get(b);
+        if (p) {
+          p.seedval = sp.seedval;
+          p.surf = sp.surf;
+          p.atmo = sp.atmo;
+          p.pal = sp.pal;
+        }
+        seeds.set(b, sp.seedval ?? 0);
+      }
+    } catch (e) {
+      console.error(`lino: body ${body} planet failed, skipping: ${(e as Error).message}`);
+      planets.delete(body);
+    }
+  }
+  const sectors = new Map<number, { def: SectorHashes; rand: SectorHashes }>();
+  const textures = new Map<number, { def: TextureHashes; rand: TextureHashes }>();
+  const dumps = new Map<number, { def: { stex?: string; sky?: string }; rand: { stex?: string; sky?: string } }>();
+  for (const [body, p] of planets) {
+    try {
+      const { lon, lat } = coordsFromSeedval(p.seedval ?? 0);
+      const defArgs = [...base, "-p", String(body), "-lon", "0", "-lat", "60"];
+      const randArgs = [...base, "-p", String(body), "-lon", String(lon), "-lat", String(lat)];
+      const def = parseSectorOutput(await runNivlin(repoDir, ["sector", ...defArgs]));
+      const rand = parseSectorOutput(await runNivlin(repoDir, ["sector", ...randArgs]));
+      sectors.set(body, { def, rand });
+      const defTex = parseTextureOutput(await runNivlin(repoDir, ["surftex", ...defArgs]));
+      const randTex = parseTextureOutput(await runNivlin(repoDir, ["surftex", ...randArgs]));
+      textures.set(body, { def: defTex, rand: randTex });
+    } catch (e) {
+      console.error(`lino: body ${body} sector/surftex failed, skipping: ${(e as Error).message}`);
+    }
+  }
+  return { planets, sectors, textures, dumps, surfaces: new Map() };
+}
+
 export async function lrEngine(
   repoDir: string,
   coords: Coords,
@@ -1148,7 +1237,7 @@ export async function addRun(
 // ============================== engine versioning ==============================
 
 export const SHEET_ENGINES = "nivgen_engines";
-export const ENGINE_BATCH_CAPS: Record<string, number> = { orig: 2, rust: 20, lr: 20 };
+export const ENGINE_BATCH_CAPS: Record<string, number> = { orig: 2, rust: 20, lr: 20, lino: 20 };
 
 /** Planet sheet row cap: once reached, no new stars are processed, only
  * version-based refreshes of already-processed content. */
@@ -1189,6 +1278,12 @@ export async function getEngineVersion(repoDir: string, engine: string): Promise
     case "lr":
       try {
         return await sha256File(lrNivtestPath(repoDir));
+      } catch {
+        return "missing";
+      }
+    case "lino":
+      try {
+        return await sha256File(linoNivlinPath(repoDir));
       } catch {
         return "missing";
       }
@@ -1355,7 +1450,7 @@ export async function verifyStarForEngine(
   const before = await sheetRows(SHEET_PLANETS);
   let gapDef: string | undefined;
   let gapRand: string | undefined;
-  if (engine === "rust" || engine === "lr") {
+  if (engine === "rust" || engine === "lr" || engine === "lino") {
     const row = before.get(planetKey(name, 0));
     if (row && row["orig_sect_def_gap"]) gapDef = String(row["orig_sect_def_gap"]);
     if (row && row["orig_sect_rand_gap"]) gapRand = String(row["orig_sect_rand_gap"]);
@@ -1372,6 +1467,8 @@ export async function verifyStarForEngine(
     result = await rustEngine(repoDir, coords, { gapDef, gapRand, dump: true });
   } else if (engine === "lr") {
     result = await lrEngine(repoDir, coords, { gapDef, gapRand });
+  } else if (engine === "lino") {
+    result = await linoEngine(repoDir, coords, { gapDef, gapRand });
   } else if (engine === "orig") {
     result = await origEngine(repoDir, coords, { build: !!opts.build, force: !!opts.force });
   } else {
@@ -1607,6 +1704,12 @@ export async function runExploreAction(
     if (data.lon !== null && data.lon !== undefined) args.push("-lon", String(data.lon));
     if (data.lat !== null && data.lat !== undefined) args.push("-lat", String(data.lat));
     output = await runNivtest(repoDir, [sub, ...args]);
+  } else if (engine === "lino") {
+    const args = ["-x", String(coords.x), "-y", String(coords.y), "-z", String(coords.z)];
+    if (data.body !== null && data.body !== undefined) args.push("-p", String(data.body));
+    if (data.lon !== null && data.lon !== undefined) args.push("-lon", String(data.lon));
+    if (data.lat !== null && data.lat !== undefined) args.push("-lat", String(data.lat));
+    output = await runNivlin(repoDir, [sub, ...args]);
   } else if (engine === "orig") {
     const extra: string[] = [];
     if (data.body !== null && data.body !== undefined) extra.push(`-p ${data.body}`);
@@ -1666,24 +1769,25 @@ export async function runCoverageAction(
   let companion = 0;
   let complete = 0;
   let incomplete = 0;
-  const missing: Record<string, number> = { orig: 0, rust: 0, lr: 0 };
-  const present: Record<string, number> = { orig: 0, rust: 0, lr: 0 };
+  const missing: Record<string, number> = {};
+  const present: Record<string, number> = {};
+  for (const e of ENGINES) {
+    missing[e] = 0;
+    present[e] = 0;
+  }
   for (const [, row] of planets) {
     planetRows++;
     if (Number(row["type"] ?? 0) === 10) {
       companion++;
       continue;
     }
-    const has: Record<string, boolean> = {
-      orig: !!row["orig_surf"],
-      rust: !!row["rust_surf"],
-      lr: !!row["lr_surf"],
-    };
+    const has: Record<string, boolean> = {};
+    for (const e of ENGINES) has[e] = !!row[`${e}_surf`];
     for (const e of ENGINES) {
       if (has[e]) present[e]++;
       else missing[e]++;
     }
-    if (has.orig && has.rust && has.lr) complete++;
+    if (ENGINES.every((e) => has[e])) complete++;
     else incomplete++;
   }
   const nonCompanion = planetRows - companion;
@@ -1693,14 +1797,12 @@ export async function runCoverageAction(
     companion_rows: companion,
     complete,
     incomplete,
-    missing_orig: missing.orig,
-    missing_rust: missing.rust,
-    missing_lr: missing.lr,
-    complete_orig: present.orig,
-    complete_rust: present.rust,
-    complete_lr: present.lr,
     pct_complete: pct,
   };
+  for (const e of ENGINES) {
+    snapshot[`missing_${e}`] = missing[e];
+    snapshot[`complete_${e}`] = present[e];
+  }
   const key = new Date().toISOString();
   await upsertSheet(SHEET_COVERAGE, key, { key, ...snapshot });
 
@@ -1710,7 +1812,7 @@ export async function runCoverageAction(
   );
 
   log.push(
-    `COVERAGE: ${complete}/${nonCompanion} complete (${pct}%), missing orig=${missing.orig} rust=${missing.rust} lr=${missing.lr}`,
+    `COVERAGE: ${complete}/${nonCompanion} complete (${pct}%), missing ${ENGINES.map((e) => `${e}=${missing[e]}`).join(" ")}`,
   );
   await addRun({ action: "coverage", result: "OK", summary: `complete=${complete}/${nonCompanion} (${pct}%)` });
   return { action: "coverage", ...snapshot, accuracy_error_planets: accuracy.error_planets };
