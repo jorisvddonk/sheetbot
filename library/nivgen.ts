@@ -45,7 +45,9 @@ Engines:
   lr   - the noctis-iv-lr port's headless nivtest harness
          (build/nivtest in the sibling ../noctis-iv-lr checkout, or set
          NIVLR_DIR to override the lr repo path)
-  more engines can be added later (linoleum, ...)
+  lino - the noctis-lino L.in.oleum port's headless nivlin CLI
+         (build/nivlin in the sibling ../noctis-lino checkout, built by
+         build/build_nivlin.sh; set NIVLIN_DIR to override)
 
 Data fields:
   engine  (default "rust")      engine to run
