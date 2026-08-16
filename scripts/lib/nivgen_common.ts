@@ -1870,54 +1870,48 @@ function compareVsOrig(row: Record<string, unknown>, engine: string): { compared
 export async function writeAccuracySheets(
   planets: Map<string, Record<string, unknown>>,
 ): Promise<{ error_planets: number }> {
-  const byType = new Map<number, {
-    planets: number;
-    comparedRust: number;
-    errorsRust: number;
-    comparedLr: number;
-    errorsLr: number;
-  }>();
-  const byTypeField = new Map<number, Map<string, {
-    comparedRust: number;
-    errorsRust: number;
-    comparedLr: number;
-    errorsLr: number;
-  }>>();
+  const engines = ENGINES.filter((e) => e !== "orig");
+  const zeroAcc = (): Record<string, number> =>
+    Object.fromEntries(engines.map((e) => [e, 0]));
+  const byType = new Map<number, { planets: number } & Record<string, number>>();
+  const byTypeField = new Map<number, Map<string, { compared: Record<string, number>; errors: Record<string, number> }>>();
   let errorPlanets = 0;
 
   for (const [key, row] of planets) {
     if (Number(row["type"] ?? 0) === 10) continue;
     const type = Number(row["type"] ?? 0);
-    const rust = mismatchesVsOrig(row, "rust");
-    const lr = mismatchesVsOrig(row, "lr");
     const missingEngines = ENGINES.filter((e) => !row[`${e}_surf`]);
-    const cRust = compareVsOrig(row, "rust");
-    const cLr = compareVsOrig(row, "lr");
-    const totalErrors = rust.length + lr.length + missingEngines.length;
+    const comp = Object.fromEntries(engines.map((e) => [e, compareVsOrig(row, e)]));
+    const mis = Object.fromEntries(engines.map((e) => [e, mismatchesVsOrig(row, e)]));
+    const totalErrors = engines.reduce((n, e) => n + mis[e].length, 0) + missingEngines.length;
 
-    await upsertSheet(SHEET_ACCURACY, key, {
+    const accRow: Record<string, unknown> = {
       key,
       star: row["star"],
       body: row["body"],
       type,
       is_moon: row["is_moon"],
       missing_engines: missingEngines.join(","),
-      rust_errors: rust.length,
-      lr_errors: lr.length,
-      rust_fields: rust.join(" "),
-      lr_fields: lr.join(" "),
       total_errors: totalErrors,
-      compared: cRust.compared + cLr.compared,
-    });
+      compared: engines.reduce((n, e) => n + comp[e].compared, 0),
+    };
+    for (const e of engines) {
+      accRow[`${e}_errors`] = mis[e].length;
+      accRow[`${e}_fields`] = mis[e].join(" ");
+    }
+    await upsertSheet(SHEET_ACCURACY, key, accRow);
     if (totalErrors > 0) errorPlanets++;
 
-    const seg = byType.get(type) ?? { planets: 0, comparedRust: 0, errorsRust: 0, comparedLr: 0, errorsLr: 0 };
+    let seg = byType.get(type);
+    if (!seg) {
+      seg = { planets: 0, ...zeroAcc(), ...Object.fromEntries(engines.map((e) => [`${e}_compared`, 0])), ...Object.fromEntries(engines.map((e) => [`${e}_errors`, 0])) };
+      byType.set(type, seg);
+    }
     seg.planets++;
-    seg.comparedRust += cRust.compared;
-    seg.errorsRust += cRust.errors;
-    seg.comparedLr += cLr.compared;
-    seg.errorsLr += cLr.errors;
-    byType.set(type, seg);
+    for (const e of engines) {
+      seg[`${e}_compared`] = seg[`${e}_compared`] + comp[e].compared;
+      seg[`${e}_errors`] = seg[`${e}_errors`] + comp[e].errors;
+    }
 
     let tf = byTypeField.get(type);
     if (!tf) {
@@ -1925,19 +1919,22 @@ export async function writeAccuracySheets(
       byTypeField.set(type, tf);
     }
     for (const f of MATCH_FIELDS) {
-      const mineRust = row[`rust_${f}`];
-      const mineLr = row[`lr_${f}`];
       const ref = row[`orig_${f}`];
-      const acc = tf.get(f) ?? { comparedRust: 0, errorsRust: 0, comparedLr: 0, errorsLr: 0 };
-      if (mineRust !== undefined && ref !== undefined) {
-        acc.comparedRust++;
-        if (mineRust !== ref) acc.errorsRust++;
+      let acc = tf.get(f);
+      if (!acc) {
+        acc = {
+          compared: Object.fromEntries(engines.map((e) => [e, 0])),
+          errors: Object.fromEntries(engines.map((e) => [e, 0])),
+        };
+        tf.set(f, acc);
       }
-      if (mineLr !== undefined && ref !== undefined) {
-        acc.comparedLr++;
-        if (mineLr !== ref) acc.errorsLr++;
+      for (const e of engines) {
+        const mine = row[`${e}_${f}`];
+        if (mine !== undefined && ref !== undefined) {
+          acc.compared[e]++;
+          if (mine !== ref) acc.errors[e]++;
+        }
       }
-      tf.set(f, acc);
     }
   }
 
@@ -1945,44 +1942,44 @@ export async function writeAccuracySheets(
     compared > 0 ? Math.round((1 - errors / compared) * 1000) / 10 : null;
 
   for (const [type, seg] of byType) {
-    const totalCompared = seg.comparedRust + seg.comparedLr;
-    const totalErrors = seg.errorsRust + seg.errorsLr;
-    await upsertSheet(SHEET_ACCURACY_SEGMENTS, String(type), {
+    const totalCompared = engines.reduce((n, e) => n + seg[`${e}_compared`], 0);
+    const totalErrors = engines.reduce((n, e) => n + seg[`${e}_errors`], 0);
+    const segRow: Record<string, unknown> = {
       key: String(type),
       type,
       planets: seg.planets,
-      rust_compared: seg.comparedRust,
-      rust_errors: seg.errorsRust,
-      rust_accuracy: pct(seg.comparedRust, seg.errorsRust),
-      lr_compared: seg.comparedLr,
-      lr_errors: seg.errorsLr,
-      lr_accuracy: pct(seg.comparedLr, seg.errorsLr),
       total_compared: totalCompared,
       total_errors: totalErrors,
       overall_accuracy: pct(totalCompared, totalErrors),
-    });
+    };
+    for (const e of engines) {
+      segRow[`${e}_compared`] = seg[`${e}_compared`];
+      segRow[`${e}_errors`] = seg[`${e}_errors`];
+      segRow[`${e}_accuracy`] = pct(seg[`${e}_compared`], seg[`${e}_errors`]);
+    }
+    await upsertSheet(SHEET_ACCURACY_SEGMENTS, String(type), segRow);
 
     const fields = byTypeField.get(type) ?? new Map();
     for (const f of MATCH_FIELDS) {
       const acc = fields.get(f);
       if (!acc) continue;
-      const compared = acc.comparedRust + acc.comparedLr;
-      const errors = acc.errorsRust + acc.errorsLr;
-      await upsertSheet(SHEET_ACCURACY_FIELDS, `${type}|${f}`, {
+      const compared = engines.reduce((n, e) => n + acc.compared[e], 0);
+      const errors = engines.reduce((n, e) => n + acc.errors[e], 0);
+      const fRow: Record<string, unknown> = {
         key: `${type}|${f}`,
         type,
         field: f,
         label: FIELD_LABELS[f] ?? f,
-        rust_compared: acc.comparedRust,
-        rust_errors: acc.errorsRust,
-        rust_accuracy: pct(acc.comparedRust, acc.errorsRust),
-        lr_compared: acc.comparedLr,
-        lr_errors: acc.errorsLr,
-        lr_accuracy: pct(acc.comparedLr, acc.errorsLr),
         total_compared: compared,
         total_errors: errors,
         overall_accuracy: pct(compared, errors),
-      });
+      };
+      for (const e of engines) {
+        fRow[`${e}_compared`] = acc.compared[e];
+        fRow[`${e}_errors`] = acc.errors[e];
+        fRow[`${e}_accuracy`] = pct(acc.compared[e], acc.errors[e]);
+      }
+      await upsertSheet(SHEET_ACCURACY_FIELDS, `${type}|${f}`, fRow);
     }
   }
 

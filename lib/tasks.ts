@@ -297,10 +297,13 @@ export function scheduleTransition(db: DatabaseSync, task: Task, transition: Tra
     const scheduledAt = Math.floor((now + parseDuration(transition.timing.every!)) / 1000);
     console.log(`[DEBUG] Scheduling transition for task ${task.id} at ${scheduledAt} (${new Date(scheduledAt * 1000).toISOString()})`);
 
-    // Insert into transitions_schedule
+    // Insert into transitions_schedule (idempotent: a transition may be
+    // scheduled twice when a task completes, e.g. by the complete handler and
+    // the task-completed event listener).
     const stmt = db.prepare(`
         INSERT INTO transitions_schedule (task_id, transition_index, scheduled_at)
         VALUES (?, ?, ?)
+        ON CONFLICT(task_id, transition_index) DO UPDATE SET scheduled_at = excluded.scheduled_at
     `);
     const transitionIndex = task.transitions.indexOf(transition);
     stmt.run(task.id, transitionIndex, scheduledAt);
