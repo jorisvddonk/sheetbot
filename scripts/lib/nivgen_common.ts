@@ -993,7 +993,7 @@ export async function runNivlin(
 export async function linoEngine(
   repoDir: string,
   coords: Coords,
-  opts: { gapDef?: string; gapRand?: string } = {},
+  opts: { gapDef?: string; gapRand?: string; dump?: boolean } = {},
 ): Promise<{
   planets: Map<number, PlanetSurface>;
   sectors: Map<number, { def: SectorHashes; rand: SectorHashes }>;
@@ -1005,22 +1005,41 @@ export async function linoEngine(
   const allText = await runNivlin(repoDir, ["planet-all", ...base]);
   const planets = parsePlanetAll(allText);
   const seeds = new Map<number, number>();
-  for (const body of planets.keys()) {
-    try {
-      const t = await runNivlin(repoDir, ["planet", ...base, "-p", String(body)]);
-      for (const [b, sp] of parseCanonicalPlanets(t)) {
-        const p = planets.get(b);
-        if (p) {
-          p.seedval = sp.seedval;
-          p.surf = sp.surf;
-          p.atmo = sp.atmo;
-          p.pal = sp.pal;
+  const dumpDir = opts.dump ? await Deno.makeTempDir({ prefix: "d", dir: "/tmp" }) : undefined;
+  const surfaces = new Map<number, string>();
+  try {
+    for (const body of planets.keys()) {
+      try {
+        const t = await runNivlin(repoDir, ["planet", ...base, "-p", String(body), ...(dumpDir ? ["-dump", dumpDir] : [])]);
+        for (const [b, sp] of parseCanonicalPlanets(t)) {
+          const p = planets.get(b);
+          if (p) {
+            p.seedval = sp.seedval;
+            p.surf = sp.surf;
+            p.atmo = sp.atmo;
+            p.pal = sp.pal;
+          }
+          seeds.set(b, sp.seedval ?? 0);
         }
-        seeds.set(b, sp.seedval ?? 0);
+        if (dumpDir) {
+          const p = planets.get(body);
+          if (p) {
+            const surf = await renderLinoSurfaceDump(dumpDir, p.isMoon, `lino_surface_${coords.x}_${coords.y}_${coords.z}_${body}.png`);
+            if (surf) surfaces.set(body, surf);
+          }
+        }
+      } catch (e) {
+        console.error(`lino: body ${body} planet failed, skipping: ${(e as Error).message}`);
+        planets.delete(body);
       }
-    } catch (e) {
-      console.error(`lino: body ${body} planet failed, skipping: ${(e as Error).message}`);
-      planets.delete(body);
+    }
+  } finally {
+    if (dumpDir) {
+      try {
+        Deno.removeSync(dumpDir, { recursive: true });
+      } catch {
+        // ignore
+      }
     }
   }
   const sectors = new Map<number, { def: SectorHashes; rand: SectorHashes }>();
@@ -1041,7 +1060,30 @@ export async function linoEngine(
       console.error(`lino: body ${body} sector/surftex failed, skipping: ${(e as Error).message}`);
     }
   }
-  return { planets, sectors, textures, dumps, surfaces: new Map() };
+  return { planets, sectors, textures, dumps, surfaces };
+}
+
+/**
+ * Reads a nivlin -dump dir (surface.raw + palette.raw written with one
+ * byte per 32-bit unit) and renders the surface PNG.
+ */
+export async function renderLinoSurfaceDump(
+  dumpDir: string,
+  isMoon: boolean,
+  filename: string,
+): Promise<string | undefined> {
+  const surfPath = `${dumpDir}/surface.raw`;
+  const palPath = `${dumpDir}/palette.raw`;
+  if (!existsSync(surfPath) || !existsSync(palPath)) return undefined;
+  const surfRaw = Deno.readFileSync(surfPath);
+  const palRaw = Deno.readFileSync(palPath);
+  const map = new Uint8Array(Math.floor(surfRaw.length / 4));
+  for (let i = 0; i < map.length; i++) map[i] = surfRaw[i * 4];
+  const pal = new Uint8Array(Math.floor(palRaw.length / 4));
+  for (let i = 0; i < pal.length; i++) pal[i] = palRaw[i * 4];
+  if (map.length < 360 * 180) return undefined;
+  const png = await indexedToPng(360, 180, map.subarray(0, 360 * 180), colorLut(pal, 576));
+  return await uploadPng(png, filename);
 }
 
 export async function lrEngine(
@@ -1468,7 +1510,7 @@ export async function verifyStarForEngine(
   } else if (engine === "lr") {
     result = await lrEngine(repoDir, coords, { gapDef, gapRand });
   } else if (engine === "lino") {
-    result = await linoEngine(repoDir, coords, { gapDef, gapRand });
+    result = await linoEngine(repoDir, coords, { gapDef, gapRand, dump: true });
   } else if (engine === "orig") {
     result = await origEngine(repoDir, coords, { build: !!opts.build, force: !!opts.force });
   } else {
@@ -1542,6 +1584,10 @@ export async function verifyStarForEngine(
       continue;
     }
     const m = matchAgainst(full, engine, other);
+    await upsertSheet(SHEET_PLANETS, planetKey(name, body), {
+      [`${engine}_errors`]: m.mismatches.length,
+      updated_at: new Date().toISOString(),
+    });
     if (m.compared === 0) {
       lines.push(`  body ${String(body).padStart(3)}: no ${other} reference`);
     } else if (m.mismatches.length === 0) {

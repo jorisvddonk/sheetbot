@@ -52,12 +52,12 @@ export class NoctisHashCheckWidget extends LitElement {
     if (!this.rowkey || !this.column) {
       return;
     }
-    if (!/^(rust|lr)_/.test(this.column)) {
+    if (!/^(rust|lr|lino)_/.test(this.column)) {
       this.match = "plain";
       this.requestUpdate();
       return;
     }
-    const origCol = this.column.replace(/^(rust|lr)_/, 'orig_');
+    const origCol = this.column.replace(/^(rust|lr|lino)_/, 'orig_');
     try {
       const grid = this.closest('element-grid');
       if (!grid || !grid.data) {
@@ -91,12 +91,12 @@ export class NoctisHashCheckWidget extends LitElement {
       return html`<span class="plain" title="${this.column}">${this.data}</span>`;
     }
     if (this.match === true) {
-      return html`<span class="ok" title="rust ${this.data} == orig">✓ ${this.data}</span>`;
+      return html`<span class="ok" title="${this.column} == orig">✓ ${this.data}</span>`;
     }
     if (this.match === false) {
-      return html`<span class="bad" title="rust ${this.data} != orig">✗ ${this.data}</span>`;
+      return html`<span class="bad" title="${this.column} != orig">✗ ${this.data}</span>`;
     }
-    return html`<span class="plain" title="rust ${this.data} (no orig reference yet)">${this.data}</span>`;
+    return html`<span class="plain" title="${this.column} (no orig reference yet)">${this.data}</span>`;
   }
 
   getCopyText() {
