@@ -1,5 +1,4 @@
 import { addSheetData, getSheetData } from "./sheetutil.ts";
-import { uploadArtefactFromFilepath } from "./taskutil.ts";
 
 export const DEFAULT_REPO = "/Users/joris/projects/Noctis-IV-Plus";
 export const ENGINES = ["orig", "rust", "lr", "lino"];
@@ -692,8 +691,6 @@ export async function dumpTexture(
     if (!file) return undefined;
     try {
       const bytes = Deno.readFileSync(`${dumpDir}/${file}`);
-      const rawName = `${prefix}_${kind}.bin`;
-      await uploadArtefactFromFilepath(`${dumpDir}/${file}`, rawName).catch(() => undefined);
       if (palette && palette.length >= 253) {
         const { width, height } = textureDims(bytes);
         const lut = kind === "surftex" ? colorLut(palette, 0) : colorLut(palette, 192);
