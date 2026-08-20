@@ -43,6 +43,9 @@ Environment Variables:
   SHEETBOT_INIT_SEARCH_PATHS  Custom init script search paths
   SHEETBOT_EVENTHANDLER_SEARCH_PATHS  Custom event handler search paths
   SHEETBOT_MIDDLEWARE_SEARCH_PATHS  Custom middleware search paths
+  SHEETBOT_STATIC_SEARCH_PATHS  Additional static file directories (served alongside ./static)
+  SHEETBOT_SCRIPTS_SEARCH_PATHS  Additional scripts directories (served at /scripts alongside ./scripts)
+  SHEETBOT_WIDGET_CACHE_TTL  Minutes to cache the /widgets.js widget list (default: 5)
 
 Examples:
   deno run --allow-all main.ts --port 8080
@@ -206,6 +209,66 @@ app.use((req: any, res: any, next: any) => {
 
 app.use(express.json());
 app.use(express.static('static'));
+const staticDirs: string[] = ["./static"];
+const staticSearchPaths = Deno.env.get("SHEETBOT_STATIC_SEARCH_PATHS");
+if (staticSearchPaths) {
+    for (const staticPath of staticSearchPaths.split(":").filter(p => p.trim())) {
+        if (existsSync(staticPath)) {
+            console.log(`Serving additional static files from: ${staticPath}`);
+            app.use(express.static(staticPath));
+            staticDirs.push(staticPath);
+        } else {
+            console.warn(`SHEETBOT_STATIC_SEARCH_PATHS: directory not found, skipping: ${staticPath}`);
+        }
+    }
+}
+
+// GET /widgets.js - Dynamically discovers all widget-*.js files across static dirs and
+// returns a JS snippet that injects them as ES modules. Cached for SHEETBOT_WIDGET_CACHE_TTL
+// minutes (default: 5) to avoid scanning the filesystem on every page load.
+const widgetCacheTtlMs = (parseInt(Deno.env.get("SHEETBOT_WIDGET_CACHE_TTL") ?? "5") || 5) * 60 * 1000;
+let widgetsJsCache: { body: string; urls: string[]; expiresAt: number } | null = null;
+
+function getWidgetUrls(): { urls: string[]; expiresAt: number } {
+    const now = Date.now();
+    if (!widgetsJsCache || now > widgetsJsCache.expiresAt) {
+        const seen = new Set<string>();
+        const urls: string[] = [];
+        for (const dir of staticDirs) {
+            try {
+                for (const entry of Deno.readDirSync(dir)) {
+                    if (entry.isFile && entry.name.startsWith("widget-") && entry.name.endsWith(".js") && !seen.has(entry.name)) {
+                        seen.add(entry.name);
+                        urls.push(`/${entry.name}`);
+                    }
+                }
+            } catch (_) { /* dir unreadable, skip */ }
+        }
+        const imports = urls.map(u => `  s = document.createElement('script'); s.type = 'module'; s.src = ${JSON.stringify(u)}; document.head.appendChild(s);`).join("\n");
+        widgetsJsCache = {
+            body: `(function(){\n  var s;\n${imports}\n})();`,
+            urls,
+            expiresAt: now + widgetCacheTtlMs,
+        };
+    }
+    return { urls: widgetsJsCache.urls, expiresAt: widgetsJsCache.expiresAt };
+}
+
+app.get("/widgets.js", (req: any, res: any) => {
+    const { expiresAt } = getWidgetUrls();
+    res.setHeader("Content-Type", "application/javascript");
+    res.setHeader("Cache-Control", `public, max-age=${Math.floor(widgetCacheTtlMs / 1000)}`);
+    res.send(widgetsJsCache!.body);
+});
+
+// GET /widgets.json - Returns the list of widget URLs as JSON, for use with dynamic import()
+app.get("/widgets.json", (req: any, res: any) => {
+    const { urls, expiresAt } = getWidgetUrls();
+    res.setHeader("Content-Type", "application/json");
+    res.setHeader("Cache-Control", `public, max-age=${Math.floor(widgetCacheTtlMs / 1000)}`);
+    res.json(urls);
+});
+
 app.use((req: any, res: any, next: any) => {
     req.cookies = simpleCookieParser(req.headers.cookie);
     res.cookie = (name: string, value: string, options?: any) => {
@@ -385,6 +448,17 @@ app.get("/events", requiresLogin, createEventsSSEHandler(taskEventEmitter, agent
 
 // Static file serving for scripts directory - Serves agent template files
 app.use('/scripts', express.static('scripts'));
+const scriptsSearchPaths = Deno.env.get("SHEETBOT_SCRIPTS_SEARCH_PATHS");
+if (scriptsSearchPaths) {
+    for (const scriptsPath of scriptsSearchPaths.split(":").filter(p => p.trim())) {
+        if (existsSync(scriptsPath)) {
+            console.log(`Serving additional scripts from: ${scriptsPath}`);
+            app.use('/scripts', express.static(scriptsPath));
+        } else {
+            console.warn(`SHEETBOT_SCRIPTS_SEARCH_PATHS: directory not found, skipping: ${scriptsPath}`);
+        }
+    }
+}
 
 // Static file serving for library directory - Serves automation scripts
 app.use('/library', express.static('library'));

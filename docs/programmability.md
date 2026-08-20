@@ -8,6 +8,9 @@ SheetBot is designed for easy extension through code modification and external c
 - **Event Handlers** (`SHEETBOT_EVENTHANDLER_SEARCH_PATHS`): React to task and agent events with custom handlers (see [Event Handlers](event_handlers.md))
 - **Init Scripts** (`SHEETBOT_INIT_SEARCH_PATHS`): Run custom initialization code on server startup (see [Initialization System](init_system.md))
 - **Custom Middleware** (`SHEETBOT_MIDDLEWARE_SEARCH_PATHS`): Add Express middleware for authentication, logging, CORS, etc. (see [Custom Middleware](custom_middleware.md))
+- **Additional Static Files** (`SHEETBOT_STATIC_SEARCH_PATHS`): Serve extra static assets (e.g. custom widgets) from external directories alongside `./static` (see [Static Search Paths](static_search_paths.md))
+- **Additional Scripts** (`SHEETBOT_SCRIPTS_SEARCH_PATHS`): Serve extra agent-facing scripts at `/scripts` from external directories alongside `./scripts` (see [Scripts Search Paths](scripts_search_paths.md))
+- **Widget Auto-loading** (`SHEETBOT_WIDGET_CACHE_TTL`): The `/widgets.js` endpoint dynamically discovers all `widget-*.js` files across all static directories and injects them into `sheet.html`. The result is cached for this many minutes (default: 5). Set to `0` to disable caching.
 
 ## Code Modification Extension Points
 
@@ -41,6 +44,6 @@ The codebase is structured for straightforward modifications. For most use cases
 - Bug fixes and features from upstream require manual integration
 - You have full control over the codebase
 
-For most users, the external extension points (`SHEETBOT_LIBRARY_SEARCH_PATHS`, `SHEETBOT_EVENTHANDLER_SEARCH_PATHS`, `SHEETBOT_INIT_SEARCH_PATHS`, `SHEETBOT_MIDDLEWARE_SEARCH_PATHS`) provide sufficient customization without the maintenance burden of a fork.
+For most users, the external extension points (`SHEETBOT_LIBRARY_SEARCH_PATHS`, `SHEETBOT_EVENTHANDLER_SEARCH_PATHS`, `SHEETBOT_INIT_SEARCH_PATHS`, `SHEETBOT_MIDDLEWARE_SEARCH_PATHS`, `SHEETBOT_STATIC_SEARCH_PATHS`, `SHEETBOT_SCRIPTS_SEARCH_PATHS`) provide sufficient customization without the maintenance burden of a fork.
 
 **Important:** SheetBot is provided AS IS without warranty. The maintainer makes no guarantees about backward compatibility, API stability, or continued support for any extension points or internal APIs. Extension points may change or be removed in future versions. Use at your own risk and be prepared to adapt your customizations as the project evolves.

@@ -10,23 +10,6 @@
     <script src="element-table.js" type="module"></script>
     <script src="element-grid.js" type="module"></script>
     <script src="element-contextmenu.js" type="module"></script>
-    <script src="widget-image.js" type="module"></script>
-    <script src="widget-code.js" type="module"></script>
-    <script src="widget-text.js" type="module"></script>
-    <script src="widget-download.js" type="module"></script>
-    <script src="widget-sheetkey.js" type="module"></script>
-    <script src="widget-hashimg.js" type="module"></script>
-     <script src="widget-multi.js" type="module"></script>
-       <script src="widget-testresult.js" type="module"></script>
-       <script src="widget-json-viewer.js" type="module"></script>
-       <script src="widget-progress.js" type="module"></script>
-       <script src="widget-duration.js" type="module"></script>
-    <script src="widget-rating.js" type="module"></script>
-    <script src="widget-metric.js" type="module"></script>
-    <script src="widget-video.js" type="module"></script>
-    <script src="widget-audio.js" type="module"></script>
-    <script src="widget-qr-code.js" type="module"></script>
-    <script src="widget-attachments.js" type="module"></script>
     <script src="header.js"></script>
  </head>
 
@@ -35,23 +18,28 @@
      <ul id="sheetlist"></ul>
     <div class="table-wrapper"><element-grid id="spreadsheet"></element-grid></div>
 
-    <script>
+    <script type="module">
         const params = new URL(document.URL).searchParams;
         const headers = {};
         if (localStorage.hasOwnProperty("jwt_token")) {
             headers["Authorization"] = `Bearer ${localStorage["jwt_token"]}`;
         }
+
+        // Load all widgets and sheet data in parallel, render only when both are ready
+        const widgetsReady = fetch('/widgets.json')
+            .then(r => r.json())
+            .then(urls => Promise.all(urls.map(url => import(url))));
+
         if (params.has("sheet")) {
             const pageSize = parseInt(params.get("pageSize") || "50", 10);
-            const data = fetch(`/sheets/${params.get("sheet")}?page=1&pageSize=${pageSize}`, { headers: headers }).then(response => {
-                return response.json()
-            }).then(data => {
+            Promise.all([
+                fetch(`/sheets/${params.get("sheet")}?page=1&pageSize=${pageSize}`, { headers }).then(r => r.json()),
+                widgetsReady
+            ]).then(([data]) => {
                 document.getElementById('spreadsheet').setAttribute('data', JSON.stringify({data: data.rows, columns: data.columns, total: data.total, page: 1, pageSize}));
             });
         } else {
-            const data = fetch(`/sheets`, { headers: headers }).then(response => {
-                return response.json()
-            }).then(data => {
+            fetch(`/sheets`, { headers }).then(r => r.json()).then(data => {
                 data.forEach(sheetName => {
                     const elem = document.createElement("a");
                     elem.innerText = sheetName;
@@ -62,7 +50,6 @@
                 });
             });
         }
-
     </script>
 </body>
 
