@@ -45,7 +45,7 @@ Environment Variables:
   SHEETBOT_MIDDLEWARE_SEARCH_PATHS  Custom middleware search paths
   SHEETBOT_STATIC_SEARCH_PATHS  Additional static file directories (served alongside ./static)
   SHEETBOT_SCRIPTS_SEARCH_PATHS  Additional scripts directories (served at /scripts alongside ./scripts)
-  SHEETBOT_WIDGET_CACHE_TTL  Minutes to cache the /widgets.js widget list (default: 5)
+  SHEETBOT_WIDGET_CACHE_TTL  Minutes to cache the /widgets.json widget list (default: 5)
 
 Examples:
   deno run --allow-all main.ts --port 8080
@@ -223,15 +223,14 @@ if (staticSearchPaths) {
     }
 }
 
-// GET /widgets.js - Dynamically discovers all widget-*.js files across static dirs and
-// returns a JS snippet that injects them as ES modules. Cached for SHEETBOT_WIDGET_CACHE_TTL
-// minutes (default: 5) to avoid scanning the filesystem on every page load.
+// GET /widgets.json - Dynamically discovers all widget-*.js files across static dirs and
+// returns the list of URLs as JSON. Cached for SHEETBOT_WIDGET_CACHE_TTL minutes (default: 5).
 const widgetCacheTtlMs = (parseInt(Deno.env.get("SHEETBOT_WIDGET_CACHE_TTL") ?? "5") || 5) * 60 * 1000;
-let widgetsJsCache: { body: string; urls: string[]; expiresAt: number } | null = null;
+let widgetUrlsCache: { urls: string[]; expiresAt: number } | null = null;
 
-function getWidgetUrls(): { urls: string[]; expiresAt: number } {
+app.get("/widgets.json", (req: any, res: any) => {
     const now = Date.now();
-    if (!widgetsJsCache || now > widgetsJsCache.expiresAt) {
+    if (!widgetUrlsCache || now > widgetUrlsCache.expiresAt) {
         const seen = new Set<string>();
         const urls: string[] = [];
         for (const dir of staticDirs) {
@@ -244,29 +243,11 @@ function getWidgetUrls(): { urls: string[]; expiresAt: number } {
                 }
             } catch (_) { /* dir unreadable, skip */ }
         }
-        const imports = urls.map(u => `  s = document.createElement('script'); s.type = 'module'; s.src = ${JSON.stringify(u)}; document.head.appendChild(s);`).join("\n");
-        widgetsJsCache = {
-            body: `(function(){\n  var s;\n${imports}\n})();`,
-            urls,
-            expiresAt: now + widgetCacheTtlMs,
-        };
+        widgetUrlsCache = { urls, expiresAt: now + widgetCacheTtlMs };
     }
-    return { urls: widgetsJsCache.urls, expiresAt: widgetsJsCache.expiresAt };
-}
-
-app.get("/widgets.js", (req: any, res: any) => {
-    const { expiresAt } = getWidgetUrls();
-    res.setHeader("Content-Type", "application/javascript");
-    res.setHeader("Cache-Control", `public, max-age=${Math.floor(widgetCacheTtlMs / 1000)}`);
-    res.send(widgetsJsCache!.body);
-});
-
-// GET /widgets.json - Returns the list of widget URLs as JSON, for use with dynamic import()
-app.get("/widgets.json", (req: any, res: any) => {
-    const { urls, expiresAt } = getWidgetUrls();
     res.setHeader("Content-Type", "application/json");
     res.setHeader("Cache-Control", `public, max-age=${Math.floor(widgetCacheTtlMs / 1000)}`);
-    res.json(urls);
+    res.json(widgetUrlsCache.urls);
 });
 
 app.use((req: any, res: any, next: any) => {
