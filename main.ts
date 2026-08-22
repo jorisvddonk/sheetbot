@@ -443,6 +443,17 @@ if (scriptsSearchPaths) {
 
 // Static file serving for library directory - Serves automation scripts
 app.use('/library', express.static('library'));
+const librarySearchPaths = Deno.env.get("SHEETBOT_LIBRARY_SEARCH_PATH");
+if (librarySearchPaths) {
+    for (const libraryPath of librarySearchPaths.split(":").filter(p => p.trim())) {
+        if (existsSync(libraryPath)) {
+            console.log(`Serving additional library scripts from: ${libraryPath}`);
+            app.use('/library', express.static(libraryPath));
+        } else {
+            console.warn(`SHEETBOT_LIBRARY_SEARCH_PATH: directory not found, skipping: ${libraryPath}`);
+        }
+    }
+}
 
 // GET /scripts/agent(.ts|.py|.sh)? - Serves agent template scripts for different languages
 app.get("/scripts/agent(\.ts|\.py|\.sh)?", createGetAgentTemplateHandler());

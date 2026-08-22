@@ -16,6 +16,7 @@ export SHEETBOT_LIBRARY_SEARCH_PATH="/path/to/custom/scripts:/another/path/scrip
 - Additional paths from `SHEETBOT_LIBRARY_SEARCH_PATH` are searched in order
 - Paths that don't exist or aren't accessible are silently skipped
 - Scripts from all paths appear in the library UI and `addtask.ts` script picker
+- Script content is served at `/library/<filename>` for all search paths, so scripts can be selected and added as tasks from the library page
 
 ## Example
 
