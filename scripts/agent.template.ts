@@ -151,8 +151,7 @@ const json = await response.json();
     body: JSON.stringify({}),
   }));
   try {
-    const TASK_TIMEOUT_MS = parseInt(Deno.env.get("SHEETBOT_TASK_TIMEOUT_MS") || "3600000", 10);
-    const data = await withTimeout(import(json.script), TASK_TIMEOUT_MS);
+    const data = await import(json.script);
     await checkForErrors(fetch(Deno.env.get("SHEETBOT_TASK_COMPLETEURL")!, {
       method: "POST",
       headers: {
@@ -163,31 +162,13 @@ const json = await response.json();
     }));
   } catch (e) {
     console.error(e);
-    try {
-      await checkForErrors(fetch(Deno.env.get("SHEETBOT_TASK_FAILEDURL")!, {
-        method: "POST",
-        headers: {
-          ...headers,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({}),
-      }));
-    } catch (err) {
-      console.error("Failed to notify task failure:", err);
-    }
-  }
-}
-
-async function withTimeout(promise, ms) {
-  let timer;
-  const timeout = new Promise((_, reject) => {
-    timer = setTimeout(() => {
-      reject(new Error(`Task timed out after ${ms}ms`));
-    }, ms);
-  });
-  try {
-    return await Promise.race([promise, timeout]);
-  } finally {
-    clearTimeout(timer);
+    await checkForErrors(fetch(Deno.env.get("SHEETBOT_TASK_FAILEDURL")!, {
+      method: "POST",
+      headers: {
+        ...headers,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({}),
+    }));
   }
 }
