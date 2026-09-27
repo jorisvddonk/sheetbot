@@ -63,6 +63,9 @@ export function parseAllSQLTasks(array: any[]): Task[] {
 
 export function getTaskToComplete(db: DatabaseSync, type: string, capabilities?: object, filter_by_status?: TaskStatus): Task | undefined {
     // Get the task to complete, ensuring it's available, does not have any dependencies remaining, and its capabilities schema (if any) matches the provided capabilities.
+    // Order by lastRunAt ASC so the least-recently-run (and never-run, NULL) tasks are offered first.
+    // Without this, selection would follow raw rowid/insertion order and a task that frequently
+    // re-arms to AWAITING could permanently starve tasks inserted after it.
     let sql = `SELECT * FROM tasks WHERE type = ?`;
     const params: any[] = [type];
     
@@ -70,6 +73,8 @@ export function getTaskToComplete(db: DatabaseSync, type: string, capabilities?:
         sql += ` AND status = ?`;
         params.push(filter_by_status);
     }
+
+    sql += ` ORDER BY lastRunAt IS NOT NULL, lastRunAt ASC, rowid ASC`;
     
     const stmt = db.prepare(sql);
     const tasks = stmt.all(...params);
@@ -151,8 +156,15 @@ export function updateTaskStatus(db: DatabaseSync, transitionTracker: Transition
     const task = getTask(db, taskId);
     const oldStatus = task?.status;
     
-    const stmt = db.prepare("UPDATE tasks SET status = ? WHERE id = ?");
-    stmt.run(status, taskId);
+    if (status === TaskStatus.RUNNING) {
+        // Record when the task was picked up for execution. This drives fair
+        // scheduling in getTaskToComplete() so recurring tasks can't starve others.
+        const stmt = db.prepare("UPDATE tasks SET status = ?, lastRunAt = ? WHERE id = ?");
+        stmt.run(status, Date.now(), taskId);
+    } else {
+        const stmt = db.prepare("UPDATE tasks SET status = ? WHERE id = ?");
+        stmt.run(status, taskId);
+    }
 
     // Check for transitions
     const updatedTask = getTask(db, taskId);

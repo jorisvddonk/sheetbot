@@ -98,6 +98,10 @@ components:
         capabilitiesSchema:
           type: object
           description: JSON Schema for agent capability requirements
+        lastRunAt:
+          type: integer
+          nullable: true
+          description: Timestamp (ms since epoch) when the task last started RUNNING; null if never run
       required:
         - id
         - script

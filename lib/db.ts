@@ -21,7 +21,8 @@ export function initDatabaseTables(): void {
             dependsOn TEXT,
             transitions TEXT,
             type TEXT NOT NULL,
-            capabilitiesSchema TEXT
+            capabilitiesSchema TEXT,
+            lastRunAt INTEGER
         )
     `);
 

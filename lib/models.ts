@@ -19,7 +19,12 @@ export interface Task {
     dependsOn: string[],
     transitions: Transition[],
     type: string,
-    capabilitiesSchema: Record<string, unknown>
+    capabilitiesSchema: Record<string, unknown>,
+    // Timestamp (ms since epoch) of when the task last started RUNNING.
+    // Null/undefined means it has never been picked up. Used to schedule
+    // fairly so a task that keeps re-arming (e.g. a short recurring task)
+    // cannot starve tasks that sit behind it in insertion order.
+    lastRunAt?: number | null
 }
 
 export enum TaskStatus {
