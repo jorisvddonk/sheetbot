@@ -1,4 +1,5 @@
-import { AgentEventEmitter, AgentEvent, AgentEventData } from './agent-events.ts';
+import { AgentEventEmitter, AgentEvent } from './agent-events.ts';
+import type { AgentEventData } from './agent-events.ts';
 
 export class AgentTracker {
     private agents: Map<string, { id: string, ip: string, type: string, timestamp: number, capabilities?: Record<string, any> }> = new Map();

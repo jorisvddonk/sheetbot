@@ -1,1 +1,1 @@
-{"compilerOptions": {"allowImportingTsExtensions": true, "module": "node16", "target": "es2017", "moduleResolution": "node16"}} 
+{"compilerOptions": {"allowImportingTsExtensions": true, "module": "node16", "target": "es2022", "moduleResolution": "node16", "lib": ["ES2023"], "types": ["node"], "strict": false, "skipLibCheck": true, "noEmit": true}, "exclude": ["node_modules", "scripts", "library", "static", "monitor.ts", "addtask.ts"]} 

@@ -1,15 +1,17 @@
 import { EventEmitter } from "node:events";
-import { Task, TaskStatus } from "./models.ts";
+import type { Task } from "./models.ts";
+import { TaskStatus } from "./models.ts";
 
-export enum TaskEvent {
-  CREATED = 'task:created',
-  COMPLETED = 'task:completed',
-  FAILED = 'task:failed',
-  ADDED = 'task:added',
-  CHANGED = 'task:changed',
-  STATUS_CHANGED = 'task:status_changed',
-  DELETED = 'task:deleted'
-}
+export const TaskEvent = {
+  CREATED: 'task:created',
+  COMPLETED: 'task:completed',
+  FAILED: 'task:failed',
+  ADDED: 'task:added',
+  CHANGED: 'task:changed',
+  STATUS_CHANGED: 'task:status_changed',
+  DELETED: 'task:deleted'
+} as const;
+export type TaskEvent = (typeof TaskEvent)[keyof typeof TaskEvent];
 
 export interface TaskEventData {
   taskId: string;

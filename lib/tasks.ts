@@ -1,6 +1,7 @@
 import { DatabaseSync } from "node:sqlite";
-import Ajv from "npm:ajv@8.17.1";
-import { Task, Transition, TaskStatus, statusToString, stringToStatus } from "./models.ts";
+import Ajv from "ajv";
+import type { Task, Transition } from "./models.ts";
+import { TaskStatus, statusToString, stringToStatus } from "./models.ts";
 import { TransitionTracker } from "./transitiontracker.ts";
 import { TaskEventEmitter } from "./task-events.ts";
 

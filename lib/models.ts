@@ -27,20 +27,22 @@ export interface Task {
     lastRunAt?: number | null
 }
 
-export enum TaskStatus {
-    AWAITING = 0,
-    RUNNING = 1,
-    COMPLETED = 2,
-    FAILED = 3,
-    PAUSED = 4,
-    DELETED = 5,
-}
+export const TaskStatus = {
+    AWAITING: 0,
+    RUNNING: 1,
+    COMPLETED: 2,
+    FAILED: 3,
+    PAUSED: 4,
+    DELETED: 5,
+} as const;
+export type TaskStatus = (typeof TaskStatus)[keyof typeof TaskStatus];
 
-export enum Ephemeralness {
-    PERSISTENT = 0, // task will not get auto-deleted on completion
-    EPHEMERAL_ON_SUCCESS = 1, // task will get auto-deleted, but only if completed successful; this allows you to debug failures
-    EPHEMERAL_ALWAYS = 2 // task will get auto-deleted when completed, regardless of if it completed succesfully or not
-}
+export const Ephemeralness = {
+    PERSISTENT: 0, // task will not get auto-deleted on completion
+    EPHEMERAL_ON_SUCCESS: 1, // task will get auto-deleted, but only if completed successful; this allows you to debug failures
+    EPHEMERAL_ALWAYS: 2 // task will get auto-deleted when completed, regardless of if it completed succesfully or not
+} as const;
+export type Ephemeralness = (typeof Ephemeralness)[keyof typeof Ephemeralness];
 
 export function statusToString(status: TaskStatus): string {
     switch (status) {

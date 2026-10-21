@@ -1,10 +1,11 @@
+import "./lib/deno-compat.ts";
 import { SheetPermissionsDB } from "./lib/data_providers/sqlite/sheet_permissions.ts";
 
 const sheet = Deno.args[0];
 const value = Deno.args[1];
 
 if (!sheet || (value !== "true" && value !== "false")) {
-    console.error("Usage: deno run --allow-all set-sheet-public.ts <sheet> <true|false>");
+    console.error("Usage: node --experimental-sqlite --experimental-strip-types set-sheet-public.ts <sheet> <true|false>");
     Deno.exit(1);
 }
 

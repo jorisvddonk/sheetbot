@@ -1,8 +1,9 @@
 import { EventEmitter } from "node:events";
 
-export enum AgentEvent {
-  CONNECTED = 'agent:connected'
-}
+export const AgentEvent = {
+  CONNECTED: 'agent:connected'
+} as const;
+export type AgentEvent = (typeof AgentEvent)[keyof typeof AgentEvent];
 
 export interface AgentEventData {
     id: string;

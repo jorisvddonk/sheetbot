@@ -1,3 +1,4 @@
+import "./lib/deno-compat.ts";
 import { UserDB } from "./lib/data_providers/sqlite/userdb.ts";
 
 const userdb = new UserDB();

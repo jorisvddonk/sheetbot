@@ -1,6 +1,6 @@
 import { DatabaseSync } from "node:sqlite";
 import { upsert } from "./lib.ts";
-import { existsSync } from "https://deno.land/std@0.220.1/fs/mod.ts";
+import { existsSync } from "node:fs";
 
 export const SHEETDB_DATA_TABLENAME = "data"; // used for writing
 export const SHEETDB_DATA_VIEWNAME = "data_view"; // used for reading, can be customized by user to alter data if needed

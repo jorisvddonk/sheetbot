@@ -1,5 +1,5 @@
 import { DatabaseSync } from "node:sqlite";
-import { existsSync } from "https://deno.land/std@0.220.1/fs/mod.ts";
+import { existsSync } from "node:fs";
 
 const DB_PATH = "tasks.db";
 

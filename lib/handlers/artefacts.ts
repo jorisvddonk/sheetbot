@@ -17,7 +17,7 @@ const mimeTypes: Record<string, string> = {
  * Creates a handler that lists artefact files in a bucket/prefix, S3-style.
  * @returns {Function} Express route handler function
  */
-async function* walkDir(dir: string, base: string = ''): AsyncGenerator<{path: string, stat: Deno.FileInfo}> {
+async function* walkDir(dir: string, base: string = ''): AsyncGenerator<{path: string, stat: any}> {
     for await (const entry of Deno.readDir(dir)) {
         const fullPath = `${dir}/${entry.name}`;
         const relPath = base ? `${base}/${entry.name}` : entry.name;

@@ -1,4 +1,4 @@
-import { existsSync } from "https://deno.land/std@0.220.1/fs/mod.ts";
+import { existsSync } from "node:fs";
 
 export default function generateSecret(): void {
     const secretPath = "./secret.txt";

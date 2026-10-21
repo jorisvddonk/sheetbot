@@ -1,4 +1,4 @@
-import jsonwebtoken from "npm:jsonwebtoken@9.0.2";
+import jsonwebtoken from "jsonwebtoken";
 
 let secretKey: string | null = null;
 

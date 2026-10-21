@@ -1,4 +1,4 @@
-import jsonwebtoken from "npm:jsonwebtoken@9.0.2";
+import jsonwebtoken from "jsonwebtoken";
 import { UserDB } from "../data_providers/sqlite/userdb.ts";
 
 let secretKey: string | null = null;

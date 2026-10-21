@@ -1,4 +1,5 @@
-import { TaskEventEmitter, TaskEvent, TaskEventData } from './task-events.ts';
+import { TaskEventEmitter, TaskEvent } from './task-events.ts';
+import type { TaskEventData } from './task-events.ts';
 
 export class TaskTracker {
     private added: number[] = [];

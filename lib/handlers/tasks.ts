@@ -1,4 +1,4 @@
-import multer from "npm:multer@2.0.2";
+import multer from "multer";
 import { DatabaseSync } from "node:sqlite";
 import { TaskTracker } from "../tasktracker.ts";
 import { AgentTracker } from "../agenttracker.ts";
@@ -35,7 +35,7 @@ function parseTaskStatus(value: unknown): TaskStatus {
     } else {
         return TaskStatus.AWAITING;
     }
-    return VALID_TASK_STATUSES.includes(n) ? n : TaskStatus.AWAITING;
+    return (VALID_TASK_STATUSES as number[]).includes(n) ? (n as TaskStatus) : TaskStatus.AWAITING;
 }
 
 const PERMISSION_VIEW_TASKS = "viewTasks";

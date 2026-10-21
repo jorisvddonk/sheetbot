@@ -4,10 +4,11 @@
 // ██ ██  ██  ██ ██      ██    ██ ██   ██    ██         ██
 // ██ ██      ██ ██       ██████  ██   ██    ██    ███████
 
+import "./lib/deno-compat.ts";
 import https from "node:https";
 import { existsSync, readFileSync } from "node:fs";
-import express from "npm:express@4.18.3";
-import OpenApiValidator from "npm:express-openapi-validator@5.6.0";
+import express from "express";
+import OpenApiValidator from "express-openapi-validator";
 
 function simpleCookieParser(cookieHeader: string | undefined) {
     if (!cookieHeader) return {};
@@ -110,7 +111,7 @@ for (const initDir of initDirs) {
         continue;
     }
     
-    const initFiles = Array.from(Deno.readDirSync(initDir))
+    const initFiles = Array.from(Deno.readDirSync(initDir) as any[])
         .filter(entry => entry.isFile && entry.name.endsWith('.ts'))
         .sort((a, b) => a.name.localeCompare(b.name));
 

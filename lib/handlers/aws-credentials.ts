@@ -6,7 +6,7 @@
  */
 
 import { getDeriveKeySecret, AWS_CREDENTIALS_EXPIRES_IN, AWS_CONFIG } from "../aws-config.ts";
-import jsonwebtoken from "npm:jsonwebtoken@9.0.2";
+import jsonwebtoken from "jsonwebtoken";
 
 /**
  * Creates a handler that issues temporary AWS-compatible credentials.
@@ -30,7 +30,7 @@ export function createAwsCredentialsHandler() {
 
       // Verify the JWT token is valid
       try {
-        const user = jsonwebtoken.verify(jwtToken, new TextDecoder().decode(Deno.readFileSync("./secret.txt")));
+        const user: any = jsonwebtoken.verify(jwtToken, new TextDecoder().decode(Deno.readFileSync("./secret.txt")));
         
         // Extract user information
         const username = user.userId;

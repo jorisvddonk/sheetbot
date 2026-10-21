@@ -1,5 +1,5 @@
 import { DatabaseSync } from "node:sqlite";
-import * as bcrypt from "https://deno.land/x/bcrypt/mod.ts";
+import bcrypt from "bcryptjs";
 
 export const USERDB_DATA_TABLENAME = "users";
 export const API_KEYS_TABLENAME = "api_keys";

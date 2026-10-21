@@ -1,5 +1,5 @@
+import "./lib/deno-compat.ts";
 import { UserDB } from "./lib/data_providers/sqlite/userdb.ts";
-import { promptSecret } from "https://deno.land/std@0.220.1/cli/prompt_secret.ts";
 
 const userdb = new UserDB();
 

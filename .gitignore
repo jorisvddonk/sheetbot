@@ -1,6 +1,8 @@
 tasks.db
 users.db
+sheet_permissions.db
 sheets/*.db
+node_modules/
 experiment.*
 artefacts/
 key.pem

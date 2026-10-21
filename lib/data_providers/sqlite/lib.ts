@@ -1,7 +1,7 @@
 import { DatabaseSync } from "node:sqlite";
 
 
-import { SQLInputValue } from "node:sqlite";
+import type { SQLInputValue } from "node:sqlite";
 
 const ALLOWED_TABLE_NAME_REGEX = /^[a-zA-Z0-9-_ ]+$/;
 const ALLOWED_COLUMN_NAME_REGEX = /^[a-zA-Z0-9-_ .]+$/;

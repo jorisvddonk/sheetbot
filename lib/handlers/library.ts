@@ -9,7 +9,7 @@ export function createGetLibraryHandler() {
     return (req: any, res: any) => {
         // Get scripts from both scripts/ (templates) and library/ (automation) directories
         const scriptFiles = [
-            ...Array.from(Deno.readDirSync("./scripts/").filter(x => (x.name.endsWith(".ts") || x.name.endsWith(".js") || x.name.endsWith(".py") || x.name.endsWith(".sh")) && !x.name.includes(".template."))).map(x => ({ name: x.name, path: "./scripts/" })),
+            ...Array.from(Deno.readDirSync("./scripts/") as any[]).filter((x: any) => (x.name.endsWith(".ts") || x.name.endsWith(".js") || x.name.endsWith(".py") || x.name.endsWith(".sh")) && !x.name.includes(".template.")).map((x: any) => ({ name: x.name, path: "./scripts/" })) as any[],
             ...Array.from(getLibraryScripts())
         ];
         const library = scriptFiles.map(file => {
