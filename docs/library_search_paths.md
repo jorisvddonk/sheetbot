@@ -28,7 +28,7 @@ export SHEETBOT_LIBRARY_SEARCH_PATH="/home/user/my-scripts:/opt/shared-scripts"
 # - ./library/
 # - /home/user/my-scripts/
 # - /opt/shared-scripts/
-deno run main.ts
+npm start
 ```
 
 This allows you to:

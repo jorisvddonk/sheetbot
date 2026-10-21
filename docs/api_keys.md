@@ -11,7 +11,8 @@ API keys provide a secure way to authenticate agents and scripts without storing
 Use the `addapikey.ts` script to generate API keys for existing users:
 
 ```bash
-deno run -A addapikey.ts
+npm run addapikey
+# or: node --experimental-sqlite --experimental-strip-types addapikey.ts
 ```
 
 The script will prompt for:
@@ -32,7 +33,7 @@ When creating an API key, you can specify permissions to restrict what the key c
 ### Example
 
 ```bash
-$ deno run -A addapikey.ts
+$ npm run addapikey
 username: alice
 key name (optional) [default]: readonly-apikey
 permissions (separate with commas or use * for all) [*]: viewTasks

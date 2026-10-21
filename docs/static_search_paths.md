@@ -23,7 +23,7 @@ export SHEETBOT_STATIC_SEARCH_PATHS="/path/to/my-widgets:/another/path/static"
 ```bash
 export SHEETBOT_STATIC_SEARCH_PATHS="/home/user/my-sheetbot-customizations/static"
 
-deno run --allow-all main.ts
+npm start
 # SheetBot now serves files from both ./static/ and the external path.
 # A file at /home/user/my-sheetbot-customizations/static/widget-foo.js
 # is accessible at http://localhost:3000/widget-foo.js

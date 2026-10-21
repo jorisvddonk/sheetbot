@@ -34,7 +34,8 @@ The following permissions are defined in the system:
 Permissions are assigned when creating a new user using the `adduser.ts` script:
 
 ```bash
-deno run adduser.ts
+npm run adduser
+# or: node --experimental-sqlite --experimental-strip-types adduser.ts
 ```
 
 You will be prompted to enter:

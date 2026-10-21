@@ -22,7 +22,7 @@ export SHEETBOT_SCRIPTS_SEARCH_PATHS="/path/to/my-scripts:/another/path/scripts"
 ```bash
 export SHEETBOT_SCRIPTS_SEARCH_PATHS="/home/user/my-sheetbot-customizations/scripts"
 
-deno run --allow-all main.ts
+npm start
 # A file at /home/user/my-sheetbot-customizations/scripts/lib/myutil.ts
 # is accessible at http://localhost:3000/scripts/lib/myutil.ts
 # and can be imported by agents as:

@@ -114,4 +114,4 @@ If an init script throws an error, the server startup will fail. Ensure your scr
 
 ## Permissions
 
-Init scripts run with the same permissions as the main server process. They can read and write files, access the network, and perform other operations allowed by the Deno permissions granted to `main.ts`.
+Init scripts run with the same permissions as the main server process. They can read and write files, access the network, and perform other operations allowed by the Node.js process running `main.ts`. The `Deno` global is available via the compatibility shim for backwards compatibility.

@@ -17,7 +17,7 @@
 
 <img src="static/logo.png" width="128px">
 
-An open-source automation and CI tool built with Deno, Express.js, SQLite, Web Components (Lit), and JSON Schema. SheetBot provides flexible task orchestration and a widget-based UI for visualization, enabling cross-platform builds, remote installations, and bespoke automation without heavy dependencies.
+An open-source automation and CI tool built with Node.js, Express.js, SQLite, Web Components (Lit), and JSON Schema. Agent scripts still run on Deno (or Python/Bash). SheetBot provides flexible task orchestration and a widget-based UI for visualization, enabling cross-platform builds, remote installations, and bespoke automation without heavy dependencies.
 
 **For a detailed human-written account of SheetBot's development and philosophy, see: https://mooses.nl/blog/sheetbot_opensource_release/**
 
@@ -29,7 +29,7 @@ I needed a quick build system for testing modifications to my projects across Li
 
 SheetBot embraces "primitive emergent architecture": simple primitives (tasks, schemas, widgets) that combine into powerful systems. It's designed for configuration as code, easy extensibility, and integration with diverse environments. Tasks are opaque to SheetBot, allowing scripts in any language with custom runners. The API is simple; add a new runner with a few hours of work or an AI prompt.
 
-Built with familiar tools: Express, JSON Schema, SQLite and Web Components. No complex dependencies, no complex build tooling, no opinions on build scripts, just flexible automation and the ability to get started with a simple `git clone` and `deno run` command.
+Built with familiar tools: Express, JSON Schema, SQLite and Web Components. No complex dependencies, no complex build tooling, no opinions on build scripts, just flexible automation and the ability to get started with a simple `git clone` and `npm start` command.
 
 As much compute as possible is pushed out to the viewer side (the web UI) or build agents, and kept away from the server side so that the server is lightweight and doesn't need a lot of compute. For example, visualizations depicting which tasks can be ran by which agents is performed client-side in the UI.
 
@@ -89,7 +89,7 @@ See [Distributed Runtime](docs/Distributed_Runtime.md) for info on an experiment
 
 ## Getting Started
 
-1. Ensure Deno is [installed](https://docs.deno.com/runtime/getting_started/installation/), then clone this repository
+1. Ensure Node.js 22.6+ is [installed](https://nodejs.org/), then clone this repository. (Deno is still required for agent scripts.)
 2. Add a user via `npm run adduser` (or `node --experimental-strip-types adduser.ts`) - type in the username and password to generate a new user. Use `*` for permissions to give access to all features, or see [docs/permissions.md](docs/permissions.md) for more info on the permissions system.
 3. (Optional) Generate an API key via `npm run addapikey` for secure agent authentication - see [docs/api_keys.md](docs/api_keys.md) for details.
 4. Run the main server: `npm start` - requires Node.js 22.6+ (uses experimental type stripping).
