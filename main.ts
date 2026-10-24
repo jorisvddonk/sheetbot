@@ -226,7 +226,10 @@ if (staticSearchPaths) {
 
 // GET /widgets.json - Dynamically discovers all widget-*.js files across static dirs and
 // returns the list of URLs as JSON. Cached for SHEETBOT_WIDGET_CACHE_TTL minutes (default: 5).
-const widgetCacheTtlMs = (parseInt(Deno.env.get("SHEETBOT_WIDGET_CACHE_TTL") ?? "5") || 5) * 60 * 1000;
+const widgetCacheTtlEnv = Deno.env.get("SHEETBOT_WIDGET_CACHE_TTL");
+const widgetCacheTtlParsed = widgetCacheTtlEnv === undefined ? 5 : parseInt(widgetCacheTtlEnv, 10);
+const widgetCacheTtlMinutes = Number.isFinite(widgetCacheTtlParsed) && widgetCacheTtlParsed >= 0 ? widgetCacheTtlParsed : 5;
+const widgetCacheTtlMs = widgetCacheTtlMinutes * 60 * 1000;
 let widgetUrlsCache: { urls: string[]; expiresAt: number } | null = null;
 
 app.get("/widgets.json", (req: any, res: any) => {

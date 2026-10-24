@@ -106,4 +106,4 @@ This makes sheets useful for status dashboards: a task can write the current sta
 
 ## Next
 
-The columns currently use the default text widget. Continue to [Customizing your sheet](customizing-your-sheet.md) to choose a widget for each column.
+The columns currently use the default text widget. Continue to [Customizing your sheet](customizing-your-sheet.md) to choose a widget for each column, then [publish the sheet](publishing-a-sheet.md) for read-only sharing. For file outputs, see [Working with artefacts](working-with-artefacts.md).

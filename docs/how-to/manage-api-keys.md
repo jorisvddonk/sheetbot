@@ -117,19 +117,20 @@ All agent templates support API key authentication:
 ### Deno/TypeScript Agent
 ```bash
 export SHEETBOT_AUTH_APIKEY=your.api.key
-deno run --reload -A ${SHEETBOT_BASEURL}/scripts/agent.ts
+deno run --reload -A "$SHEETBOT_BASEURL/scripts/agent.ts"
 ```
 
 ### Python Agent
 ```bash
 export SHEETBOT_AUTH_APIKEY=your.api.key
-uv run --script ${SHEETBOT_BASEURL}/scripts/agent.py
+curl -fsSL "$SHEETBOT_BASEURL/scripts/agent.py" -o agent.py
+uv run --script agent.py
 ```
 
 ### Bash Agent
 ```bash
 export SHEETBOT_AUTH_APIKEY=your.api.key
-curl -fsSL ${SHEETBOT_BASEURL}/scripts/agent.sh | bash
+curl -fsSL "$SHEETBOT_BASEURL/scripts/agent.sh" | bash
 ```
 
 ## Distributed Runtime

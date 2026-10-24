@@ -26,14 +26,18 @@ To obtain temporary AWS-compatible credentials for S3 API access, use POST `/art
 
 ## Public Artefacts Bucket
 
-SheetBot includes routes for a "public" artefacts bucket that allows serving artefacts without authentication. These routes are commented out by default in `main.ts`. To enable public artefact serving, uncomment the following lines in `main.ts`:
+The `public` bucket is served without authentication:
 
-```typescript
-// GET /artefacts/public - Lists artefacts in the public bucket without login
-//app.get('/artefacts/public', createListArtefactsHandler('public'));
+- `GET /artefacts/public` lists the bucket.
+- `GET /artefacts/public/*` reads a file.
 
-// GET /artefacts/public/* - Retrieves public artefact files without login
-//app.get('/artefacts/public/*', createListArtefactsHandler('public'));
+Uploads still require login and the `createArtefacts` permission. Use the public bucket only for files that are safe for anonymous access:
+
+```bash
+curl -X PUT "$SHEETBOT_BASEURL/artefacts/public/report.txt" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: text/plain" \
+  --data-binary @report.txt
 ```
 
-Note that enabling this feature makes artefacts in the named "public" bucket publicly accessible, so use with caution and ensure only appropriate files are placed in the public bucket.
+See [Working with artefacts](../tutorials/working-with-artefacts.md) for a full walkthrough.

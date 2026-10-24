@@ -36,3 +36,5 @@ See [Protocol](../reference/protocol.md) for the exact sequence and state machin
 - [Extensibility](extensibility.md) — choose an extension point.
 - [Agent runtime API](../reference/agent-runtime.md) — implement a custom runner.
 - [Sheet database](../reference/sheet-database.md) — understand the storage layout.
+- [Deploy SheetBot](../how-to/deploy-sheetbot.md) — run it as a service and back it up.
+- [Debug a failed task](../how-to/debug-failed-tasks.md) — diagnose task and agent failures.

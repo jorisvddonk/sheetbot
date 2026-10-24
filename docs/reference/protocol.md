@@ -73,7 +73,7 @@ stateDiagram-v2
 
 ## Transitions
 
-Transitions enable automated status changes for tasks based on time and conditions:
+Transitions enable automated status changes for tasks based on time and conditions. See [Configure task transitions](../how-to/configure-transitions.md) for worked examples:
 
 - **Configuration**: Tasks include a `transitions` array with status change rules
 - **Evaluation**: Transitions are checked when task status changes or at scheduled intervals

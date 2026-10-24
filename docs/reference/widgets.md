@@ -98,11 +98,13 @@ Interactive buttons, multi-widgets, utility components, and QR codes.
 
 To create a custom widget:
 
-1. Add `widget-<name>.js` in `static/`
-2. Define a class extending `HTMLElement`
-3. Implement required methods: `getCopyText()`, `getCopyHTML()`, `getContextMenuDefinition()`, `delete()`
-4. Register with `customElements.define('widget-<name>', WidgetClass)`
-5. Load in `sheet.html` with `<script src="widget-<name>.js" type="module"></script>`
-6. Set `widgettype = '<name>'` in `columnstructure`
+1. Add `widget-<name>.js` in `static/` or a directory listed in `SHEETBOT_STATIC_SEARCH_PATHS`.
+2. Import Lit (or use a plain custom element) and define a class, normally extending `LitElement`.
+3. Read the cell value from the `data` property. `rowkey` and `column` are also set.
+4. Implement `getCopyText()`; it is used by copy operations. `getCopyHTML()` and `getContextMenuDefinition()` are optional.
+5. Register with `customElements.define('widget-<name>', WidgetClass)`.
+6. Set `widgettype = '<name>'` in `columnstructure`.
 
-See existing widgets in `static/` for examples.
+Widgets are discovered automatically by `/widgets.json` and imported by `sheet.html`; you do not need to edit `sheet.html`. The list is cached for `SHEETBOT_WIDGET_CACHE_TTL` minutes (default `5`); set it to `0` while developing.
+
+See [Building a custom widget](../tutorials/building-a-custom-widget.md) for a complete example, and existing widgets in `static/` for more patterns.

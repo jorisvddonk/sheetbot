@@ -86,5 +86,6 @@ If a task later adds a new column and it does not appear in the sheet, add a mat
 ## Next
 
 - Browse all widget types in [Widgets](../reference/widgets.md).
+- Build your own with [Building a custom widget](building-a-custom-widget.md).
+- Share the result with [Publishing a read-only sheet](publishing-a-sheet.md).
 - Read the full storage layout in [Sheet database](../reference/sheet-database.md).
-- Learn how tasks write data in [Data management](../reference/data-management.md).

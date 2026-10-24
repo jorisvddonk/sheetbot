@@ -139,7 +139,7 @@ Library scripts use special XML-like annotations in comments to define task meta
 
 ## Protocol and API
 
-See [Protocol](docs/reference/protocol.md) for task execution flows and [Artefacts](docs/reference/artefacts.md) for artefact management.
+See the [HTTP API reference](docs/reference/http-api.md) for endpoints and permissions, [Protocol](docs/reference/protocol.md) for task execution flows, and [Artefacts](docs/reference/artefacts.md) for artefact management.
 
 ## Data Management
 
