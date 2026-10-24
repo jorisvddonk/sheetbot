@@ -344,7 +344,10 @@ export function createGetTaskToCompleteHandler(db: DatabaseSync, agentTrackingMi
         (req: any, res: any) => {
             const task = getTaskToComplete(db, req.body.type, req.body.capabilities, TaskStatus.AWAITING);
             if (task) {
-                const extension = req.body.type === "python" ? ".py" : ".ts";
+                let extension = ".ts";
+                if (req.body.type === "python") extension = ".py";
+                else if (["node", "javascript", "js"].includes(req.body.type)) extension = ".js";
+                else if (["typescript", "ts"].includes(req.body.type)) extension = ".ts";
                 const taskScriptURL = `${req.protocol}://${req.get('host')}/scripts/${task.id}${extension}`;
                 res.json({script: taskScriptURL, id: task.id, type: req.body.type})
                 return;

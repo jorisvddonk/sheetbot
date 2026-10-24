@@ -457,7 +457,7 @@ if (librarySearchPaths) {
 }
 
 // GET /scripts/agent(.ts|.py|.sh)? - Serves agent template scripts for different languages
-app.get("/scripts/agent(\.ts|\.py|\.sh)?", createGetAgentTemplateHandler());
+app.get("/scripts/agent(\.ts|\.js|\.py|\.sh)?", createGetAgentTemplateHandler());
 
 // GET /scripts/:id.* - Serves the script for a specific task, with dependency injection
 app.get("/scripts/:id\.?.*", ...createGetTaskScriptHandler(db));

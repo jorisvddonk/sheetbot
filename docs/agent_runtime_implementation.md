@@ -23,7 +23,7 @@ This allows agents to be downloaded and run immediately, automatically connectin
 **Supported Extensions:**
 - `.py`: Python agent template (uses `uv` for dependency management and script execution)
 - `.ts`: TypeScript/Deno agent template
-- `.js`: JavaScript agent template (served from the same `.ts` template with appropriate content-type)
+- `.js`: JavaScript/TypeScript-capable Node.js agent template (`scripts/agent.template.js`)
 
 Agents can load additional capabilities from local files:
 - `.capabilities.json`: Static JSON capabilities

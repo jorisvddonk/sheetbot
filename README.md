@@ -103,6 +103,8 @@ See [Distributed Runtime](docs/Distributed_Runtime.md) for info on an experiment
    # export SHEETBOT_AUTH_APIKEY=your.api.key
    export SHEETBOT_BASEURL=http://localhost:3000
    deno run --allow-net --allow-env --allow-read ${SHEETBOT_BASEURL}/scripts/agent.ts
+   # Or run a Node.js agent:
+   curl -fsSL ${SHEETBOT_BASEURL}/scripts/agent.js | node
    ```
 8. (Optional) View tasks from the terminal using the TUI:
    ```bash

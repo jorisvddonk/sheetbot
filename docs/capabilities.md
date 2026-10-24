@@ -154,6 +154,23 @@ if os.path.exists("./.capabilities.override.json"):
         local_capabilities.update(json.load(f))
 ```
 
+### Node.js Agent Runner (`scripts/agent.template.js`)
+
+```javascript
+const localCapabilities = {};
+if (fs.existsSync("./.capabilities.json")) {
+  Object.assign(localCapabilities, JSON.parse(fs.readFileSync("./.capabilities.json", "utf8")));
+}
+if (fs.existsSync("./.capabilities.dynamic.mjs")) {
+  const mod = await import(pathToFileURL("./.capabilities.dynamic.mjs").href);
+  if (mod.getCapabilities) Object.assign(localCapabilities, await mod.getCapabilities(localCapabilities));
+}
+if (fs.existsSync("./.capabilities.override.json")) {
+  Object.assign(localCapabilities, JSON.parse(fs.readFileSync("./.capabilities.override.json", "utf8")));
+}
+const capabilities = { os: os.platform(), arch: os.arch(), node: process.version, ...localCapabilities };
+```
+
 ### Shell Agent Runner (`scripts/agent.template.sh`)
 
 ```bash
