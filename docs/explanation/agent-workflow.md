@@ -26,6 +26,6 @@ Workflow:
 
 Node.js tasks are executed as temporary files. Node's strip-only TypeScript mode does not support network imports, so Node task scripts must be self-contained or use `fetch` for remote data.
 
-See [Agent Runtime Implementation](../reference/agent-runtime.md) for details on implementing custom runners.
+See [Setting up other agents](../tutorials/setting-up-other-agents.md) for Deno, Python, and Bash agent commands, and [Agent Runtime Implementation](../reference/agent-runtime.md) for details on implementing custom runners.
 
 Runner implementations are flexible; SheetBot only requires adherence to the polling and reporting protocol.

@@ -51,7 +51,7 @@ curl -fsSL ${SHEETBOT_BASEURL}/scripts/agent.js | node
 | [Reference](reference/index.md) | look up an exact contract: protocol, APIs, data formats, and widgets |
 | [Explanation](explanation/index.md) | understand how SheetBot works and why |
 
-Start with [Getting started](tutorials/getting-started.md), then [Your first task](tutorials/your-first-task.md), [Working with sheets](tutorials/working-with-sheets.md), and [Customizing your sheet](tutorials/customizing-your-sheet.md). For the bigger picture, read [Architecture](explanation/architecture.md). See the [project README](https://github.com/jorisvddonk/sheetbot#readme) for the full story.
+Start with [Getting started](tutorials/getting-started.md), then [Your first task](tutorials/your-first-task.md), [Setting up other agents](tutorials/setting-up-other-agents.md), [Working with sheets](tutorials/working-with-sheets.md), and [Customizing your sheet](tutorials/customizing-your-sheet.md). For the bigger picture, read [Architecture](explanation/architecture.md). See the [project README](https://github.com/jorisvddonk/sheetbot#readme) for the full story.
 
 ## Project structure
 

@@ -49,7 +49,7 @@ export SHEETBOT_AUTH_PASS=your_password
 curl -fsSL "$SHEETBOT_BASEURL/scripts/agent.js" | node
 ```
 
-The Node.js agent polls once and exits. Run it in a loop, or schedule it with your operating system, if you want it to keep picking up tasks. The Deno agent is available at `/scripts/agent.ts`.
+The Node.js agent polls once and exits. Run it in a loop, or schedule it with your operating system, if you want it to keep picking up tasks. See [Setting up other agents](setting-up-other-agents.md) for Deno, Python, and Bash agents.
 
 ## Next
 
