@@ -6,7 +6,7 @@ You can preview all available widgets by visiting the 'Help' page in SheetBot's 
 
 ## Setting Up Widgets
 
-Widgets are configured in a sheet's `columnstructure` table. Each column specifies:
+Widgets are configured in a sheet's `columnstructure` table. See [Customizing your sheet](../tutorials/customizing-your-sheet.md) for a worked example. Each column specifies:
 
 - `widgettype`: The widget name (e.g., "text", "image")
 - `minwidth`/`maxwidth`: Width constraints

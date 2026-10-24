@@ -2,6 +2,8 @@
 
 Sheets in SheetBot are stored as individual SQLite database files in the `./sheets/` directory. Each sheet contains several tables and views that manage data storage and presentation.
 
+For a walkthrough, see [Working with sheets](../tutorials/working-with-sheets.md) and [Customizing your sheet](../tutorials/customizing-your-sheet.md).
+
 ## Core Tables
 
 ### `data` Table

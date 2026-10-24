@@ -28,7 +28,7 @@ Note: Dependency injection is an advanced feature primarily used by the [distrib
 
 ## Sheet Data
 
-Sheets provide persistent key-value storage using SQLite databases. See [Sheet Database Table Structure](sheet-database.md) for details on the underlying schema.
+Sheets provide persistent key-value storage using SQLite databases. See [Sheet Database Table Structure](sheet-database.md) for details on the underlying schema, or follow [Working with sheets](../tutorials/working-with-sheets.md) for a task-based example.
 
 - **Upsert data**: POST to `/sheets/:id/data` with JSON containing `key` and other fields
 - **Delete row**: DELETE `/sheets/:id/data/:key`

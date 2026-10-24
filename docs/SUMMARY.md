@@ -7,6 +7,8 @@
 - [Tutorials](tutorials/index.md)
   - [Getting started](tutorials/getting-started.md)
   - [Your first task](tutorials/your-first-task.md)
+  - [Working with sheets](tutorials/working-with-sheets.md)
+  - [Customizing your sheet](tutorials/customizing-your-sheet.md)
 
 # How-to guides
 
