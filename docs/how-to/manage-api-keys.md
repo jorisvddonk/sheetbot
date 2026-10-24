@@ -6,6 +6,8 @@ SheetBot supports API key authentication as an alternative to username/password 
 
 API keys provide a secure way to authenticate agents and scripts without storing passwords. They can be restricted to specific permissions, enabling the creation of "downscoped" keys for read-only access or other limited operations.
 
+For a step-by-step setup, see [Using API keys for agents](../tutorials/using-api-keys-for-agents.md).
+
 ## Creating API Keys
 
 Use the `addapikey.ts` script to generate API keys for existing users:

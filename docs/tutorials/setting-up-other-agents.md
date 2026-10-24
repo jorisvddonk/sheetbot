@@ -28,7 +28,7 @@ export SHEETBOT_AUTH_APIKEY=your.api.key
 unset SHEETBOT_AUTH_USER SHEETBOT_AUTH_PASS
 ```
 
-See [Manage API keys](../how-to/manage-api-keys.md) for how to create one.
+See [Using API keys for agents](using-api-keys-for-agents.md) for a step-by-step setup, or [Manage API keys](../how-to/manage-api-keys.md) for the full reference.
 
 Agents poll once per invocation. Run the command again, put it in a loop, or schedule it with cron, systemd, launchd, or another scheduler.
 
