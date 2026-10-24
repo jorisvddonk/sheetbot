@@ -4,12 +4,12 @@ SheetBot is designed for easy extension through code modification and external c
 
 ## External Extension Points (No Code Modification Required)
 
-- **Library Scripts** (`SHEETBOT_LIBRARY_SEARCH_PATHS`): Add custom task scripts from external directories (see [Library Search Paths](library_search_paths.md))
-- **Event Handlers** (`SHEETBOT_EVENTHANDLER_SEARCH_PATHS`): React to task and agent events with custom handlers (see [Event Handlers](event_handlers.md))
-- **Init Scripts** (`SHEETBOT_INIT_SEARCH_PATHS`): Run custom initialization code on server startup (see [Initialization System](init_system.md))
-- **Custom Middleware** (`SHEETBOT_MIDDLEWARE_SEARCH_PATHS`): Add Express middleware for authentication, logging, CORS, etc. (see [Custom Middleware](custom_middleware.md))
-- **Additional Static Files** (`SHEETBOT_STATIC_SEARCH_PATHS`): Serve extra static assets (e.g. custom widgets) from external directories alongside `./static` (see [Static Search Paths](static_search_paths.md))
-- **Additional Scripts** (`SHEETBOT_SCRIPTS_SEARCH_PATHS`): Serve extra agent-facing scripts at `/scripts` from external directories alongside `./scripts` (see [Scripts Search Paths](scripts_search_paths.md))
+- **Library Scripts** (`SHEETBOT_LIBRARY_SEARCH_PATHS`): Add custom task scripts from external directories (see [Library Search Paths](../how-to/configure-library-paths.md))
+- **Event Handlers** (`SHEETBOT_EVENTHANDLER_SEARCH_PATHS`): React to task and agent events with custom handlers (see [Event Handlers](../how-to/handle-events.md))
+- **Init Scripts** (`SHEETBOT_INIT_SEARCH_PATHS`): Run custom initialization code on server startup (see [Initialization System](../how-to/write-init-scripts.md))
+- **Custom Middleware** (`SHEETBOT_MIDDLEWARE_SEARCH_PATHS`): Add Express middleware for authentication, logging, CORS, etc. (see [Custom Middleware](../how-to/write-custom-middleware.md))
+- **Additional Static Files** (`SHEETBOT_STATIC_SEARCH_PATHS`): Serve extra static assets (e.g. custom widgets) from external directories alongside `./static` (see [Static Search Paths](../how-to/configure-static-paths.md))
+- **Additional Scripts** (`SHEETBOT_SCRIPTS_SEARCH_PATHS`): Serve extra agent-facing scripts at `/scripts` from external directories alongside `./scripts` (see [Scripts Search Paths](../how-to/configure-script-paths.md))
 - **Widget Auto-loading** (`SHEETBOT_WIDGET_CACHE_TTL`): The `/widgets.js` endpoint dynamically discovers all `widget-*.js` files across all static directories and injects them into `sheet.html`. The result is cached for this many minutes (default: 5). Set to `0` to disable caching.
 
 ## Code Modification Extension Points
@@ -17,11 +17,11 @@ SheetBot is designed for easy extension through code modification and external c
 - **Authentication**: Add custom middleware to `main.ts` for auth schemes (e.g., OAuth, LDAP)
 - **New Endpoints**: Extend the Express app with additional routes
 - **Data Providers**: Implement custom storage backends by extending data provider classes
-- **Widgets**: Add new widget types (see [Widgets](widgets.md))
-- **Sheet Views**: Customize data presentation with widgets and column structures (see [Sheet Database Table Structure](sheet_db_tablestructure.md))
-- **Custom Runners**: Implement new execution environments (see [Agent Runtime Implementation](agent_runtime_implementation.md))
-- **Capabilities**: Customize agent matching logic (see [Capabilities](capabilities.md))
-- **Distributed Runtime**: Enable distributed task execution (see [Distributed Runtime](Distributed_Runtime.md))
+- **Widgets**: Add new widget types (see [Widgets](../reference/widgets.md))
+- **Sheet Views**: Customize data presentation with widgets and column structures (see [Sheet Database Table Structure](../reference/sheet-database.md))
+- **Custom Runners**: Implement new execution environments (see [Agent Runtime Implementation](../reference/agent-runtime.md))
+- **Capabilities**: Customize agent matching logic (see [Capabilities](../how-to/declare-capabilities.md))
+- **Distributed Runtime**: Enable distributed task execution (see [Distributed Runtime](distributed-runtime.md))
 
 The codebase is structured for straightforward modifications. For most use cases, the external extension points provide sufficient flexibility without requiring code changes.
 

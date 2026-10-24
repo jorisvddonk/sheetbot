@@ -1,0 +1,59 @@
+/* SheetBot docs — light theme polish over mdBook's defaults.
+   Kept conservative: only tokens and spacing, no layout surgery. */
+
+:root {
+    --links: #4338ca;
+    --content-max-width: 860px;
+    --page-padding: 20px;
+}
+
+/* Dark themes get a lighter accent so links stay legible. */
+.navy,
+.ayu,
+.coal {
+    --links: #a5b4fc;
+}
+
+.content {
+    line-height: 1.7;
+}
+
+.content h1,
+.content h2,
+.content h3,
+.content h4 {
+    font-weight: 650;
+    letter-spacing: -0.01em;
+}
+
+/* Section part titles in the sidebar (Tutorials, How-to guides, …). */
+.chapter li.part-title {
+    font-weight: 700;
+    color: var(--sidebar-fg);
+    text-transform: none;
+}
+
+.content code {
+    border-radius: 4px;
+    padding: 0.1em 0.35em;
+}
+
+.content pre code {
+    padding: 0;
+}
+
+.content blockquote {
+    border-left: 3px solid var(--links);
+    opacity: 0.95;
+}
+
+.content table {
+    font-size: 0.95em;
+}
+
+/* Center rendered Mermaid diagrams and give them breathing room. */
+.content .mermaid,
+.content pre.mermaid {
+    text-align: center;
+    margin: 1.5em 0;
+}

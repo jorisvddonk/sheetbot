@@ -12,7 +12,9 @@
     "adduser": "node --experimental-sqlite --experimental-strip-types adduser.ts",
     "addapikey": "node --experimental-sqlite --experimental-strip-types addapikey.ts",
     "set-sheet-public": "node --experimental-sqlite --experimental-strip-types set-sheet-public.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "docs:build": "mdbook build",
+    "docs:serve": "mdbook serve --open"
   },
   "dependencies": {
     "express": "4.18.3",

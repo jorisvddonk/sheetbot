@@ -24,11 +24,11 @@ const depResult = __DEP_RESULT_abc123__; // Becomes actual data
 console.log(depResult);
 ```
 
-Note: Dependency injection is an advanced feature primarily used by the [distributed runtime](Distributed_Runtime.md). For most use cases, it's recommended to fetch task data dynamically at runtime using the API (e.g., GET `/tasks/{id}`), or have tasks communicate via shared sheets for better flexibility and decoupling.
+Note: Dependency injection is an advanced feature primarily used by the [distributed runtime](../explanation/distributed-runtime.md). For most use cases, it's recommended to fetch task data dynamically at runtime using the API (e.g., GET `/tasks/{id}`), or have tasks communicate via shared sheets for better flexibility and decoupling.
 
 ## Sheet Data
 
-Sheets provide persistent key-value storage using SQLite databases. See [Sheet Database Table Structure](sheet_db_tablestructure.md) for details on the underlying schema.
+Sheets provide persistent key-value storage using SQLite databases. See [Sheet Database Table Structure](sheet-database.md) for details on the underlying schema.
 
 - **Upsert data**: POST to `/sheets/:id/data` with JSON containing `key` and other fields
 - **Delete row**: DELETE `/sheets/:id/data/:key`

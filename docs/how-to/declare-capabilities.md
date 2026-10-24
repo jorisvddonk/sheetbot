@@ -462,5 +462,4 @@ The capabilities loading process is designed to be fault-tolerant:
 - Missing files are ignored
 - Detection failures for individual tools don't prevent other detections
 - The agent continues with whatever capabilities were successfully detected
-- Errors are logged but don't stop agent execution</content>
-<parameter name="filePath">docs/dynamic_capabilities.md
+- Errors are logged but don't stop agent execution

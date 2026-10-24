@@ -1,5 +1,6 @@
 # SheetBot
 
+- [Documentation](#documentation)
 - [Why I Built SheetBot](#why-i-built-sheetbot)
 - [Philosophy](#philosophy)
 - [AI Usage](#ai-usage)
@@ -20,6 +21,12 @@
 An open-source automation and CI tool built with Node.js, Express.js, SQLite, Web Components (Lit), and JSON Schema. Agent scripts still run on Deno (or Python/Bash). SheetBot provides flexible task orchestration and a widget-based UI for visualization, enabling cross-platform builds, remote installations, and bespoke automation without heavy dependencies.
 
 **For a detailed human-written account of SheetBot's development and philosophy, see: https://mooses.nl/blog/sheetbot_opensource_release/**
+
+## Documentation
+
+Published documentation: **https://jorisvddonk.github.io/sheetbot/**
+
+The docs are built with [mdBook](https://rust-lang.github.io/mdBook/) from the `docs/` directory. Preview them locally with `npm run docs:serve` (requires `mdbook` and `mdbook-mermaid`).
 
 ## Why I Built SheetBot
 
@@ -63,7 +70,7 @@ While SheetBot provides core automation primitives, it differs from full-feature
 
 These features can be implemented in SheetBot using its primitives:
 - **Triggers**: Via polling tasks that periodically check Git repos for updates and spawn build tasks, or by adding custom webhooks to the Express.js app
-- **Pipelines**: Through task dependencies and transitions, comprehensive scripts, or the experimental distributed promise runtime ([Distributed Runtime](docs/Distributed_Runtime.md))—a Deno-only feature—that enables a higher-level programming paradigm where tasks serve as modular compute blocks orchestrated via natural async TypeScript code into distributed DAGs
+- **Pipelines**: Through task dependencies and transitions, comprehensive scripts, or the experimental distributed promise runtime ([Distributed Runtime](docs/explanation/distributed-runtime.md))—a Deno-only feature—that enables a higher-level programming paradigm where tasks serve as modular compute blocks orchestrated via natural async TypeScript code into distributed DAGs
 - **Caching/Workspaces**: Data persistence via artefacts and sheet-stored metadata; manual caching with tools like sccache; workspaces via capability schemas or environment variables directing tasks to pre-existing local project directories for checkout reuse and incremental builds
 - **Security/Notifications**: Via custom scripts in tasks or Express.js app modifications (implementation depends on use case)
 
@@ -85,13 +92,13 @@ Conceptually, this looks like this:
 - **Cross-Platform**: Works on diverse hardware from Raspberry Pis to gaming handhelds
 - **Extensibility**: Modify code for custom auth, endpoints, widgets, or task types
 
-See [Distributed Runtime](docs/Distributed_Runtime.md) for info on an experimental distributed runtime system that's also included.
+See [Distributed Runtime](docs/explanation/distributed-runtime.md) for info on an experimental distributed runtime system that's also included.
 
 ## Getting Started
 
 1. Ensure Node.js 22.6+ is [installed](https://nodejs.org/), then clone this repository. (Deno is still required for agent scripts.)
-2. Add a user via `npm run adduser` (or `node --experimental-strip-types adduser.ts`) - type in the username and password to generate a new user. Use `*` for permissions to give access to all features, or see [docs/permissions.md](docs/permissions.md) for more info on the permissions system.
-3. (Optional) Generate an API key via `npm run addapikey` for secure agent authentication - see [docs/api_keys.md](docs/api_keys.md) for details.
+2. Add a user via `npm run adduser` (or `node --experimental-strip-types adduser.ts`) - type in the username and password to generate a new user. Use `*` for permissions to give access to all features, or see [Configure permissions](docs/how-to/configure-permissions.md) for more info on the permissions system.
+3. (Optional) Generate an API key via `npm run addapikey` for secure agent authentication - see [Manage API keys](docs/how-to/manage-api-keys.md) for details.
 4. Run the main server: `npm start` - requires Node.js 22.6+ (uses experimental type stripping).
 5. Access the web interface at http://localhost:3000/
 6. To test SheetBot, go to the Library page and add the "Hello World" task.
@@ -115,36 +122,36 @@ By default, SheetBot listens on all interfaces (`0.0.0.0`) - change this in `mai
 
 ## Known Issues
 
-See [Known Issues](docs/known_issues.md) for current limitations and workarounds.
+See [Troubleshoot](docs/how-to/troubleshoot.md) for current limitations and workarounds.
 
 ## Initialization
 
-See [Initialization System](docs/init_system.md) for details on the startup initialization system that runs TypeScript scripts on every server startup.
+See [Initialization System](docs/how-to/write-init-scripts.md) for details on the startup initialization system that runs TypeScript scripts on every server startup.
 
 ## Scripts
 
-- **`scripts/` directory**: Contains agent template files (`agent.template.ts`, `agent.template.py`, `agent.template.sh`)
+- **`scripts/` directory**: Contains agent template files (`agent.template.ts`, `agent.template.js`, `agent.template.py`, `agent.template.sh`)
 - **`library/` directory**: Contains automation scripts for various use cases (game development, web deployment, system automation, etc.) - [See examples](library/README.md)
 
 ### Library Script Annotations
 
-Library scripts use special XML-like annotations in comments to define task metadata. See [Library Script Annotations](docs/library_script_annotations.md) for details on how to use `<name>`, `<capabilitiesSchema>`, `<data>`, and `<addTaskComments>` annotations.
+Library scripts use special XML-like annotations in comments to define task metadata. See [Library Script Annotations](docs/reference/library-script-annotations.md) for details on how to use `<name>`, `<capabilitiesSchema>`, `<data>`, and `<addTaskComments>` annotations.
 
 ## Protocol and API
 
-See [Protocol](docs/protocol.md) for task execution flows and [Artefacts](docs/artefacts.md) for artefact management.
+See [Protocol](docs/reference/protocol.md) for task execution flows and [Artefacts](docs/reference/artefacts.md) for artefact management.
 
 ## Data Management
 
-See [Data Management](docs/data_management.md) for details on task data, dependency injection, sheet data, and sheet updates during tasks.
+See [Data Management](docs/reference/data-management.md) for details on task data, dependency injection, sheet data, and sheet updates during tasks.
 
 ## Agent Workflow
 
-See [Agent Workflow](docs/agent_workflow.md) for information on how agents poll for tasks and execute them using various runners.
+See [Agent Workflow](docs/explanation/agent-workflow.md) for information on how agents poll for tasks and execute them using various runners.
 
 ## Programmability and Extensibility
 
-See [Programmability](docs/programmability.md) for key extension points and how to customize SheetBot.
+See [Extensibility](docs/explanation/extensibility.md) for key extension points and how to customize SheetBot.
 
 ## Project Structure
 
@@ -153,7 +160,8 @@ See [Programmability](docs/programmability.md) for key extension points and how 
 - `library/`: Automation scripts
 - `sheets/`: Generated sheet files
 - `static/`: Web assets and HTML files
-- `docs/`: Documentation files
+- `docs/`: Documentation source (mdBook)
+- `book.toml`: Documentation site configuration
 - `init/`: Initialization scripts that run on server startup
 - `artefacts/`: File artefacts uploaded by tasks
 - `adduser.ts`: Script to add users to the database

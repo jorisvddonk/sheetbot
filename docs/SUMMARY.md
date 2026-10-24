@@ -1,0 +1,43 @@
+# Summary
+
+[Introduction](index.md)
+
+# Tutorials
+
+- [Tutorials](tutorials/index.md)
+  - [Getting started](tutorials/getting-started.md)
+  - [Your first task](tutorials/your-first-task.md)
+
+# How-to guides
+
+- [How-to guides](how-to/index.md)
+  - [Configure permissions](how-to/configure-permissions.md)
+  - [Manage API keys](how-to/manage-api-keys.md)
+  - [Write init scripts](how-to/write-init-scripts.md)
+  - [Configure library paths](how-to/configure-library-paths.md)
+  - [Configure script paths](how-to/configure-script-paths.md)
+  - [Configure static paths](how-to/configure-static-paths.md)
+  - [Write custom middleware](how-to/write-custom-middleware.md)
+  - [Handle events](how-to/handle-events.md)
+  - [Declare capabilities](how-to/declare-capabilities.md)
+  - [Troubleshoot](how-to/troubleshoot.md)
+
+# Reference
+
+- [Reference](reference/index.md)
+  - [Protocol](reference/protocol.md)
+  - [Agent runtime API](reference/agent-runtime.md)
+  - [Task events](reference/task-events.md)
+  - [Data management](reference/data-management.md)
+  - [Artefacts](reference/artefacts.md)
+  - [Widgets](reference/widgets.md)
+  - [Library script annotations](reference/library-script-annotations.md)
+  - [Sheet database](reference/sheet-database.md)
+
+# Explanation
+
+- [Explanation](explanation/index.md)
+  - [Architecture](explanation/architecture.md)
+  - [Agent workflow](explanation/agent-workflow.md)
+  - [Distributed promise runtime](explanation/distributed-runtime.md)
+  - [Extensibility](explanation/extensibility.md)

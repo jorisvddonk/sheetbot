@@ -1,0 +1,22 @@
+[book]
+title = "SheetBot"
+description = "Task management and automation system with distributed agents, sheets, artefacts, and transitions."
+src = "docs"
+language = "en"
+
+[build]
+build-dir = "site"
+
+[output.html]
+default-theme = "light"
+preferred-dark-theme = "navy"
+git-repository-url = "https://github.com/jorisvddonk/sheetbot"
+edit-url-template = "https://github.com/jorisvddonk/sheetbot/edit/main/{path}"
+site-url = "/sheetbot/"
+additional-js = ["mermaid.min.js", "mermaid-init.js"]
+additional-css = ["theme/custom.css"]
+
+[preprocessor]
+
+[preprocessor.mermaid]
+command = "mdbook-mermaid"

@@ -6,7 +6,7 @@ This document specifies the API contract for implementing agent runtimes that in
 
 ### Agent Templating System
 
-Sheetbot provides a templating system to serve pre-built agent runtime implementations for different programming languages. These templates are stored as `agent.template.<extension>` files (e.g., `agent.template.py` for Python, `agent.template.ts` for TypeScript/Deno) and are served dynamically via the `/scripts/agent.template.<extension>` endpoint.
+Sheetbot provides a templating system to serve pre-built agent runtime implementations for different programming languages. These templates are stored as `agent.template.<extension>` files (e.g., `agent.template.py` for Python, `agent.template.ts` for TypeScript/Deno, `agent.template.js` for Node.js) and are served dynamically via the `/scripts/agent.<extension>` endpoint.
 
 The templates contain boilerplate code that implements the full agent lifecycle:
 - Authentication with the Sheetbot server
@@ -24,6 +24,7 @@ This allows agents to be downloaded and run immediately, automatically connectin
 - `.py`: Python agent template (uses `uv` for dependency management and script execution)
 - `.ts`: TypeScript/Deno agent template
 - `.js`: JavaScript/TypeScript-capable Node.js agent template (`scripts/agent.template.js`)
+- `.sh`: Bash agent template (`scripts/agent.template.sh`)
 
 Agents can load additional capabilities from local files:
 - `.capabilities.json`: Static JSON capabilities
@@ -42,7 +43,7 @@ Agents follow a polling-based execution model:
 
 ### Capabilities Declaration
 
-See [Capabilities](capabilities.md) for more details on the capabilities system.
+See [Capabilities](../how-to/declare-capabilities.md) for more details on the capabilities system.
 
 Agents declare their execution capabilities to receive appropriate tasks. Capabilities are JSON objects with arbitrary structure, but should include basic system information.
 
