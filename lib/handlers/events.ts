@@ -2,6 +2,7 @@ import { TaskEventEmitter } from "../task-events.ts";
 import { AgentEventEmitter } from "../agent-events.ts";
 import { TaskEvent } from "../task-events.ts";
 import { AgentEvent } from "../agent-events.ts";
+import { toPublicTask } from "../task-serialization.ts";
 
 /**
  * Creates a handler that provides Server-Sent Events (SSE) for task and agent events.
@@ -34,7 +35,7 @@ export function createEventsSSEHandler(
         data: {
           taskId: data.taskId,
           timestamp: data.timestamp,
-          ...(data.task && { task: data.task }),
+          ...(data.task && { task: toPublicTask(data.task) }),
           ...(data.changes && { changes: data.changes }),
           ...(data.oldStatus !== undefined && { oldStatus: data.oldStatus }),
           ...(data.newStatus !== undefined && { newStatus: data.newStatus }),

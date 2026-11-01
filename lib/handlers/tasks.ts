@@ -8,6 +8,7 @@ import { createTaskTrackingMiddleware } from "../task-tracking-middleware.ts";
 import { createAgentTrackingMiddleware } from "../agent-tracking-middleware.ts";
 import { taskify, addTask, getTasks, getTask, updateTaskStatus, claimTask, renewLease, updateTaskDataWithLease, completeTaskWithLease, failTaskWithLease, getTaskLeaseTtlMs, getHeartbeatIntervalMs, deleteTask, getTaskToComplete, checkTransitions, updateTaskAddArtefact, updateTaskRemoveArtefact } from "../tasks.ts";
 import { TaskStatus } from "../models.ts";
+import { toPublicTask } from "../task-serialization.ts";
 
 function extractLeaseId(req: any): string | undefined {
     return req.header?.("X-SheetBot-Lease") || req.body?.leaseId || req.query?.leaseId;
@@ -55,7 +56,7 @@ const PERMISSION_UPDATE_TASKS = "updateTasks";
  */
 export function createGetTasksHandler(db: DatabaseSync) {
     return (req: any, res: any) => {
-        res.json(Array.from(getTasks(db)));
+        res.json(Array.from(getTasks(db)).map(toPublicTask));
     };
 }
 
@@ -143,7 +144,7 @@ export function createCreateTaskHandler(db: DatabaseSync, transitionTracker: Tra
             addTask(db, task, taskEventEmitter);
             checkTransitions(db, transitionTracker, task, taskEventEmitter); // Schedule transitions for initial status
             res.locals.taskId = task.id; // Set for middleware
-            res.json(task);
+            res.json(toPublicTask(task));
             res.send();
         }
     ];
@@ -158,7 +159,7 @@ export function createGetTaskHandler(db: DatabaseSync) {
     return (req: any, res: any) => {
         const task = getTask(db, req.params.id);
         if (task) {
-            res.json(task);
+            res.json(toPublicTask(task));
             return;
         }
         res.status(404);
@@ -356,7 +357,7 @@ export function createCloneTaskHandler(db: DatabaseSync, taskEventEmitter?: Task
                 await Deno.copyFile(`./artefacts/tasks/${oldTaskid}/${artefact}`, `${dirpath}/${artefact}`);
             }
             addTask(db, task, taskEventEmitter);
-            res.json(task);
+            res.json(toPublicTask(task));
             res.send();
         } else {
             res.status(404);

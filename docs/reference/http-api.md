@@ -114,6 +114,8 @@ Accepting a task returns a lease:
 
 Send the lease as `X-SheetBot-Lease: <leaseId>` or in the JSON body as `"leaseId": "…"` for heartbeat, complete, failed, and data updates. Task artefact URLs returned to the task script include the lease as a query parameter.
 
+The lease token is returned only by the accept endpoint. Task read endpoints and the SSE stream omit it; `owner` and `leaseExpiresAt` remain visible.
+
 A task whose lease expires is returned to `AWAITING`; a stale agent that tries to complete it receives `409`. The lease TTL is controlled by [`SHEETBOT_TASK_LEASE_TTL`](environment-variables.md).
 
 ## Scripts and library

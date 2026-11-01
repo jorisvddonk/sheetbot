@@ -18,6 +18,8 @@ The following events are available:
 
 The `TaskEventEmitter` is available globally in `main.ts` and can be accessed to listen for events:
 
+The SSE stream omits the task lease token from event task objects.
+
 ```typescript
 import { TaskEventEmitter, TaskEvent } from "./lib/task-events.ts";
 

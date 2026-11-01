@@ -106,10 +106,6 @@ components:
           type: string
           nullable: true
           description: Agent that currently holds the task lease
-        leaseId:
-          type: string
-          nullable: true
-          description: Lease token for the current RUNNING claim
         leaseExpiresAt:
           type: integer
           nullable: true
