@@ -51,6 +51,7 @@
 
 - [Explanation](explanation/index.md)
   - [Architecture](explanation/architecture.md)
+  - [Formal task model](explanation/formal-task-model.md)
   - [Agent workflow](explanation/agent-workflow.md)
   - [Distributed promise runtime](explanation/distributed-runtime.md)
   - [Extensibility](explanation/extensibility.md)
