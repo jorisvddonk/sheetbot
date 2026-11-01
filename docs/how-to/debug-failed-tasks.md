@@ -45,6 +45,7 @@ Common agent errors:
 - `No such file or directory` — a script interpreter or command is missing.
 - `Script failed with exit code N` — the task script returned a non-zero status.
 - `fetch failed` / `ECONNREFUSED` — the agent cannot reach `SHEETBOT_BASEURL`.
+- `409` on complete/failed/data — the lease expired or the task was reclaimed; check `SHEETBOT_TASK_LEASE_TTL` and heartbeat output.
 
 ## 3. Check agent matching
 
@@ -125,6 +126,7 @@ curl -X PATCH \
 - Bucket uploads need `createArtefacts`; reads need `viewArtefacts`.
 - Init, library, script, static, middleware, and event-handler directories must exist and be readable by the server user.
 - SQLite errors usually mean the database is locked by another process or the directory is not writable.
+- A `409` after a long task usually means the lease expired before the agent heartbeated or finished.
 
 ## Quick checklist
 

@@ -127,15 +127,49 @@ if echo "$task_body" | jq -e '.script' >/dev/null 2>&1; then
     export SHEETBOT_TASK_ACCEPTURL="$SHEETBOT_BASEURL/tasks/$task_id/accept"
     export SHEETBOT_TASK_COMPLETEURL="$SHEETBOT_BASEURL/tasks/$task_id/complete"
     export SHEETBOT_TASK_FAILEDURL="$SHEETBOT_BASEURL/tasks/$task_id/failed"
-    export SHEETBOT_TASK_DATAURL="$SHEETBOT_BASEURL/tasks/$task_id/data"
-    export SHEETBOT_TASK_ARTEFACTURL="$SHEETBOT_BASEURL/tasks/$task_id/artefacts"
+    export SHEETBOT_TASK_HEARTBEATURL="$SHEETBOT_BASEURL/tasks/$task_id/heartbeat"
 
-    # Accept task
+    # Accept task and obtain the lease.
     accept_response=$(curl -s -w "%{http_code}" "${headers[@]}" -X POST "$SHEETBOT_TASK_ACCEPTURL" \
         -H "Content-Type: application/json" \
         -d "{}")
     accept_status="${accept_response: -3}"
+    accept_body="${accept_response%???}"
     check_for_errors "$accept_status"
+    lease_id=$(echo "$accept_body" | jq -r '.leaseId // empty')
+    heartbeat_interval_ms=$(echo "$accept_body" | jq -r '.heartbeatIntervalMs // 60000')
+    heartbeat_seconds=$(( heartbeat_interval_ms / 1000 ))
+    if [ "$heartbeat_seconds" -lt 1 ]; then
+        heartbeat_seconds=1
+    fi
+    lease_query=""
+    if [ -n "$lease_id" ]; then
+        lease_query="?leaseId=$lease_id"
+    fi
+    export SHEETBOT_TASK_LEASE_ID="$lease_id"
+    export SHEETBOT_TASK_DATAURL="$SHEETBOT_BASEURL/tasks/$task_id/data$lease_query"
+    export SHEETBOT_TASK_ARTEFACTURL="$SHEETBOT_BASEURL/tasks/$task_id/artefacts$lease_query"
+
+    heartbeat_pid=""
+    cleanup_heartbeat() {
+        if [ -n "${heartbeat_pid:-}" ]; then
+            kill "$heartbeat_pid" 2>/dev/null || true
+        fi
+    }
+    trap cleanup_heartbeat EXIT
+
+    if [ -n "$lease_id" ]; then
+        (
+            while true; do
+                sleep "$heartbeat_seconds"
+                curl -s "${headers[@]}" -X POST "$SHEETBOT_TASK_HEARTBEATURL" \
+                    -H "Content-Type: application/json" \
+                    -H "X-SheetBot-Lease: $lease_id" \
+                    -d "{\"leaseId\":\"$lease_id\"}" >/dev/null || true
+            done
+        ) &
+        heartbeat_pid=$!
+    fi
 
     # Fetch and execute script
     script_url=$(echo "$task_body" | jq -r '.script')
@@ -152,11 +186,13 @@ if echo "$task_body" | jq -e '.script' >/dev/null 2>&1; then
             echo "Captured data: '$data'" >&2
             curl -s "${headers[@]}" -X POST "$SHEETBOT_TASK_COMPLETEURL" \
                 -H "Content-Type: application/json" \
-                -d "{\"data\":$data}"
+                -H "X-SheetBot-Lease: $lease_id" \
+                -d "{\"data\":$data,\"leaseId\":\"$lease_id\"}"
         else
             curl -s "${headers[@]}" -X POST "$SHEETBOT_TASK_FAILEDURL" \
                 -H "Content-Type: application/json" \
-                -d "{}"
+                -H "X-SheetBot-Lease: $lease_id" \
+                -d "{\"leaseId\":\"$lease_id\"}"
         fi
         rm "$temp_script"
     else
@@ -166,11 +202,13 @@ if echo "$task_body" | jq -e '.script' >/dev/null 2>&1; then
             data="${data:-{}}"
             curl -s "${headers[@]}" -X POST "$SHEETBOT_TASK_COMPLETEURL" \
                 -H "Content-Type: application/json" \
-                -d "{\"data\":$data}"
+                -H "X-SheetBot-Lease: $lease_id" \
+                -d "{\"data\":$data,\"leaseId\":\"$lease_id\"}"
         else
             curl -s "${headers[@]}" -X POST "$SHEETBOT_TASK_FAILEDURL" \
                 -H "Content-Type: application/json" \
-                -d "{}"
+                -H "X-SheetBot-Lease: $lease_id" \
+                -d "{\"leaseId\":\"$lease_id\"}"
         fi
     fi
 fi

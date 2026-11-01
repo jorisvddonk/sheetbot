@@ -4,40 +4,21 @@ import { DatabaseSync } from "node:sqlite";
 import { addTask, taskify, claimTask, getTask, reclaimStaleRunningTasks } from "../lib/tasks.ts";
 import { TransitionTracker } from "../lib/transitiontracker.ts";
 import { TaskStatus } from "../lib/models.ts";
-
-function createTaskDb(): DatabaseSync {
-    const db = new DatabaseSync(":memory:");
-    db.exec(`
-        CREATE TABLE tasks (
-            id TEXT PRIMARY KEY,
-            name TEXT,
-            script TEXT,
-            status INTEGER,
-            data TEXT,
-            artefacts TEXT,
-            dependsOn TEXT,
-            transitions TEXT,
-            type TEXT NOT NULL,
-            capabilitiesSchema TEXT,
-            lastRunAt INTEGER
-        )
-    `);
-    return db;
-}
+import { createTaskDb } from "./helpers.ts";
 
 function addClaimedTask(db: DatabaseSync): string {
     const task = taskify("console.log('hello')");
     task.type = "node";
     addTask(db, task);
-    assert.equal(claimTask(db, new TransitionTracker(), task.id), true);
+    assert.ok(claimTask(db, new TransitionTracker(), task.id));
     return task.id;
 }
 
-test("reclaimStaleRunningTasks requeues an old RUNNING task", () => {
+test("reclaimStaleRunningTasks requeues an old RUNNING task without a lease", () => {
     const db = createTaskDb();
     const taskId = addClaimedTask(db);
     const oldRunAt = Date.now() - 60_000;
-    db.prepare("UPDATE tasks SET lastRunAt = ? WHERE id = ?").run(oldRunAt, taskId);
+    db.prepare("UPDATE tasks SET lastRunAt = ?, leaseId = NULL, leaseExpiresAt = NULL WHERE id = ?").run(oldRunAt, taskId);
 
     const reclaimed = reclaimStaleRunningTasks(
         db,
@@ -51,11 +32,14 @@ test("reclaimStaleRunningTasks requeues an old RUNNING task", () => {
     const task = getTask(db, taskId);
     assert.equal(task?.status, TaskStatus.AWAITING);
     assert.equal(task?.lastRunAt, null);
+    assert.equal(task?.leaseId, null);
 });
 
-test("reclaimStaleRunningTasks leaves a fresh RUNNING task alone", () => {
+test("reclaimStaleRunningTasks leaves a leased RUNNING task alone", () => {
     const db = createTaskDb();
     const taskId = addClaimedTask(db);
+    const oldRunAt = Date.now() - 60_000;
+    db.prepare("UPDATE tasks SET lastRunAt = ? WHERE id = ?").run(oldRunAt, taskId);
 
     const reclaimed = reclaimStaleRunningTasks(
         db,

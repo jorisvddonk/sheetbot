@@ -12,6 +12,8 @@ import platform
 import importlib.util
 import subprocess
 import tempfile
+import threading
+from urllib.parse import quote
 
 if "SHEETBOT_BASEURL" not in os.environ:
     SHEETBOT_BASEURL = "${req.protocol}://${req.get('host')}"
@@ -114,20 +116,48 @@ if "script" in json_data:
     os.environ["SHEETBOT_TASK_FAILEDURL"] = (
         SHEETBOT_BASEURL + "/tasks/" + json_data["id"] + "/failed"
     )
-    os.environ["SHEETBOT_TASK_DATAURL"] = (
-        SHEETBOT_BASEURL + "/tasks/" + json_data["id"] + "/data"
-    )
-    os.environ["SHEETBOT_TASK_ARTEFACTURL"] = (
-        SHEETBOT_BASEURL + "/tasks/" + json_data["id"] + "/artefacts"
+    os.environ["SHEETBOT_TASK_HEARTBEATURL"] = (
+        SHEETBOT_BASEURL + "/tasks/" + json_data["id"] + "/heartbeat"
     )
 
-    check_for_errors(
+    lease = check_for_errors(
         requests.post(
             os.environ["SHEETBOT_TASK_ACCEPTURL"],
             headers={**headers, "Content-Type": "application/json"},
             json={},
         )
+    ).json()
+    lease_id = lease.get("leaseId")
+    lease_header = {"X-SheetBot-Lease": lease_id} if lease_id else {}
+    lease_query = "?leaseId=" + quote(lease_id, safe="") if lease_id else ""
+    heartbeat_interval = max(1.0, (lease.get("heartbeatIntervalMs") or 60000) / 1000.0)
+
+    os.environ["SHEETBOT_TASK_LEASE_ID"] = lease_id or ""
+    os.environ["SHEETBOT_TASK_DATAURL"] = (
+        SHEETBOT_BASEURL + "/tasks/" + json_data["id"] + "/data" + lease_query
     )
+    os.environ["SHEETBOT_TASK_ARTEFACTURL"] = (
+        SHEETBOT_BASEURL + "/tasks/" + json_data["id"] + "/artefacts" + lease_query
+    )
+
+    stop_heartbeat = threading.Event()
+    heartbeat_thread = None
+
+    def heartbeat_loop():
+        while not stop_heartbeat.wait(heartbeat_interval):
+            try:
+                requests.post(
+                    os.environ["SHEETBOT_TASK_HEARTBEATURL"],
+                    headers={**headers, "Content-Type": "application/json", **lease_header},
+                    json={"leaseId": lease_id},
+                    timeout=10,
+                )
+            except Exception as e:
+                print("heartbeat failed:", e)
+
+    if lease_id:
+        heartbeat_thread = threading.Thread(target=heartbeat_loop, daemon=True)
+        heartbeat_thread.start()
 
     try:
         script_response = requests.get(json_data["script"])
@@ -153,8 +183,8 @@ if "script" in json_data:
         check_for_errors(
             requests.post(
                 os.environ["SHEETBOT_TASK_COMPLETEURL"],
-                headers={**headers, "Content-Type": "application/json"},
-                json={"data": data},
+                headers={**headers, "Content-Type": "application/json", **lease_header},
+                json={"data": data, "leaseId": lease_id},
             )
         )
     except Exception as e:
@@ -162,7 +192,9 @@ if "script" in json_data:
         check_for_errors(
             requests.post(
                 os.environ["SHEETBOT_TASK_FAILEDURL"],
-                headers={**headers, "Content-Type": "application/json"},
-                json={},
+                headers={**headers, "Content-Type": "application/json", **lease_header},
+                json={"leaseId": lease_id},
             )
         )
+    finally:
+        stop_heartbeat.set()

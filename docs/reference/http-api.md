@@ -64,12 +64,13 @@ Send `Authorization: Bearer $TOKEN` on authenticated requests. Most endpoints en
 | `PATCH` | `/tasks/{id}` | `updateTasks` | Update status or fields. |
 | `DELETE` | `/tasks/{id}` | `deleteTasks` | Delete a task. |
 | `POST` | `/tasks/get` | `performTasks` | Poll for a matching task (agents). |
-| `POST` | `/tasks/{id}/accept` | `performTasks` | Mark the task `RUNNING`. |
-| `POST` | `/tasks/{id}/complete` | `performTasks` | Complete with `{ "data": ... }`. |
-| `POST` | `/tasks/{id}/failed` | `performTasks` | Mark the task `FAILED`. |
-| `POST` | `/tasks/{id}/data` | `performTasks` | Merge data into the task. |
+| `POST` | `/tasks/{id}/accept` | `performTasks` | Claim the task atomically and return a lease. |
+| `POST` | `/tasks/{id}/heartbeat` | `performTasks` | Renew the lease on a `RUNNING` task. |
+| `POST` | `/tasks/{id}/complete` | `performTasks` + lease | Complete with `{ "data": ... }`. |
+| `POST` | `/tasks/{id}/failed` | `performTasks` + lease | Mark the task `FAILED`. |
+| `POST` | `/tasks/{id}/data` | `performTasks` + lease | Merge data into the task. |
 | `POST` | `/tasks/{id}/clone` | `createTasks` | Clone a task and its artefacts. |
-| `POST` | `/tasks/{id}/artefacts` | `performTasks` | Upload a file (`multipart/form-data`, field `file`). |
+| `POST` | `/tasks/{id}/artefacts` | `performTasks` + lease | Upload a file (`multipart/form-data`, field `file`). |
 | `GET` | `/tasks/{id}/artefacts/{filename}` | none | Redirect to an artefact; the direct URL needs `viewArtefacts`. |
 | `DELETE` | `/tasks/{id}/artefacts/{filename}` | `deleteTasks` | Delete an artefact. |
 
@@ -98,6 +99,22 @@ curl -X POST "$SHEETBOT_BASEURL/tasks/get" \
 ```
 
 Status values: `0` awaiting, `1` running, `2` completed, `3` failed, `4` paused, `5` deleted.
+
+### Task leases
+
+Accepting a task returns a lease:
+
+```json
+{
+  "leaseId": "…",
+  "leaseExpiresAt": 1790000000000,
+  "heartbeatIntervalMs": 100000
+}
+```
+
+Send the lease as `X-SheetBot-Lease: <leaseId>` or in the JSON body as `"leaseId": "…"` for heartbeat, complete, failed, and data updates. Task artefact URLs returned to the task script include the lease as a query parameter.
+
+A task whose lease expires is returned to `AWAITING`; a stale agent that tries to complete it receives `409`. The lease TTL is controlled by [`SHEETBOT_TASK_LEASE_TTL`](environment-variables.md).
 
 ## Scripts and library
 

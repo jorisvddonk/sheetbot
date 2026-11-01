@@ -75,7 +75,7 @@ import { TransitionTracker } from "./lib/transitiontracker.ts";
 import { requiresLogin, requiresPermission } from "./lib/auth.ts";
 import { UserDB } from "./lib/data_providers/sqlite/userdb.ts";
 import { createLoginHandler, createIndexHandler, createOpenApiHandler } from "./lib/handlers/auth.ts";
-import { createGetTasksHandler, createCreateTaskHandler, createGetTaskHandler, createDeleteTaskHandler, createUpdateTaskHandler, createAcceptTaskHandler, createCompleteTaskHandler, createUpdateTaskDataHandler, createFailTaskHandler, createCloneTaskHandler, createGetTaskToCompleteHandler, createUploadArtefactHandler, createGetArtefactHandler, createDeleteArtefactHandler as createDeleteTaskArtefactHandler } from "./lib/handlers/tasks.ts";
+import { createGetTasksHandler, createCreateTaskHandler, createGetTaskHandler, createDeleteTaskHandler, createUpdateTaskHandler, createAcceptTaskHandler, createHeartbeatTaskHandler, createCompleteTaskHandler, createUpdateTaskDataHandler, createFailTaskHandler, createCloneTaskHandler, createGetTaskToCompleteHandler, createUploadArtefactHandler, createGetArtefactHandler, createDeleteArtefactHandler as createDeleteTaskArtefactHandler } from "./lib/handlers/tasks.ts";
 import { createGetLibraryHandler } from "./lib/handlers/library.ts";
 import { createGetTaskTrackerHandler, createGetAgentTrackerHandler, createGetTransitionTrackerHandler } from "./lib/handlers/tracker.ts";
 import { createGetAgentTemplateHandler, createGetTaskScriptHandler } from "./lib/handlers/scripts.ts";
@@ -373,6 +373,9 @@ app.patch("/tasks/:id", requiresLogin, requiresPermission("updateTasks"), create
 
 // POST /tasks/:id/accept - Marks a task as accepted and changes its status to RUNNING
 app.post("/tasks/:id/accept", requiresLogin, requiresPermission("performTasks"), createAcceptTaskHandler(db, transitionTracker, taskEventEmitter));
+
+// POST /tasks/:id/heartbeat - Renews the agent's lease on a RUNNING task
+app.post("/tasks/:id/heartbeat", requiresLogin, requiresPermission("performTasks"), createHeartbeatTaskHandler(db));
 
 // POST /tasks/:id/complete - Marks a task as completed with the provided result data
 app.post("/tasks/:id/complete", requiresLogin, requiresPermission("performTasks"), ...createCompleteTaskHandler(db, transitionTracker, taskTrackingMiddleware, taskEventEmitter));

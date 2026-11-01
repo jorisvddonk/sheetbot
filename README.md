@@ -168,7 +168,7 @@ See [Extensibility](docs/explanation/extensibility.md) for key extension points 
 - `npm run docs:serve` — preview the docs locally.
 - `formal/check.sh` — run the TLA+ models (requires Java 17+).
 
-CI runs type checking, unit tests, and the formal models. The tests cover atomic task claiming; the [formal models](formal/) cover the task lifecycle, lease reclamation, and transition scheduling, including a reproducible double-accept counterexample.
+CI runs type checking, unit tests, and the formal models. The tests cover atomic task claiming, lease renewal, expiry reclamation, and stale-lease rejection; the [formal models](formal/) cover the task lifecycle, lease reclamation, and transition scheduling, including a reproducible double-accept counterexample.
 
 ## Project Structure
 

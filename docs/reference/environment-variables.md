@@ -10,7 +10,8 @@ SheetBot reads environment variables at startup. Restart the server after changi
 | `SHEETBOT_HTTPS_PORT` | `443` | HTTPS port, used when `key.pem` and `cert.pem` exist. Overridden by `--https-port`/`-P`. |
 | `NODE_ENV` | unset | Set to `production` in deployments. |
 | `SHEETBOT_WIDGET_CACHE_TTL` | `5` | Minutes to cache `/widgets.json`. `0` disables caching. |
-| `SHEETBOT_STALE_RUNNING_TIMEOUT` | `6h` | Requeue `RUNNING` tasks whose `lastRunAt` is older than this duration. Set `0` to disable the watchdog. |
+| `SHEETBOT_STALE_RUNNING_TIMEOUT` | `6h` | Requeue legacy `RUNNING` tasks without a lease whose `lastRunAt` is older than this duration. Set `0` to disable the watchdog. |
+| `SHEETBOT_TASK_LEASE_TTL` | `5m` | Lifetime of an agent task lease. Agents heartbeat at one third of this interval; expired leases are reclaimed. |
 
 ## Search paths
 
@@ -49,8 +50,10 @@ These are read by agent templates and task scripts. They are not server settings
 | `SHEETBOT_TASK_ACCEPTURL` | Injected: accept endpoint. |
 | `SHEETBOT_TASK_COMPLETEURL` | Injected: complete endpoint. |
 | `SHEETBOT_TASK_FAILEDURL` | Injected: fail endpoint. |
-| `SHEETBOT_TASK_DATAURL` | Injected: update task data. |
-| `SHEETBOT_TASK_ARTEFACTURL` | Injected: upload task artefacts. |
+| `SHEETBOT_TASK_DATAURL` | Injected: update task data. Includes the lease query parameter for leased tasks. |
+| `SHEETBOT_TASK_ARTEFACTURL` | Injected: upload task artefacts. Includes the lease query parameter for leased tasks. |
+| `SHEETBOT_TASK_LEASE_ID` | Injected: current task lease token. |
+| `SHEETBOT_TASK_HEARTBEATURL` | Injected: lease renewal endpoint. |
 
 Example for an agent:
 

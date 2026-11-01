@@ -6,8 +6,12 @@ import { TransitionTracker } from "../transitiontracker.ts";
 import { TaskEventEmitter } from "../task-events.ts";
 import { createTaskTrackingMiddleware } from "../task-tracking-middleware.ts";
 import { createAgentTrackingMiddleware } from "../agent-tracking-middleware.ts";
-import { taskify, addTask, getTasks, getTask, updateTaskStatus, claimTask, deleteTask, updateTaskData, getTaskToComplete, checkTransitions, updateTaskAddArtefact, updateTaskRemoveArtefact } from "../tasks.ts";
+import { taskify, addTask, getTasks, getTask, updateTaskStatus, claimTask, renewLease, updateTaskDataWithLease, completeTaskWithLease, failTaskWithLease, getTaskLeaseTtlMs, getHeartbeatIntervalMs, deleteTask, getTaskToComplete, checkTransitions, updateTaskAddArtefact, updateTaskRemoveArtefact } from "../tasks.ts";
 import { TaskStatus } from "../models.ts";
+
+function extractLeaseId(req: any): string | undefined {
+    return req.header?.("X-SheetBot-Lease") || req.body?.leaseId || req.query?.leaseId;
+}
 
 const VALID_TASK_STATUSES = [
     TaskStatus.AWAITING,
@@ -221,12 +225,36 @@ export function createUpdateTaskHandler(db: DatabaseSync, transitionTracker: Tra
  */
 export function createAcceptTaskHandler(db: DatabaseSync, transitionTracker: TransitionTracker, taskEventEmitter?: TaskEventEmitter) {
     return (req: any, res: any) => {
-        if (claimTask(db, transitionTracker, req.params.id, taskEventEmitter)) {
-            res.json({});
+        const owner = req.header?.("X-SheetBot-Agent-Id") || req.ip || "unknown";
+        const claim = claimTask(db, transitionTracker, req.params.id, taskEventEmitter, {
+            owner,
+            leaseTtlMs: getTaskLeaseTtlMs()
+        });
+        if (claim) {
+            res.json(claim);
         } else {
-            res.status(404);
-            res.send();
+            res.status(409).json({ error: "Task is no longer available" });
         }
+    };
+}
+
+export function createHeartbeatTaskHandler(db: DatabaseSync) {
+    return (req: any, res: any) => {
+        const leaseId = extractLeaseId(req);
+        const leaseTtlMs = getTaskLeaseTtlMs();
+        const leaseExpiresAt = leaseId
+            ? renewLease(db, req.params.id, leaseId, leaseTtlMs)
+            : null;
+
+        if (!leaseExpiresAt) {
+            res.status(409).json({ error: "Lease is no longer valid" });
+            return;
+        }
+
+        res.json({
+            leaseExpiresAt,
+            heartbeatIntervalMs: getHeartbeatIntervalMs(leaseTtlMs)
+        });
     };
 }
 
@@ -242,16 +270,18 @@ export function createCompleteTaskHandler(db: DatabaseSync, transitionTracker: T
     return [
         taskTrackingMiddleware.onTaskCompleted,
         (req: any, res: any) => {
-            const task = getTask(db, req.params.id, TaskStatus.RUNNING);
-            if (task) {
-                updateTaskData(db, task.id, req.body.data, taskEventEmitter);
-                updateTaskStatus(db, transitionTracker, task.id, TaskStatus.COMPLETED, taskEventEmitter);
-
+            if (completeTaskWithLease(
+                db,
+                transitionTracker,
+                req.params.id,
+                extractLeaseId(req),
+                req.body.data,
+                taskEventEmitter
+            )) {
                 res.json({});
                 console.log(`Task ${req.params.id} completed with data ${JSON.stringify(req.body.data)}`);
             } else {
-                res.status(404);
-                res.send();
+                res.status(409).json({ error: "Task is no longer owned by this agent" });
             }
         }
     ];
@@ -265,14 +295,17 @@ export function createCompleteTaskHandler(db: DatabaseSync, transitionTracker: T
  */
 export function createUpdateTaskDataHandler(db: DatabaseSync, taskEventEmitter?: TaskEventEmitter) {
     return (req: any, res: any) => {
-        const task = getTask(db, req.params.id);
-        if (task) {
+        if (updateTaskDataWithLease(
+            db,
+            req.params.id,
+            req.body.data,
+            extractLeaseId(req),
+            taskEventEmitter
+        )) {
             res.json({});
             console.log(`Adding data to task ${req.params.id}: ${JSON.stringify(req.body.data)}`);
-            updateTaskData(db, task.id, req.body.data, taskEventEmitter);
         } else {
-            res.status(404);
-            res.send();
+            res.status(409).json({ error: "Task is no longer owned by this agent" });
         }
     };
 }
@@ -289,14 +322,16 @@ export function createFailTaskHandler(db: DatabaseSync, transitionTracker: Trans
     return [
         taskTrackingMiddleware.onTaskFailed,
         (req: any, res: any) => {
-            const task = getTask(db, req.params.id, TaskStatus.RUNNING);
-            if (task) {
-                updateTaskStatus(db, transitionTracker, task.id, TaskStatus.FAILED, taskEventEmitter);
-
+            if (failTaskWithLease(
+                db,
+                transitionTracker,
+                req.params.id,
+                extractLeaseId(req),
+                taskEventEmitter
+            )) {
                 res.json({});
             } else {
-                res.status(404);
-                res.send();
+                res.status(409).json({ error: "Task is no longer owned by this agent" });
             }
         }
     ];
@@ -368,6 +403,13 @@ export function createUploadArtefactHandler(db: DatabaseSync, taskEventEmitter?:
         async (req: any, res: any) => {
             const task = getTask(db, req.params.id);
             if (task) {
+                if (task.status !== TaskStatus.RUNNING || (task.leaseId && task.leaseId !== extractLeaseId(req))) {
+                    if (req.file?.path) {
+                        await Deno.remove(req.file.path).catch(() => {});
+                    }
+                    res.status(409).json({ error: "Task is no longer owned by this agent" });
+                    return;
+                }
                 const dirpath = `./artefacts/tasks/${req.params.id}`;
                 await Deno.mkdir(dirpath, { recursive: true });
                 await Deno.rename(req.file.path, `${dirpath}/${req.file.originalname}`);

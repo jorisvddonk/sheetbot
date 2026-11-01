@@ -36,11 +36,13 @@ export async function getArtefacts(taskid?: string) {
 }
 
 export async function submitData(data, taskid?: string) {
+    const leaseId = Deno.env.get("SHEETBOT_TASK_LEASE_ID");
     const res = await fetch(taskid === undefined ? Deno.env.get("SHEETBOT_TASK_DATAURL") : `${Deno.env.get("SHEETBOT_BASEURL")!}/tasks/${taskid}/data`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'Authorization': Deno.env.get("SHEETBOT_AUTHORIZATION_HEADER")
+            'Authorization': Deno.env.get("SHEETBOT_AUTHORIZATION_HEADER"),
+            ...(leaseId ? { 'X-SheetBot-Lease': leaseId } : {})
         },
         body: JSON.stringify({ data })
     });
@@ -56,7 +58,8 @@ export async function uploadArtefact(filename, file: Uint8Array, taskid?: string
         method: "POST",
         body,
         headers: {
-            'Authorization': Deno.env.get("SHEETBOT_AUTHORIZATION_HEADER")
+            'Authorization': Deno.env.get("SHEETBOT_AUTHORIZATION_HEADER"),
+            ...(Deno.env.get("SHEETBOT_TASK_LEASE_ID") ? { 'X-SheetBot-Lease': Deno.env.get("SHEETBOT_TASK_LEASE_ID")! } : {})
         }
     }).then(checkError).then(res => res.json());
 }

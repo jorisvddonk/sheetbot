@@ -41,11 +41,13 @@ export async function getArtefacts(taskid) {
 
 export async function submitData(data, taskid) {
   const url = taskid === undefined ? process.env.SHEETBOT_TASK_DATAURL : `${process.env.SHEETBOT_BASEURL}/tasks/${taskid}/data`;
+  const leaseId = process.env.SHEETBOT_TASK_LEASE_ID;
   const res = await fetch(url, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Authorization: process.env.SHEETBOT_AUTHORIZATION_HEADER,
+      ...(leaseId ? { "X-SheetBot-Lease": leaseId } : {}),
     },
     body: JSON.stringify({ data }),
   });
@@ -58,10 +60,14 @@ export async function uploadArtefact(filename, file, taskid) {
   const blob = new Blob([file]);
   body.set("file", blob, filename);
   const url = taskid === undefined ? process.env.SHEETBOT_TASK_ARTEFACTURL : `${process.env.SHEETBOT_BASEURL}/tasks/${taskid}/artefacts`;
+  const leaseId = process.env.SHEETBOT_TASK_LEASE_ID;
   const res = await fetch(url, {
     method: "POST",
     body,
-    headers: { Authorization: process.env.SHEETBOT_AUTHORIZATION_HEADER },
+    headers: {
+      Authorization: process.env.SHEETBOT_AUTHORIZATION_HEADER,
+      ...(leaseId ? { "X-SheetBot-Lease": leaseId } : {}),
+    },
   });
   checkError(res);
   return res.json();

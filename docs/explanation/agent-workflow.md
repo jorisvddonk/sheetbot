@@ -20,9 +20,11 @@ Agents poll for tasks based on their type and capabilities. SheetBot provides te
 Workflow:
 1. Poll `/tasks/get` with agent type and capabilities
 2. Receive task script URL if available
-3. Accept task via `/tasks/:id/accept`
-4. Execute script (dependencies injected as `__DEP_RESULT_<taskId>__`)
-5. Report completion via `/tasks/:id/complete` with result data
+3. Accept task via `/tasks/:id/accept` and receive a lease
+4. Execute script while renewing the lease via `/tasks/:id/heartbeat`
+5. Report completion via `/tasks/:id/complete` with result data and the lease
+
+A task whose lease expires is returned to `AWAITING`. Completion, failure, data updates, and task artefact uploads from an old lease are rejected with `409`.
 
 Node.js tasks are executed as temporary files. Node's strip-only TypeScript mode does not support network imports, so Node task scripts must be self-contained or use `fetch` for remote data.
 

@@ -10,7 +10,7 @@ if (!Deno.env.has("SHEETBOT_BASEURL")) {
   SHEETBOT_BASEURL = Deno.env.get("SHEETBOT_BASEURL");
 }
 
-async function checkForErrors(responsePromise) {
+async function checkForErrors(responsePromise: Promise<Response>): Promise<Response> {
   const response = await responsePromise;
   if (response.status === 401) {
     throw new Error("Unauthenticated");
@@ -24,7 +24,7 @@ async function checkForErrors(responsePromise) {
   return response;
 }
 
-let headers = {};
+let headers: Record<string, string> = {};
 if (Deno.env.has("SHEETBOT_AUTH_APIKEY")) {
     const authr = await fetch(SHEETBOT_BASEURL + "/login", {
       method: "POST",
@@ -134,15 +134,11 @@ const json = await response.json();
     SHEETBOT_BASEURL + "/tasks/" + json.id + "/failed",
   );
   Deno.env.set(
-    "SHEETBOT_TASK_DATAURL",
-    SHEETBOT_BASEURL + "/tasks/" + json.id + "/data",
-  );
-  Deno.env.set(
-    "SHEETBOT_TASK_ARTEFACTURL",
-    SHEETBOT_BASEURL + "/tasks/" + json.id + "/artefacts",
+    "SHEETBOT_TASK_HEARTBEATURL",
+    SHEETBOT_BASEURL + "/tasks/" + json.id + "/heartbeat",
   );
 
-  await checkForErrors(fetch(Deno.env.get("SHEETBOT_TASK_ACCEPTURL")!, {
+  const acceptResponse = await checkForErrors(fetch(Deno.env.get("SHEETBOT_TASK_ACCEPTURL")!, {
     method: "POST",
     headers: {
       ...headers,
@@ -150,6 +146,39 @@ const json = await response.json();
     },
     body: JSON.stringify({}),
   }));
+  const lease = await acceptResponse.json();
+  const leaseQuery = lease.leaseId ? "?leaseId=" + encodeURIComponent(lease.leaseId) : "";
+  const leaseHeader = lease.leaseId ? { "X-SheetBot-Lease": lease.leaseId } : {};
+
+  Deno.env.set("SHEETBOT_TASK_LEASE_ID", lease.leaseId || "");
+  Deno.env.set(
+    "SHEETBOT_TASK_DATAURL",
+    SHEETBOT_BASEURL + "/tasks/" + json.id + "/data" + leaseQuery,
+  );
+  Deno.env.set(
+    "SHEETBOT_TASK_ARTEFACTURL",
+    SHEETBOT_BASEURL + "/tasks/" + json.id + "/artefacts" + leaseQuery,
+  );
+
+  let heartbeat: number | undefined;
+  if (lease.leaseId) {
+    heartbeat = setInterval(async () => {
+      try {
+        await fetch(Deno.env.get("SHEETBOT_TASK_HEARTBEATURL")!, {
+          method: "POST",
+          headers: {
+            ...headers,
+            "Content-Type": "application/json",
+            ...leaseHeader,
+          },
+          body: JSON.stringify({ leaseId: lease.leaseId }),
+        });
+      } catch (e) {
+        // A later completion/failure request will surface a lost lease.
+      }
+    }, lease.heartbeatIntervalMs || 60_000);
+  }
+
   try {
     const data = await import(json.script);
     await checkForErrors(fetch(Deno.env.get("SHEETBOT_TASK_COMPLETEURL")!, {
@@ -157,8 +186,9 @@ const json = await response.json();
       headers: {
         ...headers,
         "Content-Type": "application/json",
+        ...leaseHeader,
       },
-      body: JSON.stringify({ data: data }),
+      body: JSON.stringify({ data: data, leaseId: lease.leaseId }),
     }));
   } catch (e) {
     console.error(e);
@@ -167,8 +197,13 @@ const json = await response.json();
       headers: {
         ...headers,
         "Content-Type": "application/json",
+        ...leaseHeader,
       },
-      body: JSON.stringify({}),
+      body: JSON.stringify({ leaseId: lease.leaseId }),
     }));
+  } finally {
+    if (heartbeat !== undefined) {
+      clearInterval(heartbeat);
+    }
   }
 }

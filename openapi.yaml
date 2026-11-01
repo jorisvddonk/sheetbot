@@ -93,8 +93,8 @@ components:
           description: Array of timed status transitions for the task
         type:
           type: string
-          enum: ["deno", "python", "bash"]
           description: Execution environment type
+          enum: ["deno", "node", "javascript", "js", "typescript", "ts", "python", "bash"]
         capabilitiesSchema:
           type: object
           description: JSON Schema for agent capability requirements
@@ -102,6 +102,18 @@ components:
           type: integer
           nullable: true
           description: Timestamp (ms since epoch) when the task last started RUNNING; null if never run
+        owner:
+          type: string
+          nullable: true
+          description: Agent that currently holds the task lease
+        leaseId:
+          type: string
+          nullable: true
+          description: Lease token for the current RUNNING claim
+        leaseExpiresAt:
+          type: integer
+          nullable: true
+          description: Timestamp (ms since epoch) when the current lease expires
       required:
         - id
         - script
@@ -140,8 +152,8 @@ components:
               description: Capability schema object
         type:
           type: string
-          enum: ["deno", "python", "bash"]
           description: Execution environment type
+          enum: ["deno", "node", "javascript", "js", "typescript", "ts", "python", "bash"]
         transitions:
           type: array
           items:
@@ -221,6 +233,9 @@ components:
         data:
           type: object
           description: Result data to merge into task data
+        leaseId:
+          type: string
+          description: Lease token returned by the accept endpoint
 
     TaskDataUpdate:
       type: object
@@ -228,6 +243,9 @@ components:
         data:
           type: object
           description: Data to merge into task data
+        leaseId:
+          type: string
+          description: Lease token returned by the accept endpoint
 
     LoginRequest:
       type: object
@@ -907,11 +925,19 @@ paths:
         - bearerAuth: []
       responses:
         '200':
-          description: Task accepted successfully
+          description: Task accepted successfully; the lease proves ownership
           content:
             application/json:
               schema:
                 type: object
+                required: [leaseId, leaseExpiresAt, heartbeatIntervalMs]
+                properties:
+                  leaseId:
+                    type: string
+                  leaseExpiresAt:
+                    type: integer
+                  heartbeatIntervalMs:
+                    type: integer
         '401':
           description: Unauthorized
           content:
@@ -924,8 +950,58 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-        '404':
-          description: Task not found or not in AWAITING status
+        '409':
+          description: Task is no longer AWAITING
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /tasks/{id}/heartbeat:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Task ID
+      - name: X-SheetBot-Lease
+        in: header
+        required: false
+        schema:
+          type: string
+        description: Lease token returned by accept
+
+    post:
+      summary: Renew a task lease
+      description: Extend the lease on a RUNNING task owned by this agent
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                leaseId:
+                  type: string
+      responses:
+        '200':
+          description: Lease renewed
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [leaseExpiresAt, heartbeatIntervalMs]
+                properties:
+                  leaseExpiresAt:
+                    type: integer
+                  heartbeatIntervalMs:
+                    type: integer
+        '409':
+          description: Lease is no longer valid
           content:
             application/json:
               schema:
@@ -972,6 +1048,12 @@ paths:
                 $ref: '#/components/schemas/Error'
         '404':
           description: Task not found or not in RUNNING status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Task lease is missing, expired, or owned by another agent
           content:
             application/json:
               schema:
@@ -1023,6 +1105,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '409':
+          description: Task lease is missing, expired, or owned by another agent
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
   /tasks/{id}/failed:
     parameters:
@@ -1060,6 +1148,12 @@ paths:
                 $ref: '#/components/schemas/Error'
         '404':
           description: Task not found or not in RUNNING status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Task lease is missing, expired, or owned by another agent
           content:
             application/json:
               schema:

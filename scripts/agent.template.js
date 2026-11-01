@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
-const { spawnSync } = require("node:child_process");
+const { spawn } = require("node:child_process");
 const { pathToFileURL } = require("node:url");
 
 async function main() {
@@ -108,12 +108,37 @@ async function main() {
     process.env.SHEETBOT_TASK_FAILEDURL = SHEETBOT_BASEURL + "/tasks/" + json.id + "/failed";
     process.env.SHEETBOT_TASK_DATAURL = SHEETBOT_BASEURL + "/tasks/" + json.id + "/data";
     process.env.SHEETBOT_TASK_ARTEFACTURL = SHEETBOT_BASEURL + "/tasks/" + json.id + "/artefacts";
+    process.env.SHEETBOT_TASK_HEARTBEATURL = SHEETBOT_BASEURL + "/tasks/" + json.id + "/heartbeat";
 
-    await checkForErrors(fetch(process.env.SHEETBOT_TASK_ACCEPTURL, {
+    const acceptResponse = await checkForErrors(fetch(process.env.SHEETBOT_TASK_ACCEPTURL, {
       method: "POST",
       headers: { ...headers, "Content-Type": "application/json" },
       body: JSON.stringify({}),
     }));
+    const lease = await acceptResponse.json();
+    const leaseId = lease.leaseId;
+    const heartbeatIntervalMs = lease.heartbeatIntervalMs || 60_000;
+    const leaseHeader = leaseId ? { "X-SheetBot-Lease": leaseId } : {};
+    const leaseQuery = leaseId ? "?leaseId=" + encodeURIComponent(leaseId) : "";
+
+    process.env.SHEETBOT_TASK_LEASE_ID = leaseId || "";
+    process.env.SHEETBOT_TASK_DATAURL += leaseQuery;
+    process.env.SHEETBOT_TASK_ARTEFACTURL += leaseQuery;
+
+    let heartbeat = null;
+    if (leaseId) {
+      heartbeat = setInterval(async () => {
+        try {
+          await fetch(process.env.SHEETBOT_TASK_HEARTBEATURL, {
+            method: "POST",
+            headers: { ...headers, "Content-Type": "application/json", ...leaseHeader },
+            body: JSON.stringify({ leaseId }),
+          });
+        } catch (e) {
+          // A later completion/failure request will surface a lost lease.
+        }
+      }, heartbeatIntervalMs);
+    }
 
     let failed = false;
     try {
@@ -128,13 +153,16 @@ async function main() {
         const nodeArgs = ext === ".ts"
           ? ["--experimental-sqlite", "--experimental-strip-types", tmpFile]
           : [tmpFile];
-        const result = spawnSync(process.execPath, nodeArgs, {
-          env: process.env,
-          encoding: "utf8",
-          stdio: "inherit",
+        const result = await new Promise((resolve, reject) => {
+          const child = spawn(process.execPath, nodeArgs, {
+            env: process.env,
+            stdio: "inherit",
+          });
+          child.on("error", reject);
+          child.on("exit", (code, signal) => resolve({ status: code ?? 1, signal }));
         });
         if (result.status !== 0) {
-          throw new Error((result.stderr || "") || "task failed with exit code " + result.status);
+          throw new Error("task failed with exit code " + result.status);
         }
       } finally {
         try { fs.rmSync(tmpFile, { force: true }); } catch (e) {}
@@ -144,18 +172,22 @@ async function main() {
       failed = true;
     }
 
-    if (failed) {
-      await checkForErrors(fetch(process.env.SHEETBOT_TASK_FAILEDURL, {
-        method: "POST",
-        headers: { ...headers, "Content-Type": "application/json" },
-        body: JSON.stringify({}),
-      }));
-    } else {
-      await checkForErrors(fetch(process.env.SHEETBOT_TASK_COMPLETEURL, {
-        method: "POST",
-        headers: { ...headers, "Content-Type": "application/json" },
-        body: JSON.stringify({ data: {} }),
-      }));
+    try {
+      if (failed) {
+        await checkForErrors(fetch(process.env.SHEETBOT_TASK_FAILEDURL, {
+          method: "POST",
+          headers: { ...headers, "Content-Type": "application/json", ...leaseHeader },
+          body: JSON.stringify({ leaseId }),
+        }));
+      } else {
+        await checkForErrors(fetch(process.env.SHEETBOT_TASK_COMPLETEURL, {
+          method: "POST",
+          headers: { ...headers, "Content-Type": "application/json", ...leaseHeader },
+          body: JSON.stringify({ data: {}, leaseId }),
+        }));
+      }
+    } finally {
+      if (heartbeat) clearInterval(heartbeat);
     }
   }
 }

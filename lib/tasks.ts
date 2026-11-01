@@ -7,6 +7,23 @@ import { TaskEventEmitter } from "./task-events.ts";
 
 const ajv = new (Ajv as any)();
 
+export const DEFAULT_TASK_LEASE_TTL_MS = 5 * 60 * 1000;
+
+export function getTaskLeaseTtlMs(): number {
+    const raw = typeof Deno !== "undefined"
+        ? Deno.env.get("SHEETBOT_TASK_LEASE_TTL")
+        : process.env.SHEETBOT_TASK_LEASE_TTL;
+    if (!raw) {
+        return DEFAULT_TASK_LEASE_TTL_MS;
+    }
+    const parsed = parseDuration(raw);
+    return parsed > 0 ? parsed : DEFAULT_TASK_LEASE_TTL_MS;
+}
+
+export function getHeartbeatIntervalMs(leaseTtlMs: number): number {
+    return Math.max(1000, Math.floor(leaseTtlMs / 3));
+}
+
 export function taskify(script: string): Task {
     return {
         id: crypto.randomUUID(),
@@ -156,14 +173,14 @@ export function checkTransitions(db: DatabaseSync, transitionTracker: Transition
 export function updateTaskStatus(db: DatabaseSync, transitionTracker: TransitionTracker, taskId: string, status: TaskStatus, eventEmitter?: TaskEventEmitter) {
     const task = getTask(db, taskId);
     const oldStatus = task?.status;
-    
+
     if (status === TaskStatus.RUNNING) {
         // Record when the task was picked up for execution. This drives fair
         // scheduling in getTaskToComplete() so recurring tasks can't starve others.
-        const stmt = db.prepare("UPDATE tasks SET status = ?, lastRunAt = ? WHERE id = ?");
+        const stmt = db.prepare("UPDATE tasks SET status = ?, lastRunAt = ?, owner = NULL, leaseId = NULL, leaseExpiresAt = NULL WHERE id = ?");
         stmt.run(status, Date.now(), taskId);
     } else {
-        const stmt = db.prepare("UPDATE tasks SET status = ? WHERE id = ?");
+        const stmt = db.prepare("UPDATE tasks SET status = ?, owner = NULL, leaseId = NULL, leaseExpiresAt = NULL WHERE id = ?");
         stmt.run(status, taskId);
     }
 
@@ -179,23 +196,49 @@ export function updateTaskStatus(db: DatabaseSync, transitionTracker: Transition
     }
 }
 
+export interface ClaimResult {
+    leaseId: string;
+    leaseExpiresAt: number;
+    heartbeatIntervalMs: number;
+}
+
 /**
- * Atomically claim an AWAITING task for execution.
+ * Atomically claim an AWAITING task and issue a lease.
  *
  * The status check and the RUNNING update happen in one SQL statement, so two
  * agents racing on the same task cannot both observe AWAITING and then both
  * overwrite it with RUNNING. The loser sees changes = 0 and must treat the
  * task as already claimed.
- *
- * @returns true if this caller claimed the task, false otherwise
  */
-export function claimTask(db: DatabaseSync, transitionTracker: TransitionTracker, taskId: string, eventEmitter?: TaskEventEmitter): boolean {
-    const now = Date.now();
-    const stmt = db.prepare("UPDATE tasks SET status = ?, lastRunAt = ? WHERE id = ? AND status = ?");
-    const result = stmt.run(TaskStatus.RUNNING, now, taskId, TaskStatus.AWAITING);
+export function claimTask(
+    db: DatabaseSync,
+    transitionTracker: TransitionTracker,
+    taskId: string,
+    eventEmitter?: TaskEventEmitter,
+    options: { owner?: string | null; leaseTtlMs?: number; now?: number } = {}
+): ClaimResult | null {
+    const now = options.now ?? Date.now();
+    const leaseTtlMs = options.leaseTtlMs && options.leaseTtlMs > 0
+        ? options.leaseTtlMs
+        : getTaskLeaseTtlMs();
+    const leaseId = crypto.randomUUID();
+    const leaseExpiresAt = now + leaseTtlMs;
+
+    const stmt = db.prepare(
+        "UPDATE tasks SET status = ?, lastRunAt = ?, owner = ?, leaseId = ?, leaseExpiresAt = ? WHERE id = ? AND status = ?"
+    );
+    const result = stmt.run(
+        TaskStatus.RUNNING,
+        now,
+        options.owner ?? null,
+        leaseId,
+        leaseExpiresAt,
+        taskId,
+        TaskStatus.AWAITING
+    );
 
     if (result.changes !== 1) {
-        return false;
+        return null;
     }
 
     const updatedTask = getTask(db, taskId);
@@ -206,7 +249,209 @@ export function claimTask(db: DatabaseSync, transitionTracker: TransitionTracker
         checkTransitions(db, transitionTracker, updatedTask, eventEmitter);
     }
 
+    return {
+        leaseId,
+        leaseExpiresAt,
+        heartbeatIntervalMs: getHeartbeatIntervalMs(leaseTtlMs)
+    };
+}
+
+export function renewLease(
+    db: DatabaseSync,
+    taskId: string,
+    leaseId: string,
+    leaseTtlMs: number = getTaskLeaseTtlMs(),
+    now: number = Date.now()
+): number | null {
+    if (!leaseId || leaseTtlMs <= 0) {
+        return null;
+    }
+
+    const leaseExpiresAt = now + leaseTtlMs;
+    const result = db.prepare(
+        "UPDATE tasks SET leaseExpiresAt = ? WHERE id = ? AND status = ? AND leaseId = ?"
+    ).run(leaseExpiresAt, taskId, TaskStatus.RUNNING, leaseId);
+
+    return result.changes === 1 ? leaseExpiresAt : null;
+}
+
+function leaseMatches(task: Task, leaseId?: string): boolean {
+    // Tasks that were already RUNNING before leases were introduced have no
+    // lease. Keep them completable while the watchdog ages them out.
+    return !task.leaseId || task.leaseId === leaseId;
+}
+
+export function updateTaskDataWithLease(
+    db: DatabaseSync,
+    taskId: string,
+    data: Record<string, unknown>,
+    leaseId: string | undefined,
+    eventEmitter?: TaskEventEmitter
+): boolean {
+    const task = getTask(db, taskId);
+    if (!task || task.status !== TaskStatus.RUNNING || !leaseMatches(task, leaseId)) {
+        return false;
+    }
+
+    if (!task.leaseId) {
+        updateTaskData(db, taskId, data, eventEmitter);
+        return true;
+    }
+
+    const mergedData = { ...task.data, ...data };
+    const result = db.prepare(
+        "UPDATE tasks SET data = ? WHERE id = ? AND status = ? AND leaseId = ?"
+    ).run(JSON.stringify(mergedData), taskId, TaskStatus.RUNNING, leaseId);
+
+    if (result.changes !== 1) {
+        return false;
+    }
+
+    task.data = mergedData;
+    eventEmitter?.emitTaskChanged(task, { data });
     return true;
+}
+
+export function completeTaskWithLease(
+    db: DatabaseSync,
+    transitionTracker: TransitionTracker,
+    taskId: string,
+    leaseId: string | undefined,
+    data: Record<string, unknown> | undefined,
+    eventEmitter?: TaskEventEmitter
+): boolean {
+    const task = getTask(db, taskId);
+    if (!task || task.status !== TaskStatus.RUNNING || !leaseMatches(task, leaseId)) {
+        return false;
+    }
+
+    // Legacy task started before leases existed.
+    if (!task.leaseId) {
+        if (data) {
+            updateTaskData(db, taskId, data, eventEmitter);
+        }
+        updateTaskStatus(db, transitionTracker, taskId, TaskStatus.COMPLETED, eventEmitter);
+        return true;
+    }
+
+    db.exec("BEGIN IMMEDIATE");
+    try {
+        const current = getTask(db, taskId);
+        if (!current || current.status !== TaskStatus.RUNNING || current.leaseId !== leaseId) {
+            db.exec("ROLLBACK");
+            return false;
+        }
+
+        const mergedData = { ...current.data, ...(data || {}) };
+        const dataResult = db.prepare(
+            "UPDATE tasks SET data = ? WHERE id = ? AND status = ? AND leaseId = ?"
+        ).run(JSON.stringify(mergedData), taskId, TaskStatus.RUNNING, leaseId);
+        if (dataResult.changes !== 1) {
+            db.exec("ROLLBACK");
+            return false;
+        }
+
+        const statusResult = db.prepare(
+            "UPDATE tasks SET status = ?, owner = NULL, leaseId = NULL, leaseExpiresAt = NULL WHERE id = ? AND status = ? AND leaseId = ?"
+        ).run(TaskStatus.COMPLETED, taskId, TaskStatus.RUNNING, leaseId);
+        if (statusResult.changes !== 1) {
+            db.exec("ROLLBACK");
+            return false;
+        }
+
+        db.exec("COMMIT");
+        const updatedTask = getTask(db, taskId);
+        if (updatedTask) {
+            updatedTask.status = TaskStatus.COMPLETED;
+            eventEmitter?.emitTaskStatusChanged(updatedTask, TaskStatus.RUNNING, TaskStatus.COMPLETED);
+            eventEmitter?.emitTaskChanged(updatedTask, { data: mergedData });
+            eventEmitter?.emitTaskChanged(updatedTask, { status: TaskStatus.COMPLETED });
+            checkTransitions(db, transitionTracker, updatedTask, eventEmitter);
+        }
+        return true;
+    } catch (e) {
+        try { db.exec("ROLLBACK"); } catch (_) { /* already rolled back */ }
+        return false;
+    }
+}
+
+export function failTaskWithLease(
+    db: DatabaseSync,
+    transitionTracker: TransitionTracker,
+    taskId: string,
+    leaseId: string | undefined,
+    eventEmitter?: TaskEventEmitter
+): boolean {
+    const task = getTask(db, taskId);
+    if (!task || task.status !== TaskStatus.RUNNING || !leaseMatches(task, leaseId)) {
+        return false;
+    }
+
+    if (!task.leaseId) {
+        updateTaskStatus(db, transitionTracker, taskId, TaskStatus.FAILED, eventEmitter);
+        return true;
+    }
+
+    const result = db.prepare(
+        "UPDATE tasks SET status = ?, owner = NULL, leaseId = NULL, leaseExpiresAt = NULL WHERE id = ? AND status = ? AND leaseId = ?"
+    ).run(TaskStatus.FAILED, taskId, TaskStatus.RUNNING, leaseId);
+
+    if (result.changes !== 1) {
+        return false;
+    }
+
+    const updatedTask = getTask(db, taskId);
+    if (updatedTask) {
+        updatedTask.status = TaskStatus.FAILED;
+        eventEmitter?.emitTaskStatusChanged(updatedTask, TaskStatus.RUNNING, TaskStatus.FAILED);
+        eventEmitter?.emitTaskChanged(updatedTask, { status: TaskStatus.FAILED });
+        checkTransitions(db, transitionTracker, updatedTask, eventEmitter);
+    }
+    return true;
+}
+
+/**
+ * Requeue RUNNING tasks whose lease has expired.
+ *
+ * The conditional update is important: a heartbeat or completion may win the
+ * race, in which case the task must not be reclaimed.
+ */
+export function reclaimExpiredLeases(
+    db: DatabaseSync,
+    transitionTracker: TransitionTracker,
+    eventEmitter?: TaskEventEmitter,
+    now: number = Date.now()
+): number {
+    const rows = db.prepare(
+        "SELECT * FROM tasks WHERE status = ? AND leaseExpiresAt IS NOT NULL AND leaseExpiresAt <= ?"
+    ).all(TaskStatus.RUNNING, now) as any[];
+
+    let reclaimed = 0;
+    for (const row of rows) {
+        const task = parseOneSQLTask(row);
+        if (!task || !task.leaseId) {
+            continue;
+        }
+
+        const result = db.prepare(
+            "UPDATE tasks SET status = ?, owner = NULL, leaseId = NULL, leaseExpiresAt = NULL, lastRunAt = NULL WHERE id = ? AND status = ? AND leaseId = ? AND leaseExpiresAt IS NOT NULL AND leaseExpiresAt <= ?"
+        ).run(TaskStatus.AWAITING, task.id, TaskStatus.RUNNING, task.leaseId, now);
+
+        if (result.changes !== 1) {
+            continue;
+        }
+
+        const updatedTask = getTask(db, task.id);
+        if (updatedTask) {
+            updatedTask.status = TaskStatus.AWAITING;
+            eventEmitter?.emitTaskStatusChanged(updatedTask, TaskStatus.RUNNING, TaskStatus.AWAITING);
+            eventEmitter?.emitTaskChanged(updatedTask, { status: TaskStatus.AWAITING });
+            checkTransitions(db, transitionTracker, updatedTask, eventEmitter);
+        }
+        reclaimed++;
+    }
+
+    return reclaimed;
 }
 
 /**
@@ -231,7 +476,7 @@ export function reclaimStaleRunningTasks(
 
     const cutoff = now - timeoutMs;
     const rows = db.prepare(
-        "SELECT * FROM tasks WHERE status = ? AND lastRunAt IS NOT NULL AND lastRunAt <= ?"
+        "SELECT * FROM tasks WHERE status = ? AND leaseExpiresAt IS NULL AND lastRunAt IS NOT NULL AND lastRunAt <= ?"
     ).all(TaskStatus.RUNNING, cutoff) as any[];
 
     let reclaimed = 0;
@@ -242,8 +487,8 @@ export function reclaimStaleRunningTasks(
         }
 
         const result = db.prepare(
-            "UPDATE tasks SET status = ?, lastRunAt = NULL WHERE id = ? AND status = ?"
-        ).run(TaskStatus.AWAITING, task.id, TaskStatus.RUNNING);
+            "UPDATE tasks SET status = ?, owner = NULL, leaseId = NULL, leaseExpiresAt = NULL, lastRunAt = NULL WHERE id = ? AND status = ? AND lastRunAt IS NOT NULL AND lastRunAt <= ?"
+        ).run(TaskStatus.AWAITING, task.id, TaskStatus.RUNNING, cutoff);
 
         if (result.changes !== 1) {
             continue;

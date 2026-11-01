@@ -1,29 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { DatabaseSync } from "node:sqlite";
 import { addTask, taskify, claimTask, getTask } from "../lib/tasks.ts";
 import { TransitionTracker } from "../lib/transitiontracker.ts";
 import { TaskStatus } from "../lib/models.ts";
-
-function createTaskDb(): DatabaseSync {
-    const db = new DatabaseSync(":memory:");
-    db.exec(`
-        CREATE TABLE tasks (
-            id TEXT PRIMARY KEY,
-            name TEXT,
-            script TEXT,
-            status INTEGER,
-            data TEXT,
-            artefacts TEXT,
-            dependsOn TEXT,
-            transitions TEXT,
-            type TEXT NOT NULL,
-            capabilitiesSchema TEXT,
-            lastRunAt INTEGER
-        )
-    `);
-    return db;
-}
+import { createTaskDb } from "./helpers.ts";
 
 test("claimTask allows exactly one claim of an AWAITING task", () => {
     const db = createTaskDb();
@@ -32,12 +12,19 @@ test("claimTask allows exactly one claim of an AWAITING task", () => {
     addTask(db, task);
 
     const tracker = new TransitionTracker();
-    assert.equal(claimTask(db, tracker, task.id), true);
-    assert.equal(claimTask(db, tracker, task.id), false);
+    const first = claimTask(db, tracker, task.id);
+    const second = claimTask(db, tracker, task.id);
+
+    assert.ok(first);
+    assert.equal(second, null);
+    assert.ok(first.leaseId);
+    assert.ok(first.leaseExpiresAt > Date.now());
 
     const stored = getTask(db, task.id);
     assert.equal(stored?.status, TaskStatus.RUNNING);
     assert.equal(typeof stored?.lastRunAt, "number");
+    assert.equal(stored?.leaseId, first.leaseId);
+    assert.equal(stored?.leaseExpiresAt, first.leaseExpiresAt);
 });
 
 test("claimTask does not claim a task that is not AWAITING", () => {
@@ -48,6 +35,6 @@ test("claimTask does not claim a task that is not AWAITING", () => {
     addTask(db, task);
 
     const tracker = new TransitionTracker();
-    assert.equal(claimTask(db, tracker, task.id), false);
+    assert.equal(claimTask(db, tracker, task.id), null);
     assert.equal(getTask(db, task.id)?.status, TaskStatus.COMPLETED);
 });

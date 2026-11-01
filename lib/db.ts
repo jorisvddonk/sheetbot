@@ -1,7 +1,7 @@
 import { DatabaseSync } from "node:sqlite";
 import { TransitionTracker } from "./transitiontracker.ts";
 import { TaskEventEmitter } from "./task-events.ts";
-import { processScheduledTransitions, reclaimStaleRunningTasks, parseDuration } from "./tasks.ts";
+import { processScheduledTransitions, reclaimStaleRunningTasks, reclaimExpiredLeases, parseDuration } from "./tasks.ts";
 
 export function openDatabase(): DatabaseSync {
     const db = new DatabaseSync("tasks.db");
@@ -22,8 +22,15 @@ export function initDatabaseTables(): void {
             transitions TEXT,
             type TEXT NOT NULL,
             capabilitiesSchema TEXT,
-            lastRunAt INTEGER
+            lastRunAt INTEGER,
+            owner TEXT,
+            leaseId TEXT,
+            leaseExpiresAt INTEGER
         )
+    `);
+
+    db.exec(`
+        CREATE INDEX IF NOT EXISTS idx_tasks_running_lease ON tasks(status, leaseExpiresAt)
     `);
 
     db.exec(`
@@ -57,6 +64,7 @@ export function startTransitionWorker(db: DatabaseSync, transitionTracker: Trans
     // Start background worker for transitions and stale-running recovery.
     setInterval(() => {
         processScheduledTransitions(db, transitionTracker, taskEventEmitter);
+        reclaimExpiredLeases(db, transitionTracker, taskEventEmitter);
         reclaimStaleRunningTasks(db, transitionTracker, taskEventEmitter, staleTimeoutMs);
     }, 1000);
 }

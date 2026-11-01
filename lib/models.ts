@@ -24,7 +24,11 @@ export interface Task {
     // Null/undefined means it has never been picked up. Used to schedule
     // fairly so a task that keeps re-arming (e.g. a short recurring task)
     // cannot starve tasks that sit behind it in insertion order.
-    lastRunAt?: number | null
+    lastRunAt?: number | null,
+    // Agent that claimed the task, and the lease that proves the claim.
+    owner?: string | null,
+    leaseId?: string | null,
+    leaseExpiresAt?: number | null
 }
 
 export const TaskStatus = {

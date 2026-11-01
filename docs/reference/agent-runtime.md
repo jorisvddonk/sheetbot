@@ -37,9 +37,9 @@ Agents follow a polling-based execution model:
 
 1. **Authentication** (optional): Obtain Bearer token for API access
 2. **Task Discovery**: Poll for available tasks matching agent capabilities
-3. **Task Acquisition**: Accept and prepare task for execution
-4. **Script Execution**: Run task script in isolated environment
-5. **Result Submission**: Report execution outcome to server
+3. **Task Acquisition**: Accept the task atomically and receive a lease
+4. **Script Execution**: Run task script while renewing the lease periodically
+5. **Result Submission**: Report execution outcome with the lease
 
 ### Capabilities Declaration
 
@@ -267,8 +267,10 @@ Agents must provide the following environment variables to executing scripts, co
 - `SHEETBOT_TASK_ACCEPTURL`: `{SHEETBOT_BASEURL}/tasks/{task_id}/accept`
 - `SHEETBOT_TASK_COMPLETEURL`: `{SHEETBOT_BASEURL}/tasks/{task_id}/complete`
 - `SHEETBOT_TASK_FAILEDURL`: `{SHEETBOT_BASEURL}/tasks/{task_id}/failed`
-- `SHEETBOT_TASK_DATAURL`: `{SHEETBOT_BASEURL}/tasks/{task_id}/data`
-- `SHEETBOT_TASK_ARTEFACTURL`: `{SHEETBOT_BASEURL}/tasks/{task_id}/artefacts`
+- `SHEETBOT_TASK_DATAURL`: `{SHEETBOT_BASEURL}/tasks/{task_id}/data` (includes `?leaseId=...` for leased tasks)
+- `SHEETBOT_TASK_ARTEFACTURL`: `{SHEETBOT_BASEURL}/tasks/{task_id}/artefacts` (includes `?leaseId=...` for leased tasks)
+- `SHEETBOT_TASK_HEARTBEATURL`: `{SHEETBOT_BASEURL}/tasks/{task_id}/heartbeat`
+- `SHEETBOT_TASK_LEASE_ID`: The current lease token
 
 **Construction Example:**
 ```javascript
@@ -280,8 +282,10 @@ SHEETBOT_TASK_BASEURL = "https://example.com/tasks/task-123"
 SHEETBOT_TASK_ACCEPTURL = "https://example.com/tasks/task-123/accept"
 SHEETBOT_TASK_COMPLETEURL = "https://example.com/tasks/task-123/complete"
 SHEETBOT_TASK_FAILEDURL = "https://example.com/tasks/task-123/failed"
-SHEETBOT_TASK_DATAURL = "https://example.com/tasks/task-123/data"
-SHEETBOT_TASK_ARTEFACTURL = "https://example.com/tasks/task-123/artefacts"
+SHEETBOT_TASK_DATAURL = "https://example.com/tasks/task-123/data?leaseId=..."
+SHEETBOT_TASK_ARTEFACTURL = "https://example.com/tasks/task-123/artefacts?leaseId=..."
+SHEETBOT_TASK_HEARTBEATURL = "https://example.com/tasks/task-123/heartbeat"
+SHEETBOT_TASK_LEASE_ID = "..." 
 ```
 
 Scripts use these variables to interact with the server during execution.
@@ -301,8 +305,39 @@ Signals that the agent has received the task and is beginning execution.
 
 **Response (Success - 200):**
 ```json
-{}
+{
+  "leaseId": "…",
+  "leaseExpiresAt": 1790000000000,
+  "heartbeatIntervalMs": 100000
+}
 ```
+
+A `409` means another agent claimed the task first.
+
+### POST /tasks/:id/heartbeat
+
+Renews the lease while the script is running. Send the lease as `X-SheetBot-Lease` or in the body.
+
+**Request:**
+- Method: `POST`
+- Content-Type: `application/json`
+- Authorization: `Bearer <token>`
+- Body:
+```json
+{
+  "leaseId": "…"
+}
+```
+
+**Response (Success - 200):**
+```json
+{
+  "leaseExpiresAt": 1790000000000,
+  "heartbeatIntervalMs": 100000
+}
+```
+
+A `409` means the lease expired or was reclaimed.
 
 ## Script Execution Contract
 
@@ -323,9 +358,11 @@ Reports successful task completion with result data.
 - Method: `POST`
 - Content-Type: `application/json`
 - Authorization: `Bearer <token>` (if authenticated)
+- Header: `X-SheetBot-Lease: <leaseId>`
 - Body:
 ```json
 {
+  "leaseId": "…",
   "data": {
     // execution result data (arbitrary structure)
   }
@@ -345,15 +382,20 @@ Reports task execution failure.
 - Method: `POST`
 - Content-Type: `application/json`
 - Authorization: `Bearer <token>` (if authenticated)
+- Header: `X-SheetBot-Lease: <leaseId>`
 - Body:
 ```json
-{}
+{
+  "leaseId": "…"
+}
 ```
 
 **Response (Success - 200):**
 ```json
 {}
 ```
+
+A `409` means the lease is stale or the task was reclaimed.
 
 Example success responses:
 

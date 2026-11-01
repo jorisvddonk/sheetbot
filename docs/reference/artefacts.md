@@ -3,7 +3,7 @@
 Artefacts are file outputs associated with tasks, stored in the filesystem for persistence and sharing.
 
 - **Storage**: Files are stored in `./artefacts/tasks/{taskId}/` directories
-- **Uploading**: Agents can upload artefacts during execution via POST `/tasks/{id}/artefacts` with multipart/form-data
+- **Uploading**: Agents can upload artefacts during execution via POST `/tasks/{id}/artefacts` with multipart/form-data. The upload must carry the task lease (`X-SheetBot-Lease` or `?leaseId=`).
 - **Accessing**: Artefacts are accessible via GET `/tasks/{id}/artefacts/{filename}` which redirects to the direct file URL
 - **Listing**: Artefacts are listed in the task's `artefacts` array
 - **Deletion**: Individual artefacts can be deleted via DELETE `/tasks/{id}/artefacts/{filename}`
