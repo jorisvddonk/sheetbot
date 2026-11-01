@@ -167,7 +167,7 @@ See [Extensibility](docs/explanation/extensibility.md) for key extension points 
 - `npm run docs:serve` — preview the docs locally.
 - `formal/check.sh` — run the TLA+ task-lifecycle model (requires Java 17+).
 
-There is currently no unit test suite. Node's built-in `node --test` is the intended starting point for tests around task matching, transitions, and sheet storage. The [formal model](formal/) checks the task lifecycle and includes a reproducible double-accept counterexample.
+There is currently no unit test suite. Node's built-in `node --test` is the intended starting point for tests around task matching, transitions, and sheet storage. The [formal models](formal/) check the task lifecycle, lease reclamation, and transition scheduling, and include a reproducible double-accept counterexample.
 
 ## Project Structure
 

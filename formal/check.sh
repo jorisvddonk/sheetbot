@@ -10,18 +10,26 @@ if [ ! -f "$jar" ]; then
 fi
 
 run_tlc() {
-  java -XX:+UseParallelGC -cp "$jar" tlc2.TLC -config "$1" TaskLifecycle.tla
+  local config="$1"
+  local module="${2:-TaskLifecycle}"
+  java -XX:+UseParallelGC -cp "$jar" tlc2.TLC -config "$config" "$module.tla"
 }
 
-echo "Checking safe model (TaskLifecycle.cfg)..."
-run_tlc TaskLifecycle.cfg
+echo "Checking safe task lifecycle model (TaskLifecycle.cfg)..."
+run_tlc TaskLifecycle.cfg TaskLifecycle
+
+echo "Checking lease/crash recovery model (TaskLifecycleLeases.cfg)..."
+run_tlc TaskLifecycleLeases.cfg TaskLifecycleLeases
+
+echo "Checking transition engine model (TransitionEngine.cfg)..."
+run_tlc TransitionEngine.cfg TransitionEngine
 
 echo "Checking that the unsafe accept race is still reproducible..."
 unsafe_log="$(mktemp)"
 trap 'rm -f "$unsafe_log"' EXIT
 
 set +e
-run_tlc TaskLifecycleUnsafe.cfg >"$unsafe_log" 2>&1
+run_tlc TaskLifecycleUnsafe.cfg TaskLifecycle >"$unsafe_log" 2>&1
 unsafe_status=$?
 set -e
 

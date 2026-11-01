@@ -1,12 +1,12 @@
-# Formal task model
+# Formal task models
 
-SheetBot has a small TLA+ model of its task lifecycle under [`formal/`](https://github.com/jorisvddonk/sheetbot/tree/main/formal). It checks the parts where concurrency and lifecycle rules matter: task creation, polling, acceptance, completion, failure, deletion, dependencies, and scheduled transitions.
+SheetBot has TLA+ models of its task lifecycle under [`formal/`](https://github.com/jorisvddonk/sheetbot/tree/main/formal). They check the parts where concurrency and scheduling rules matter: task creation, polling, acceptance, completion, failure, deletion, dependencies, leases, crash recovery, and transitions.
 
-It deliberately does **not** model HTTP, SQLite transactions, sheets, artefacts, permissions, or arbitrary transition conditions. Those are implementation details or separate concerns; the model is a design check.
+They deliberately do **not** model HTTP, SQLite transactions, sheets, artefacts, permissions, or full JSON Schema semantics. Those are implementation details or separate concerns; the models are design checks.
 
-## What it checks
+## Task lifecycle
 
-The safe configuration verifies:
+The safe lifecycle configuration verifies:
 
 - no task has more than one accepting agent
 - `RUNNING` means exactly one owner, and non-running tasks have no owner
@@ -41,6 +41,28 @@ WHERE id = ? AND status = 0 AND owner IS NULL;
 
 Reject the request when no row changed. An explicit owner or lease also makes completion/failure checks and stuck-`RUNNING` recovery easier.
 
+## Leases and crash recovery
+
+`TaskLifecycleLeases.tla` adds agents going up/down and removes real time from the picture: “lease expired” becomes “owner is not up”.
+
+It checks:
+
+- completion and failure require the owner to be up
+- a `RUNNING` task whose owner is down is reclaimed to `AWAITING`
+- under weak fairness of reclamation, a task does not stay `RUNNING` under a down owner forever
+
+The liveness property allows the task to finish after the owner recovers, or to be deleted, not only to be reclaimed.
+
+## Transition engine
+
+`TransitionEngine.tla` models one task with:
+
+1. `COMPLETED -> DELETED`, immediate
+2. `FAILED -> AWAITING`, every, while `retryCount < 2`, incrementing `retryCount`
+3. `AWAITING -> PAUSED`, every
+
+It checks first-match immediate evaluation, scheduled transitions, conditions, data mutation, schedule cleanup, and that deleted tasks have no pending schedules. Conditions are abstracted to boolean operators over task data; JSON Schema itself is not modeled.
+
 ## Run it
 
 Requirements: Java 17+ and `curl`.
@@ -50,12 +72,12 @@ cd formal
 ./check.sh
 ```
 
-The script checks the safe model and verifies that the unsafe configuration still reproduces the race.
+The script runs the safe lifecycle, lease, and transition models, then verifies that the unsafe configuration still reproduces the race.
 
 ## What it does not prove
 
-TLC exhaustively checks the finite model, not the TypeScript code. The model abstracts away SQLite isolation, HTTP retries, agent crashes, leases, capability schemas beyond type equality, and most transition conditions.
+TLC exhaustively checks the finite models, not the TypeScript code. The models abstract away SQLite isolation, HTTP retries, real lease timestamps and clock skew, capability schemas beyond type equality, sheets, artefacts, events, and permissions. The transition model uses simple conditions rather than general JSON Schema.
 
-The next step for implementation confidence is trace validation: emit task lifecycle events from the server, replay them through the model, and check the same invariants against real traces. Property-based tests should cover pure functions such as transition evaluation and capability matching.
+The next step for implementation confidence is trace validation: emit task lifecycle events from the server, replay them through the models, and check the same invariants against real traces. Property-based tests should cover pure functions such as transition evaluation and capability matching.
 
 See the [formal model README](https://github.com/jorisvddonk/sheetbot/tree/main/formal) for the full scope and files.
