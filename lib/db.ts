@@ -30,10 +30,6 @@ export function initDatabaseTables(): void {
     `);
 
     db.exec(`
-        CREATE INDEX IF NOT EXISTS idx_tasks_running_lease ON tasks(status, leaseExpiresAt)
-    `);
-
-    db.exec(`
         CREATE TABLE IF NOT EXISTS transitions_schedule (
             task_id TEXT NOT NULL,
             transition_index INTEGER NOT NULL,
