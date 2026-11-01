@@ -52,6 +52,8 @@
         <h3>Running Agents</h3>
         <p>To run a Deno agent, use the following command:</p>
         <pre><code id="deno-prod" class="language-bash">deno run --reload -A ${SHEETBOT_BASEURL}/scripts/agent.ts</code></pre>
+        <p>To run a Node.js agent, use the following command:</p>
+        <pre><code id="node-prod" class="language-bash">curl -fsSL ${SHEETBOT_BASEURL}/scripts/agent.js | node</code></pre>
         <p>To run a Python agent with uv, use the following command:</p>
         <pre><code id="python-prod" class="language-bash">uv run --script ${SHEETBOT_BASEURL}/scripts/agent.py</code></pre>
         <p>To run a Bash agent, use the following command:</p>
@@ -72,7 +74,11 @@ export SHEETBOT_AUTH_PASS=password
 # export SHEETBOT_AUTH_APIKEY=your_api_key
 export SHEETBOT_BASEURL={{BASE_URL}}
 
-deno run --reload -A ${SHEETBOT_BASEURL}/scripts/agent.ts</code></pre>
+# Deno agent:
+deno run --reload -A ${SHEETBOT_BASEURL}/scripts/agent.ts
+
+# Or a Node.js agent:
+# curl -fsSL ${SHEETBOT_BASEURL}/scripts/agent.js | node</code></pre>
 
         <h3>Widget Gallery</h3>
         <p>Below is a comprehensive gallery of all available widgets in SheetBot:</p>
