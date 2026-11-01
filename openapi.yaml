@@ -32,7 +32,7 @@ components:
           description: Task script content
         status:
           type: integer
-          enum: [0, 1, 2, 3, 4]
+          enum: [0, 1, 2, 3, 4, 5]
           description: |
             Task status:
             * 0 - AWAITING (ready for execution)
@@ -201,7 +201,7 @@ components:
           description: JSON string or array of dependency task IDs
         status:
           type: integer
-          enum: [0, 1, 2, 3, 4]
+          enum: [0, 1, 2, 3, 4, 5]
           description: Initial task status
       required:
         - script
@@ -211,7 +211,7 @@ components:
       properties:
         status:
           type: integer
-          enum: [0, 1, 2, 3, 4]
+          enum: [0, 1, 2, 3, 4, 5]
           description: New task status
 
     TaskGetRequest:
@@ -575,7 +575,7 @@ paths:
                   description: JSON string of dependency task IDs
                 status:
                   type: integer
-                  enum: [0, 1, 2, 3, 4]
+                  enum: [0, 1, 2, 3, 4, 5]
                 file:
                   type: array
                   items:
