@@ -285,7 +285,7 @@ SHEETBOT_TASK_FAILEDURL = "https://example.com/tasks/task-123/failed"
 SHEETBOT_TASK_DATAURL = "https://example.com/tasks/task-123/data?leaseId=..."
 SHEETBOT_TASK_ARTEFACTURL = "https://example.com/tasks/task-123/artefacts?leaseId=..."
 SHEETBOT_TASK_HEARTBEATURL = "https://example.com/tasks/task-123/heartbeat"
-SHEETBOT_TASK_LEASE_ID = "..." 
+SHEETBOT_TASK_LEASE_ID = "..."
 ```
 
 Scripts use these variables to interact with the server during execution.
