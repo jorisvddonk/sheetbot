@@ -169,7 +169,10 @@ export class MetricWidget extends LitElement {
       }
 
       // Format as integer if it's a whole number, otherwise show decimals
-      return Number.isInteger(value) ? value.toString() : value.toFixed(2);
+      // Don't pad/round to 2 decimals: a value like 99.96923076923077 must not
+      // render as 99.97. Keep up to 6 decimals to shed float noise, then drop
+      // trailing zeros.
+      return Number.isInteger(value) ? value.toString() : String(Math.round(value * 1e6) / 1e6);
     }
 
     hasMeaningfulUnit(unit) {
