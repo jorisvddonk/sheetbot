@@ -209,6 +209,59 @@ export function claimTask(db: DatabaseSync, transitionTracker: TransitionTracker
     return true;
 }
 
+/**
+ * Requeue RUNNING tasks whose last claim is older than the configured timeout.
+ *
+ * This is a watchdog for agent crashes. It is not a lease: a legitimately slow
+ * task can be reclaimed too. Phase 2 replaces it with explicit leases and
+ * heartbeats; this remains as a fallback for tasks started without a lease.
+ *
+ * @returns number of tasks reclaimed
+ */
+export function reclaimStaleRunningTasks(
+    db: DatabaseSync,
+    transitionTracker: TransitionTracker,
+    eventEmitter?: TaskEventEmitter,
+    timeoutMs: number = 6 * 60 * 60 * 1000,
+    now: number = Date.now()
+): number {
+    if (timeoutMs <= 0) {
+        return 0;
+    }
+
+    const cutoff = now - timeoutMs;
+    const rows = db.prepare(
+        "SELECT * FROM tasks WHERE status = ? AND lastRunAt IS NOT NULL AND lastRunAt <= ?"
+    ).all(TaskStatus.RUNNING, cutoff) as any[];
+
+    let reclaimed = 0;
+    for (const row of rows) {
+        const task = parseOneSQLTask(row);
+        if (!task) {
+            continue;
+        }
+
+        const result = db.prepare(
+            "UPDATE tasks SET status = ?, lastRunAt = NULL WHERE id = ? AND status = ?"
+        ).run(TaskStatus.AWAITING, task.id, TaskStatus.RUNNING);
+
+        if (result.changes !== 1) {
+            continue;
+        }
+
+        const updatedTask = getTask(db, task.id);
+        if (updatedTask) {
+            updatedTask.status = TaskStatus.AWAITING;
+            eventEmitter?.emitTaskStatusChanged(updatedTask, TaskStatus.RUNNING, TaskStatus.AWAITING);
+            eventEmitter?.emitTaskChanged(updatedTask, { status: TaskStatus.AWAITING });
+            checkTransitions(db, transitionTracker, updatedTask, eventEmitter);
+        }
+        reclaimed++;
+    }
+
+    return reclaimed;
+}
+
 export function deleteTask(db: DatabaseSync, taskId: string, eventEmitter?: TaskEventEmitter) {
     const stmt = db.prepare("DELETE FROM tasks WHERE id = ?");
     stmt.run(taskId);

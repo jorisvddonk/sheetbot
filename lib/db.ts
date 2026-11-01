@@ -1,7 +1,7 @@
 import { DatabaseSync } from "node:sqlite";
 import { TransitionTracker } from "./transitiontracker.ts";
 import { TaskEventEmitter } from "./task-events.ts";
-import { processScheduledTransitions } from "./tasks.ts";
+import { processScheduledTransitions, reclaimStaleRunningTasks, parseDuration } from "./tasks.ts";
 
 export function openDatabase(): DatabaseSync {
     const db = new DatabaseSync("tasks.db");
@@ -49,6 +49,14 @@ export function initDatabaseTables(): void {
 }
 
 export function startTransitionWorker(db: DatabaseSync, transitionTracker: TransitionTracker, taskEventEmitter?: TaskEventEmitter) {
-    // Start background worker for transitions
-    setInterval(() => processScheduledTransitions(db, transitionTracker, taskEventEmitter), 1000); // Check every second
+    const staleTimeoutEnv = Deno.env.get("SHEETBOT_STALE_RUNNING_TIMEOUT");
+    const staleTimeoutMs = staleTimeoutEnv === undefined
+        ? 6 * 60 * 60 * 1000
+        : parseDuration(staleTimeoutEnv);
+
+    // Start background worker for transitions and stale-running recovery.
+    setInterval(() => {
+        processScheduledTransitions(db, transitionTracker, taskEventEmitter);
+        reclaimStaleRunningTasks(db, transitionTracker, taskEventEmitter, staleTimeoutMs);
+    }, 1000);
 }

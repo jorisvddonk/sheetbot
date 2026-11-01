@@ -131,7 +131,7 @@ curl -X PATCH \
 | Symptom | Check |
 |---|---|
 | Task stays `AWAITING` | Matching agent running? Type and `capabilitiesSchema` match? |
-| Task stays `RUNNING` | Agent crashed? Check agent logs, then reset to `AWAITING`. |
+| Task stays `RUNNING` | Agent crashed? Check agent logs. The stale-running watchdog requeues it after `SHEETBOT_STALE_RUNNING_TIMEOUT` (default `6h`). |
 | Task is `FAILED` | Agent stderr, script exit code, missing dependencies. |
 | Task disappears | `DELETED` transition or ephemeral task. |
 | Sheet write fails | `putSheetData`, sheet name, SQLite permissions. |

@@ -10,6 +10,7 @@ SheetBot reads environment variables at startup. Restart the server after changi
 | `SHEETBOT_HTTPS_PORT` | `443` | HTTPS port, used when `key.pem` and `cert.pem` exist. Overridden by `--https-port`/`-P`. |
 | `NODE_ENV` | unset | Set to `production` in deployments. |
 | `SHEETBOT_WIDGET_CACHE_TTL` | `5` | Minutes to cache `/widgets.json`. `0` disables caching. |
+| `SHEETBOT_STALE_RUNNING_TIMEOUT` | `6h` | Requeue `RUNNING` tasks whose `lastRunAt` is older than this duration. Set `0` to disable the watchdog. |
 
 ## Search paths
 
