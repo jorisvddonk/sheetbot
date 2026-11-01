@@ -6,7 +6,7 @@ import { TransitionTracker } from "../transitiontracker.ts";
 import { TaskEventEmitter } from "../task-events.ts";
 import { createTaskTrackingMiddleware } from "../task-tracking-middleware.ts";
 import { createAgentTrackingMiddleware } from "../agent-tracking-middleware.ts";
-import { taskify, addTask, getTasks, getTask, updateTaskStatus, deleteTask, updateTaskData, getTaskToComplete, checkTransitions, updateTaskAddArtefact, updateTaskRemoveArtefact } from "../tasks.ts";
+import { taskify, addTask, getTasks, getTask, updateTaskStatus, claimTask, deleteTask, updateTaskData, getTaskToComplete, checkTransitions, updateTaskAddArtefact, updateTaskRemoveArtefact } from "../tasks.ts";
 import { TaskStatus } from "../models.ts";
 
 const VALID_TASK_STATUSES = [
@@ -221,9 +221,7 @@ export function createUpdateTaskHandler(db: DatabaseSync, transitionTracker: Tra
  */
 export function createAcceptTaskHandler(db: DatabaseSync, transitionTracker: TransitionTracker, taskEventEmitter?: TaskEventEmitter) {
     return (req: any, res: any) => {
-        const task = getTask(db, req.params.id, TaskStatus.AWAITING);
-        if (task) {
-            updateTaskStatus(db, transitionTracker, task.id, TaskStatus.RUNNING, taskEventEmitter);
+        if (claimTask(db, transitionTracker, req.params.id, taskEventEmitter)) {
             res.json({});
         } else {
             res.status(404);

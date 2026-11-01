@@ -28,7 +28,7 @@ a1 accepts t1  -> RUNNING, owner {a1}
 a3 accepts t1  -> RUNNING, owner {a1, a3}   <- AtMostOneOwner violated
 ```
 
-The implementation fix is a single conditional update:
+The implementation now uses a single conditional update:
 
 ```sql
 UPDATE tasks
@@ -36,7 +36,7 @@ SET status = 1, owner = ?
 WHERE id = ? AND status = 0 AND owner IS NULL;
 ```
 
-Reject the request when `changes = 0`.
+The request is rejected when `changes = 0`, and `test/task-claim.test.ts` checks the second claim loses.
 
 ### `TaskLifecycleLeases`
 

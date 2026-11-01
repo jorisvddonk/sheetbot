@@ -31,7 +31,7 @@ a1 accepts t1  -> RUNNING, owner {a1}
 a3 accepts t1  -> RUNNING, owner {a1, a3}   <- AtMostOneOwner violated
 ```
 
-The implementation should make acceptance a single conditional update:
+The implementation now makes acceptance a single conditional update:
 
 ```sql
 UPDATE tasks
@@ -39,7 +39,7 @@ SET status = 1, owner = ?
 WHERE id = ? AND status = 0 AND owner IS NULL;
 ```
 
-Reject the request when no row changed. An explicit owner or lease also makes completion/failure checks and stuck-`RUNNING` recovery easier.
+The request is rejected when no row changed, and `test/task-claim.test.ts` checks the second claim loses. An explicit owner or lease also makes completion/failure checks and stuck-`RUNNING` recovery easier.
 
 ## Leases and crash recovery
 

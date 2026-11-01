@@ -179,6 +179,36 @@ export function updateTaskStatus(db: DatabaseSync, transitionTracker: Transition
     }
 }
 
+/**
+ * Atomically claim an AWAITING task for execution.
+ *
+ * The status check and the RUNNING update happen in one SQL statement, so two
+ * agents racing on the same task cannot both observe AWAITING and then both
+ * overwrite it with RUNNING. The loser sees changes = 0 and must treat the
+ * task as already claimed.
+ *
+ * @returns true if this caller claimed the task, false otherwise
+ */
+export function claimTask(db: DatabaseSync, transitionTracker: TransitionTracker, taskId: string, eventEmitter?: TaskEventEmitter): boolean {
+    const now = Date.now();
+    const stmt = db.prepare("UPDATE tasks SET status = ?, lastRunAt = ? WHERE id = ? AND status = ?");
+    const result = stmt.run(TaskStatus.RUNNING, now, taskId, TaskStatus.AWAITING);
+
+    if (result.changes !== 1) {
+        return false;
+    }
+
+    const updatedTask = getTask(db, taskId);
+    if (updatedTask) {
+        updatedTask.status = TaskStatus.RUNNING;
+        eventEmitter?.emitTaskStatusChanged(updatedTask, TaskStatus.AWAITING, TaskStatus.RUNNING);
+        eventEmitter?.emitTaskChanged(updatedTask, { status: TaskStatus.RUNNING });
+        checkTransitions(db, transitionTracker, updatedTask, eventEmitter);
+    }
+
+    return true;
+}
+
 export function deleteTask(db: DatabaseSync, taskId: string, eventEmitter?: TaskEventEmitter) {
     const stmt = db.prepare("DELETE FROM tasks WHERE id = ?");
     stmt.run(taskId);

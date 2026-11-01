@@ -162,12 +162,13 @@ See [Extensibility](docs/explanation/extensibility.md) for key extension points 
 
 ## Development
 
-- `npm run typecheck` — TypeScript type check. This is what CI runs.
+- `npm run typecheck` — TypeScript type check.
+- `npm test` — unit tests with Node's built-in test runner.
 - `npm run docs:build` — build the mdBook documentation.
 - `npm run docs:serve` — preview the docs locally.
-- `formal/check.sh` — run the TLA+ task-lifecycle model (requires Java 17+).
+- `formal/check.sh` — run the TLA+ models (requires Java 17+).
 
-There is currently no unit test suite. Node's built-in `node --test` is the intended starting point for tests around task matching, transitions, and sheet storage. The [formal models](formal/) check the task lifecycle, lease reclamation, and transition scheduling, and include a reproducible double-accept counterexample.
+CI runs type checking, unit tests, and the formal models. The tests cover atomic task claiming; the [formal models](formal/) cover the task lifecycle, lease reclamation, and transition scheduling, including a reproducible double-accept counterexample.
 
 ## Project Structure
 
@@ -177,6 +178,7 @@ There is currently no unit test suite. Node's built-in `node --test` is the inte
 - `sheets/`: Generated sheet files
 - `static/`: Web assets and HTML files
 - `docs/`: Documentation source (mdBook)
+- `test/`: Node.js unit tests
 - `formal/`: TLA+ task-lifecycle model
 - `book.toml`: Documentation site configuration
 - `theme/`: mdBook theme overrides
