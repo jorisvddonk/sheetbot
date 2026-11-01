@@ -96,7 +96,7 @@ unset SHEETBOT_AUTH_USER SHEETBOT_AUTH_PASS
 
 ## 4. Run an agent with the key
 
-All agent templates read `SHEETBOT_AUTH_APIKEY`.
+All agent templates read `SHEETBOT_AUTH_APIKEY`. They also handle task leases and heartbeats automatically after accepting a task.
 
 ### Node.js
 

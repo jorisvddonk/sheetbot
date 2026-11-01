@@ -185,6 +185,7 @@ Uploads a file artefact for a task.
 - Method: `POST`
 - Content-Type: `multipart/form-data`
 - Authorization: `Bearer <token>` (if authenticated)
+- Lease: `X-SheetBot-Lease: <leaseId>` or `?leaseId=<leaseId>`
 - Body: Form data with `file` field containing the file
 
 **Response (Success - 200):**
@@ -470,13 +471,15 @@ New runtime implementations should:
 1. ✅ Implement authentication flow with `/login` endpoint
 2. ✅ Declare capabilities for task matching
 3. ✅ Poll for tasks using `/tasks/get` with appropriate capabilities
-4. ✅ Accept tasks via `/tasks/:id/accept`
-5. ✅ Fetch and execute scripts from `/scripts/:id.*` endpoints
-6. ✅ Provide required environment variables to scripts
-7. ✅ Report execution results via `/tasks/:id/complete` or `/tasks/:id/failed`
-8. ✅ Handle HTTP errors and authentication requirements
-9. ✅ Support artefact upload/download if needed by scripts
-10. ✅ Implement proper error handling and cleanup
+4. ✅ Accept tasks via `/tasks/:id/accept` and store the returned lease
+5. ✅ Heartbeat via `/tasks/:id/heartbeat` while the script runs
+6. ✅ Fetch and execute scripts from `/scripts/:id.*` endpoints
+7. ✅ Provide required environment variables, including the lease, to scripts
+8. ✅ Report execution results via `/tasks/:id/complete` or `/tasks/:id/failed` with the lease
+9. ✅ Treat `409` as a lost lease; do not retry with a stale token
+10. ✅ Handle HTTP errors and authentication requirements
+11. ✅ Support artefact upload/download if needed by scripts
+12. ✅ Implement proper error handling and cleanup
 
 ## Security Considerations
 

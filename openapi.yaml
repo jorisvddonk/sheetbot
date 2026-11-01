@@ -219,7 +219,7 @@ components:
       properties:
         type:
           type: string
-          enum: ["deno", "python", "bash"]
+          enum: ["deno", "node", "javascript", "js", "typescript", "ts", "python", "bash"]
           description: Agent type
         capabilities:
           type: object
@@ -566,7 +566,7 @@ paths:
                   description: JSON string of capability schema
                 type:
                   type: string
-                  enum: ["deno", "python", "bash"]
+                  enum: ["deno", "node", "javascript", "js", "typescript", "ts", "python", "bash"]
                 transitions:
                   type: string
                   description: JSON string of transitions array
@@ -786,7 +786,7 @@ paths:
                     description: Task ID
                   type:
                     type: string
-                    enum: ["deno", "python", "bash"]
+                    enum: ["deno", "node", "javascript", "js", "typescript", "ts", "python", "bash"]
                     description: Task type
         '401':
           description: Unauthorized

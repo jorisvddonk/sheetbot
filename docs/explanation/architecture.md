@@ -18,8 +18,8 @@ SheetBot keeps the server small and pushes execution and visualization outward. 
 1. A user or script creates a task with a script, type, data, capabilities schema, and optional transitions.
 2. An agent polls `/tasks/get` with its type and capabilities.
 3. The server matches the task and returns its script URL.
-4. The agent accepts the task, runs the script, and reports completion or failure.
-5. The server updates the task, emits events, and evaluates transitions.
+4. The agent claims the task, receives a lease, runs the script while heartbeating, and reports completion or failure with the lease.
+5. The server updates the task, emits events, and evaluates transitions. An expired lease returns the task to `AWAITING`.
 
 See [Protocol](../reference/protocol.md) for the exact sequence and state machine, and [Agent workflow](agent-workflow.md) for the agent side.
 

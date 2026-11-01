@@ -4,8 +4,8 @@
 
 Tasks store arbitrary JSON data that can be updated during execution:
 
-- **Update during execution**: Agents can POST to `/tasks/:id/data` to add/update data
-- **Completion data**: Agents include result data in `/tasks/:id/complete` request
+- **Update during execution**: Agents can POST to `/tasks/:id/data` with the current task lease to add/update data
+- **Completion data**: Agents include result data and the lease in `/tasks/:id/complete`
 - **Dependency injection**: Completed task data is injected into dependent scripts using `__DEP_RESULT_<taskId>__` placeholders (`createInjectDependenciesMiddleware` in `lib/middleware.ts`)
 
 Example: A compilation task might store execution time, success status, or warning counts in its data.

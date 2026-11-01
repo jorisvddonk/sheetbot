@@ -16,7 +16,7 @@ Tasks are matched to agents with JSON Schema. See [Why JSON Schema](https://gith
 
 ## Quick start
 
-Requires Node.js 22.6 or newer. Deno is still required for Deno-based agent scripts.
+Requires Node.js 22.6 or newer. Deno is optional and only needed for Deno agents, Deno tasks, the distributed runtime, or the TUI.
 
 ```bash
 git clone https://github.com/jorisvddonk/sheetbot

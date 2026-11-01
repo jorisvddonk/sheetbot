@@ -80,6 +80,8 @@ The experimental distributed runtime falls back to the normal auth variables:
 - Server CLI flags `--port`/`-p` and `--https-port`/`-P` override their environment variables.
 - Init scripts run in lexicographic order per directory; `./init/` runs before additional directories.
 - Widget discovery scans static directories once per cache window; restart or set `SHEETBOT_WIDGET_CACHE_TTL=0` when developing widgets.
+- Leased tasks are reclaimed when `leaseExpiresAt` passes. The stale-running watchdog only applies to legacy tasks with no lease.
+- Agents should heartbeat before `SHEETBOT_TASK_LEASE_TTL` expires; the templates use one third of the TTL.
 - Env files are a shell/systemd/launchd concern, not a SheetBot feature. Do not commit secrets.
 
 ## Next

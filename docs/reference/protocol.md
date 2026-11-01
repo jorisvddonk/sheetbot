@@ -14,8 +14,13 @@ sequenceDiagram
     Agent->>Server: POST /tasks/get (type, capabilities)
     Server->>Agent: Task script URL
     Agent->>Server: POST /tasks/:id/accept
+    Server->>Agent: leaseId, leaseExpiresAt
+    loop While the script runs
+        Agent->>Server: POST /tasks/:id/heartbeat (lease)
+        Server->>Agent: extended lease
+    end
     Note over Agent: Run script (with dep results injected)
-    Agent->>Server: POST /tasks/:id/complete (with result data)
+    Agent->>Server: POST /tasks/:id/complete (with result data + lease)
     Note over Server: Update task status
     Note over Server: Evaluate transitions for new status
 ```
@@ -27,7 +32,7 @@ sequenceDiagram
     participant Agent
     participant Server
 
-    Agent->>Server: POST /tasks/:id/failed
+    Agent->>Server: POST /tasks/:id/failed (with lease)
     Note over Server: Set status to FAILED
     Note over Server: Evaluate transitions for new status
 ```
@@ -39,9 +44,10 @@ stateDiagram-v2
     [*] --> PAUSED : Task created (scripts/tools)
     [*] --> AWAITING : Task created (API default)
     PAUSED --> AWAITING : Manual activation
-    AWAITING --> RUNNING : Agent accepts task
-    RUNNING --> COMPLETED : Task succeeds
-    RUNNING --> FAILED : Task fails
+    AWAITING --> RUNNING : Agent accepts task + lease
+    RUNNING --> AWAITING : Lease expires / reclaimed
+    RUNNING --> COMPLETED : Task succeeds with lease
+    RUNNING --> FAILED : Task fails with lease
     note right of PAUSED
         Tasks can start paused for
         dependency setup before execution
@@ -68,6 +74,7 @@ stateDiagram-v2
 - **Dependencies**: Tasks can depend on others; execution waits for all deps to complete
 - **Capabilities**: JSON Schema matching for agent selection
 - **Transitions**: Timed status changes for tasks (e.g., auto-delete, periodic reset)
+- **Leases**: A claim returns a token and expiry. The agent heartbeats while running; an expired lease is reclaimed and stale completions are rejected.
 - **Artefacts**: File outputs stored per task
 - **Runner Types**: SheetBot is agnostic to execution environments; it provides task management API while runners handle actual script execution
 
