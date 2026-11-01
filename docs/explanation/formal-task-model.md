@@ -43,15 +43,17 @@ The request is rejected when no row changed, and `test/task-claim.test.ts` check
 
 ## Leases and crash recovery
 
-`TaskLifecycleLeases.tla` adds agents going up/down and removes real time from the picture: “lease expired” becomes “owner is not up”.
+`TaskLifecycleLeases.tla` adds a discrete clock, per-task lease tokens, heartbeats, crashes, expiry, and reclamation.
 
 It checks:
 
-- completion and failure require the owner to be up
-- a `RUNNING` task whose owner is down is reclaimed to `AWAITING`
-- under weak fairness of reclamation, a task does not stay `RUNNING` under a down owner forever
+- claiming issues a token and expiry
+- heartbeats extend the expiry, but only before expiry
+- completion and failure require the current token
+- an expired lease returns the task to `AWAITING` and clears the token
+- under weak fairness of time and reclamation, an expired lease does not stay `RUNNING` forever
 
-The liveness property allows the task to finish after the owner recovers, or to be deleted, not only to be reclaimed.
+The runtime tests cover the same boundary: double claim, lease renewal, expiry reclamation, and stale-lease completion rejection.
 
 ## Transition engine
 

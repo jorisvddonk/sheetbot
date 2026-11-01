@@ -1,154 +1,180 @@
 ---------------------------- MODULE TaskLifecycleLeases ----------------------------
-\* Extends the task lifecycle with agent crashes and lease reclamation.
+\* Task lifecycle with time-based leases, lease tokens, heartbeats, and crashes.
 \*
-\* A running task whose agent is no longer up is reclaimed to AWAITING.
-\* The liveness property ReclaimedEventually is checked under weak fairness
-\* of the Reclaim action.
+\* Time is discrete and bounded by MaxTime. A claim gives the task a token and
+\* an expiry. Heartbeat extends the expiry. Reclaim returns an expired task to
+\* AWAITING. Complete/Fail require the current token.
 
 EXTENDS Naturals, FiniteSets, TLC
 
 Agents == {"a1", "a2"}
 Tasks == {"t1", "t2"}
 NoAgent == "NO_AGENT"
-NoTask == "NO_TASK"
+NoLease == 0
 
 Statuses == {"none", "AWAITING", "RUNNING", "COMPLETED", "FAILED"}
+LeaseDuration == 3
+MaxTime == 12
+LeaseTokenMax == MaxTime + LeaseDuration
 
-ASSUME NoAgent \notin Agents
-ASSUME NoTask \notin Tasks
+VARIABLES status, owner, lease, leaseUntil, up, now
 
-VARIABLES status, owner, up, candidate
-
-vars == <<status, owner, up, candidate>>
+vars == <<status, owner, lease, leaseUntil, up, now>>
 
 TypeInvariant ==
     /\ status \in [Tasks -> Statuses]
     /\ owner \in [Tasks -> Agents \cup {NoAgent}]
+    /\ lease \in [Tasks -> Nat]
+    /\ leaseUntil \in [Tasks -> Nat]
     /\ up \subseteq Agents
-    /\ candidate \in [Agents -> Tasks \cup {NoTask}]
+    /\ now \in 0..MaxTime
 
 Init ==
     /\ status = [t \in Tasks |-> "none"]
     /\ owner = [t \in Tasks |-> NoAgent]
+    /\ lease = [t \in Tasks |-> NoLease]
+    /\ leaseUntil = [t \in Tasks |-> 0]
     /\ up = Agents
-    /\ candidate = [a \in Agents |-> NoTask]
+    /\ now = 0
 
 Create(t) ==
     /\ status[t] = "none"
     /\ status' = [status EXCEPT ![t] = "AWAITING"]
     /\ owner' = [owner EXCEPT ![t] = NoAgent]
-    /\ UNCHANGED <<up, candidate>>
+    /\ lease' = [lease EXCEPT ![t] = NoLease]
+    /\ leaseUntil' = [leaseUntil EXCEPT ![t] = 0]
+    /\ UNCHANGED <<up, now>>
 
-Poll(a, t) ==
+\* Atomic claim. The token is derived from the claim time; only the holder of
+\* that token can heartbeat, complete, or fail the task.
+Claim(a, t) ==
     /\ a \in up
     /\ status[t] = "AWAITING"
     /\ owner[t] = NoAgent
-    /\ candidate' = [candidate EXCEPT ![a] = t]
-    /\ UNCHANGED <<status, owner, up>>
+    /\ lease[t] = NoLease
+    /\ status' = [status EXCEPT ![t] = "RUNNING"]
+    /\ owner' = [owner EXCEPT ![t] = a]
+    /\ lease' = [lease EXCEPT ![t] = now + 1]
+    /\ leaseUntil' = [leaseUntil EXCEPT ![t] = now + LeaseDuration]
+    /\ UNCHANGED <<up, now>>
 
-Accept(a) ==
+Heartbeat(a, t, l) ==
     /\ a \in up
-    /\ candidate[a] # NoTask
-    /\ LET t == candidate[a] IN
-         /\ status[t] = "AWAITING"
-         /\ owner[t] = NoAgent
-         /\ status' = [status EXCEPT ![t] = "RUNNING"]
-         /\ owner' = [owner EXCEPT ![t] = a]
-         /\ candidate' = [candidate EXCEPT ![a] = NoTask]
-         /\ UNCHANGED up
-
-Complete(a, t) ==
-    /\ a \in up
+    /\ l \in 1..LeaseTokenMax
     /\ status[t] = "RUNNING"
     /\ owner[t] = a
+    /\ lease[t] = l
+    /\ leaseUntil[t] > now
+    /\ leaseUntil' = [leaseUntil EXCEPT ![t] = now + LeaseDuration]
+    /\ UNCHANGED <<status, owner, lease, up, now>>
+
+Complete(a, t, l) ==
+    /\ a \in up
+    /\ l \in 1..LeaseTokenMax
+    /\ status[t] = "RUNNING"
+    /\ owner[t] = a
+    /\ lease[t] = l
     /\ status' = [status EXCEPT ![t] = "COMPLETED"]
     /\ owner' = [owner EXCEPT ![t] = NoAgent]
-    /\ UNCHANGED <<up, candidate>>
+    /\ lease' = [lease EXCEPT ![t] = NoLease]
+    /\ leaseUntil' = [leaseUntil EXCEPT ![t] = 0]
+    /\ UNCHANGED <<up, now>>
 
-Fail(a, t) ==
+Fail(a, t, l) ==
     /\ a \in up
+    /\ l \in 1..LeaseTokenMax
     /\ status[t] = "RUNNING"
     /\ owner[t] = a
+    /\ lease[t] = l
     /\ status' = [status EXCEPT ![t] = "FAILED"]
     /\ owner' = [owner EXCEPT ![t] = NoAgent]
-    /\ UNCHANGED <<up, candidate>>
+    /\ lease' = [lease EXCEPT ![t] = NoLease]
+    /\ leaseUntil' = [leaseUntil EXCEPT ![t] = 0]
+    /\ UNCHANGED <<up, now>>
 
-\* An agent disappears. Its RUNNING task stays RUNNING until reclaimed.
 Crash(a) ==
     /\ a \in up
     /\ up' = up \ {a}
-    /\ UNCHANGED <<status, owner, candidate>>
+    /\ UNCHANGED <<status, owner, lease, leaseUntil, now>>
 
 Recover(a) ==
     /\ a \notin up
     /\ up' = up \union {a}
-    /\ UNCHANGED <<status, owner, candidate>>
+    /\ UNCHANGED <<status, owner, lease, leaseUntil, now>>
 
-\* The lease has expired because the owner is not up.
+\* The lease has expired. Reclaiming clears the token, so a late completion
+\* with the old token is no longer enabled.
 Reclaim(t) ==
     /\ status[t] = "RUNNING"
-    /\ owner[t] \notin up
+    /\ lease[t] # NoLease
+    /\ leaseUntil[t] <= now
     /\ status' = [status EXCEPT ![t] = "AWAITING"]
     /\ owner' = [owner EXCEPT ![t] = NoAgent]
-    /\ UNCHANGED <<up, candidate>>
+    /\ lease' = [lease EXCEPT ![t] = NoLease]
+    /\ leaseUntil' = [leaseUntil EXCEPT ![t] = 0]
+    /\ UNCHANGED <<up, now>>
 
 DeleteState(t) ==
     /\ status' = [status EXCEPT ![t] = "none"]
     /\ owner' = [owner EXCEPT ![t] = NoAgent]
-    /\ candidate' = [a \in Agents |->
-        IF candidate[a] = t THEN NoTask ELSE candidate[a]]
-    /\ UNCHANGED up
+    /\ lease' = [lease EXCEPT ![t] = NoLease]
+    /\ leaseUntil' = [leaseUntil EXCEPT ![t] = 0]
+    /\ UNCHANGED <<up, now>>
 
 Delete(t) ==
     /\ status[t] # "none"
     /\ DeleteState(t)
 
+Tick ==
+    /\ now < MaxTime
+    /\ now' = now + 1
+    /\ UNCHANGED <<status, owner, lease, leaseUntil, up>>
+
 Next ==
     \/ \E t \in Tasks: Create(t)
-    \/ \E a \in Agents, t \in Tasks: Poll(a, t)
-    \/ \E a \in Agents: Accept(a)
-    \/ \E a \in Agents, t \in Tasks: Complete(a, t)
-    \/ \E a \in Agents, t \in Tasks: Fail(a, t)
+    \/ \E a \in Agents, t \in Tasks: Claim(a, t)
+    \/ \E a \in Agents, t \in Tasks, l \in 1..LeaseTokenMax: Heartbeat(a, t, l)
+    \/ \E a \in Agents, t \in Tasks, l \in 1..LeaseTokenMax: Complete(a, t, l)
+    \/ \E a \in Agents, t \in Tasks, l \in 1..LeaseTokenMax: Fail(a, t, l)
     \/ \E a \in Agents: Crash(a)
     \/ \E a \in Agents: Recover(a)
     \/ \E t \in Tasks: Reclaim(t)
     \/ \E t \in Tasks: Delete(t)
+    \/ Tick
 
 Spec == Init /\ [][Next]_vars
 
-\* Fairness on reclamation is required to prove crash recovery.
-LiveSpec == Spec /\ \A t \in Tasks: WF_vars(Reclaim(t))
+\* Fairness: time advances, and an expired lease is eventually reclaimed.
+LiveSpec == Spec /\ WF_vars(Tick) /\ \A t \in Tasks: WF_vars(Reclaim(t))
 
-\* Safety.
-RunningHasOneOwner ==
+RunningHasLease ==
     \A t \in Tasks:
-        (status[t] = "RUNNING") <=> (owner[t] # NoAgent)
+        status[t] = "RUNNING" =>
+            /\ owner[t] \in Agents
+            /\ lease[t] # NoLease
+            /\ leaseUntil[t] >= lease[t]
 
-NoOwnerWhenNotRunning ==
+NoLeaseWhenNotRunning ==
     \A t \in Tasks:
-        status[t] # "RUNNING" => owner[t] = NoAgent
+        status[t] # "RUNNING" =>
+            /\ owner[t] = NoAgent
+            /\ lease[t] = NoLease
+            /\ leaseUntil[t] = 0
 
-OwnerAlwaysKnown ==
+LeaseTokenBounded ==
     \A t \in Tasks:
-        status[t] = "RUNNING" => owner[t] \in Agents
-
-CandidateExists ==
-    \A a \in Agents:
-        candidate[a] = NoTask \/ candidate[a] \in Tasks
+        lease[t] \in 0..LeaseTokenMax
 
 Inv ==
     /\ TypeInvariant
-    /\ RunningHasOneOwner
-    /\ NoOwnerWhenNotRunning
-    /\ OwnerAlwaysKnown
-    /\ CandidateExists
+    /\ RunningHasLease
+    /\ NoLeaseWhenNotRunning
+    /\ LeaseTokenBounded
 
-\* Liveness: a running task whose owner is gone is eventually no longer
-\* running under that owner. The task may be reclaimed to AWAITING, finish
-\* after the owner recovers, or be deleted.
-ReclaimedEventually ==
+\* Once a lease is expired, the task must stop being RUNNING under that lease.
+ExpiredLeaseEventuallyReleased ==
     \A t \in Tasks:
-        (status[t] = "RUNNING" /\ owner[t] \notin up) ~>
-            (status[t] # "RUNNING" \/ owner[t] \in up)
+        (status[t] = "RUNNING" /\ leaseUntil[t] <= now) ~>
+            (status[t] # "RUNNING")
 
 =============================================================================

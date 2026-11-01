@@ -26,6 +26,14 @@ test("renewLease extends the lease for the holder only", () => {
     assert.equal(getTask(db, task.id)?.leaseExpiresAt, 7_000);
 });
 
+test("renewLease rejects an already-expired lease", () => {
+    const db = createTaskDb();
+    const { task, claim } = claimedTask(db);
+
+    assert.equal(renewLease(db, task.id, claim.leaseId, 5_000, 6_000), null);
+    assert.equal(getTask(db, task.id)?.leaseExpiresAt, claim.leaseExpiresAt);
+});
+
 test("reclaimExpiredLeases requeues an expired task and clears the lease", () => {
     const db = createTaskDb();
     const { task, claim } = claimedTask(db);
@@ -55,6 +63,21 @@ test("a stale lease cannot complete or write data after reclamation", () => {
         false
     );
     assert.equal(getTask(db, task.id)?.status, TaskStatus.AWAITING);
+
+    const nextClaim = claimTask(db, new TransitionTracker(), task.id, undefined, {
+        now: 7_000,
+        leaseTtlMs: 5_000
+    });
+    assert.ok(nextClaim);
+    assert.notEqual(nextClaim.leaseId, claim.leaseId);
+    assert.equal(
+        completeTaskWithLease(db, new TransitionTracker(), task.id, claim.leaseId, {}),
+        false
+    );
+    assert.equal(
+        completeTaskWithLease(db, new TransitionTracker(), task.id, nextClaim.leaseId, {}),
+        true
+    );
 });
 
 test("completeTaskWithLease accepts the current lease and clears it", () => {

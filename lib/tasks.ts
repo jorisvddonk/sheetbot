@@ -269,8 +269,8 @@ export function renewLease(
 
     const leaseExpiresAt = now + leaseTtlMs;
     const result = db.prepare(
-        "UPDATE tasks SET leaseExpiresAt = ? WHERE id = ? AND status = ? AND leaseId = ?"
-    ).run(leaseExpiresAt, taskId, TaskStatus.RUNNING, leaseId);
+        "UPDATE tasks SET leaseExpiresAt = ? WHERE id = ? AND status = ? AND leaseId = ? AND leaseExpiresAt > ?"
+    ).run(leaseExpiresAt, taskId, TaskStatus.RUNNING, leaseId, now);
 
     return result.changes === 1 ? leaseExpiresAt : null;
 }

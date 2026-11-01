@@ -62,7 +62,7 @@ export SHEETBOT_AUTH_PASS=your_password
 curl -fsSL "$SHEETBOT_BASEURL/scripts/agent.js" | node
 ```
 
-The task needs the `performTasks` permission. The upload response contains:
+The task needs the `performTasks` permission. The agent injects the lease into `SHEETBOT_TASK_ARTEFACTURL`, so the task script does not have to add it manually. The upload response contains:
 
 ```json
 {

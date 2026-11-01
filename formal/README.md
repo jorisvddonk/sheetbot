@@ -40,14 +40,15 @@ The request is rejected when `changes = 0`, and `test/task-claim.test.ts` checks
 
 ### `TaskLifecycleLeases`
 
-Adds agents going up/down, lease reclamation, and a liveness property:
+Adds a discrete clock, per-task lease tokens, heartbeats, crashes, expiry, and reclamation.
 
-- a `RUNNING` task whose owner is not up must eventually either stop running under that owner, be reclaimed to `AWAITING`, or finish after the owner recovers
-- `Reclaim(t)` moves a task owned by a down agent back to `AWAITING`
-- completion/failure require the owner to be up
-- weak fairness on reclamation is required for the liveness result
+- `Claim` issues a token and expiry.
+- `Heartbeat` extends the expiry, but only before the lease expires.
+- `Complete` / `Fail` require the current token.
+- `Reclaim` returns an expired task to `AWAITING` and clears the token.
+- Liveness requires that once a lease is expired, the task eventually stops running under it.
 
-This models crash recovery without real time: “lease expired” is abstracted to “owner not up”.
+Checks `RunningHasLease`, `NoLeaseWhenNotRunning`, bounded lease tokens, and `ExpiredLeaseEventuallyReleased`. Weak fairness on time and reclamation is required for the liveness result.
 
 ### `TransitionEngine`
 
@@ -106,7 +107,7 @@ The next step for implementation confidence is trace validation: emit task lifec
 - `TaskLifecycle.tla` — safe lifecycle model
 - `TaskLifecycle.cfg` — safe lifecycle configuration, expected to pass
 - `TaskLifecycleUnsafe.cfg` — stale-accept configuration, expected to fail
-- `TaskLifecycleLeases.tla` — crash/reclaim model with liveness
+- `TaskLifecycleLeases.tla` — token/time lease model with liveness
 - `TaskLifecycleLeases.cfg` — lease configuration
 - `TransitionEngine.tla` — transition scheduling/mutation model
 - `TransitionEngine.cfg` — transition configuration
